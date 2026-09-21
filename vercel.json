@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/video-shop-admin",
+      "destination": "/admin.html"
+    }
+  ]
+}
