@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Link Video Shop</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:#f6f4f8;color:#201d24}
+.wrap{max-width:1100px;margin:auto;padding:28px 16px}.top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:22px}
+h1{font-size:26px;margin:0}.sub{color:#777;font-size:13px;margin-top:5px}.card{background:white;border:1px solid #eee8f2;border-radius:18px;padding:18px;margin-bottom:16px;box-shadow:0 8px 30px rgba(55,0,80,.05)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{display:block;font-size:12px;font-weight:700;margin-bottom:5px;color:#5d5363}
+input,textarea{width:100%;border:1px solid #ddd3e3;border-radius:11px;padding:11px;background:#fff;font:inherit}textarea{min-height:78px;resize:vertical}
+button{border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:pointer}.primary{background:#51007A;color:white}.ghost{background:#f0e8f5;color:#51007A}.danger{background:#fff0f0;color:#a00}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.videos{display:grid;gap:10px}.video{display:grid;grid-template-columns:70px 1fr auto;gap:13px;align-items:center;border:1px solid #eee8f2;border-radius:14px;padding:10px}
+.thumb{width:70px;height:92px;object-fit:cover;border-radius:10px;background:#eee}.name{font-weight:800}.meta{font-size:12px;color:#777;margin-top:4px}.pill{display:inline-block;background:#f4eafb;color:#51007A;border-radius:999px;padding:4px 8px;font-size:11px;margin-top:6px}
+.search-results{display:grid;gap:7px;margin-top:8px;max-height:230px;overflow:auto}.product{display:flex;align-items:center;gap:9px;border:1px solid #eee;padding:7px;border-radius:10px;cursor:pointer}.product img{width:42px;height:42px;object-fit:cover;border-radius:8px}.selected{background:#faf6fc}
+.login{max-width:430px;margin:80px auto}.hidden{display:none!important}.status{font-size:12px;color:#777}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.video{grid-template-columns:56px 1fr}.video .actions{grid-column:1/-1}.thumb{width:56px;height:75px}}
+</style>
+</head>
+<body>
+<div id="login" class="wrap login">
+  <div class="card">
+    <h1>Link Video Shop</h1>
+    <p class="sub">لوحة إدارة فيديوهات الصفحة الرئيسية</p>
+    <label>رمز الإدارة</label>
+    <input id="token" type="password" placeholder="VIDEO_SHOP_ADMIN_TOKEN">
+    <button class="primary" style="width:100%;margin-top:10px" onclick="login()">دخول</button>
+    <div id="loginStatus" class="status" style="margin-top:8px"></div>
+  </div>
+</div>
+
+<div id="app" class="wrap hidden">
+  <div class="top">
+    <div><h1>Video Shop</h1><div class="sub">إضافة وترتيب وربط فيديوهات TikTok بمنتجات Link Store</div></div>
+    <button class="ghost" onclick="logout()">خروج</button>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">إضافة فيديو</h3>
+    <div class="grid">
+      <div><label>رابط TikTok</label><input id="tiktok" placeholder="https://www.tiktok.com/@link.60/video/..."></div>
+      <div><label>العنوان</label><input id="title" placeholder="اسم الفيديو / المنتج"></div>
+      <div><label>الشارة</label><input id="badge" placeholder="🔥 الأكثر طلبًا"></div>
+      <div><label>الترتيب</label><input id="sort" type="number" value="10"></div>
+    </div>
+    <div style="margin-top:12px"><label>الوصف</label><textarea id="desc"></textarea></div>
+    <div style="margin-top:12px">
+      <label>ابحث عن المنتجات واربطها بالفيديو</label>
+      <input id="productSearch" placeholder="اكتب اسم المنتج..." oninput="searchProducts()">
+      <div id="searchResults" class="search-results"></div>
+      <div id="selectedProducts" class="row" style="margin-top:8px"></div>
+    </div>
+    <button class="primary" style="margin-top:14px" onclick="createVideo()">إضافة الفيديو</button>
+    <span id="formStatus" class="status"></span>
+  </div>
+
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h3 style="margin:0">الفيديوهات الحالية</h3>
+      <button class="ghost" onclick="loadVideos()">تحديث</button>
+    </div>
+    <div id="videos" class="videos" style="margin-top:12px"></div>
+  </div>
+</div>
+
+<script>
+let TOKEN=sessionStorage.getItem('lvs_admin')||'';
+let selected=[];
+
+async function api(url,opt={}){
+  opt.headers={...(opt.headers||{}),'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'};
+  const r=await fetch(url,opt); const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); return j;
+}
+async function login(){
+  TOKEN=document.getElementById('token').value.trim();
+  try{await api('/api/video-shop-admin');sessionStorage.setItem('lvs_admin',TOKEN);showApp()}
+  catch(e){document.getElementById('loginStatus').textContent='الرمز غير صحيح أو إعدادات السيرفر غير مكتملة'}
+}
+function logout(){sessionStorage.removeItem('lvs_admin');location.reload()}
+async function showApp(){document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');await loadVideos()}
+if(TOKEN){showApp().catch(()=>logout())}
+
+let timer;
+function searchProducts(){
+  clearTimeout(timer); timer=setTimeout(async()=>{
+    const q=document.getElementById('productSearch').value.trim();
+    const box=document.getElementById('searchResults'); if(!q){box.innerHTML='';return}
+    try{
+      const j=await api('/api/video-shop-products?q='+encodeURIComponent(q));
+      box.innerHTML=(j.products||[]).map(p=>`<div class="product" onclick='pickProduct(${JSON.stringify(JSON.stringify(p))})'>
+        <img src="${p.thumbnail_url||p.main_image_url||''}"><div><b>${esc(p.name||'')}</b><div class="meta">#${p.external_product_id} • ${p.sale_price??p.price??''} ${p.currency||'SAR'}</div></div></div>`).join('');
+    }catch(e){box.innerHTML='<div class="status">تعذر البحث</div>'}
+  },250)
+}
+function pickProduct(raw){const p=JSON.parse(raw);if(!selected.some(x=>x.external_product_id==p.external_product_id))selected.push(p);renderSelected()}
+function removeProduct(id){selected=selected.filter(x=>x.external_product_id!=id);renderSelected()}
+function renderSelected(){
+  document.getElementById('selectedProducts').innerHTML=selected.map(p=>`<span class="pill">${esc(p.name)} <b style="cursor:pointer" onclick="removeProduct(${p.external_product_id})">×</b></span>`).join('')
+}
+async function createVideo(){
+  const body={tiktok_url:val('tiktok'),title:val('title'),badge:val('badge'),description:val('desc'),sort_order:Number(val('sort')||0),product_ids:selected.map(x=>Number(x.external_product_id)),is_active:true};
+  const s=document.getElementById('formStatus');s.textContent=' جارٍ الحفظ...';
+  try{await api('/api/video-shop-admin',{method:'POST',body:JSON.stringify(body)});s.textContent=' تم';selected=[];renderSelected();['tiktok','title','badge','desc'].forEach(id=>document.getElementById(id).value='');await loadVideos()}
+  catch(e){s.textContent=' '+e.message}
+}
+async function loadVideos(){
+  const box=document.getElementById('videos');box.innerHTML='جاري التحميل...';
+  try{
+    const j=await api('/api/video-shop-admin');
+    box.innerHTML=(j.videos||[]).map(v=>`<div class="video">
+      <img class="thumb" src="${v.thumbnail_url||''}" onerror="this.style.opacity=.15">
+      <div><div class="name">${esc(v.title)}</div><div class="meta">TikTok ${v.tiktok_video_id} • ترتيب ${v.sort_order} • منتجات: ${(v.product_ids||[]).join(', ')||'بدون'}</div><span class="pill">${v.is_active?'ظاهر':'مخفي'} ${esc(v.badge||'')}</span></div>
+      <div class="actions row">
+        <button class="ghost" onclick="toggleVideo('${v.id}',${!v.is_active})">${v.is_active?'إخفاء':'إظهار'}</button>
+        <button class="danger" onclick="deleteVideo('${v.id}')">حذف</button>
+      </div></div>`).join('')||'<div class="status">لا توجد فيديوهات</div>';
+  }catch(e){box.innerHTML='<div class="status">'+esc(e.message)+'</div>'}
+}
+async function toggleVideo(id,is_active){await api('/api/video-shop-admin',{method:'PATCH',body:JSON.stringify({id,is_active})});loadVideos()}
+async function deleteVideo(id){if(!confirm('حذف الفيديو؟'))return;await api('/api/video-shop-admin?id='+encodeURIComponent(id),{method:'DELETE'});loadVideos()}
+function val(id){return document.getElementById(id).value.trim()}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+</script>
+</body>
+</html>
