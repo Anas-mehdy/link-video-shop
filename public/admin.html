@@ -37,7 +37,7 @@ button{border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:poin
   </div>
 
   <div class="card">
-    <h3 style="margin-top:0">إضافة فيديو</h3>
+    <h3 id="formHeading" style="margin-top:0">إضافة فيديو</h3>
     <div class="grid">
       <div><label>رابط TikTok</label><input id="tiktok" placeholder="https://www.tiktok.com/@link.60/video/..."></div>
       <div><label>العنوان</label><input id="title" placeholder="اسم الفيديو / المنتج"></div>
@@ -51,7 +51,8 @@ button{border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:poin
       <div id="searchResults" class="search-results"></div>
       <div id="selectedProducts" class="row" style="margin-top:8px"></div>
     </div>
-    <button class="primary" style="margin-top:14px" onclick="createVideo()">إضافة الفيديو</button>
+    <button id="saveVideo" class="primary" style="margin-top:14px" onclick="createVideo()">إضافة الفيديو</button>
+    <button id="cancelEdit" class="ghost hidden" onclick="cancelEdit()">إلغاء التعديل</button>
     <span id="formStatus" class="status"></span>
   </div>
 
@@ -67,6 +68,7 @@ button{border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:poin
 <script>
 let TOKEN=sessionStorage.getItem('lvs_admin')||'';
 let selected=[];
+let videosById=new Map(), editingId=null, saving=false, originalProductIds=[];
 
 async function api(url,opt={}){
   opt.headers={...(opt.headers||{}),'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'};
@@ -99,27 +101,69 @@ function removeProduct(id){selected=selected.filter(x=>x.external_product_id!=id
 function renderSelected(){
   document.getElementById('selectedProducts').innerHTML=selected.map(p=>`<span class="pill">${esc(p.name)} <b style="cursor:pointer" onclick="removeProduct(${p.external_product_id})">×</b></span>`).join('')
 }
+
+function cancelEdit(){
+  if(saving)return;
+  editingId=null;originalProductIds=[];selected=[];renderSelected();
+  ['tiktok','title','badge','desc','productSearch'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('sort').value='10';
+  document.getElementById('searchResults').innerHTML='';
+  document.getElementById('formHeading').textContent='إضافة فيديو';
+  document.getElementById('saveVideo').textContent='إضافة الفيديو';
+  document.getElementById('cancelEdit').classList.add('hidden');
+  document.getElementById('formStatus').textContent='';
+}
+function editVideo(id){
+  if(saving)return;
+  const v=videosById.get(id);if(!v)return;
+  if(editingId&&!confirm('ترك التعديلات الحالية وفتح الفيديو الآخر؟'))return;
+  cancelEdit();editingId=id;
+  const values={tiktok:v.tiktok_url||('https://www.tiktok.com/@link.60/video/'+v.tiktok_video_id),title:v.title,badge:v.badge,desc:v.description,sort:v.sort_order};
+  Object.entries(values).forEach(([key,value])=>document.getElementById(key).value=value??'');
+  originalProductIds=(v.product_ids||[]).map(String);
+  selected=originalProductIds.map(id=>({external_product_id:id,name:v.product_names?.[id]||('منتج #'+id)}));
+  renderSelected();
+  document.getElementById('formHeading').textContent='تعديل الفيديو';
+  document.getElementById('saveVideo').textContent='حفظ التعديلات';
+  document.getElementById('cancelEdit').classList.remove('hidden');
+  document.getElementById('formHeading').scrollIntoView({behavior:'smooth',block:'start'});
+  document.getElementById('title').focus({preventScroll:true});
+}
 async function createVideo(){
-  const body={tiktok_url:val('tiktok'),title:val('title'),badge:val('badge'),description:val('desc'),sort_order:Number(val('sort')||0),product_ids:selected.map(x=>Number(x.external_product_id)),is_active:true};
-  const s=document.getElementById('formStatus');s.textContent=' جارٍ الحفظ...';
-  try{await api('/api/video-shop-admin',{method:'POST',body:JSON.stringify(body)});s.textContent=' تم';selected=[];renderSelected();['tiktok','title','badge','desc'].forEach(id=>document.getElementById(id).value='');await loadVideos()}
-  catch(e){s.textContent=' '+e.message}
+  if(saving)return;
+  const s=document.getElementById('formStatus');
+  if(!val('title')||!val('tiktok')){s.textContent='أدخل عنوان الفيديو ورابط TikTok';return}
+  if(!Number.isFinite(Number(val('sort')))){s.textContent='الترتيب غير صحيح';return}
+  const body={tiktok_url:val('tiktok'),title:val('title'),badge:val('badge'),description:val('desc'),sort_order:Number(val('sort')||0)};
+  const ids=selected.map(x=>String(x.external_product_id));
+  if(!editingId||JSON.stringify(ids)!==JSON.stringify(originalProductIds))body.product_ids=ids.map(Number);
+  if(editingId)body.id=editingId;else body.is_active=true;
+  const editing=!!editingId;
+  saving=true;document.getElementById('saveVideo').disabled=true;document.getElementById('cancelEdit').disabled=true;
+  s.textContent='جارٍ الحفظ...';
+  try{
+    await api('/api/video-shop-admin',{method:editing?'PATCH':'POST',body:JSON.stringify(body)});
+    saving=false;cancelEdit();s.textContent=editing?'تم حفظ التعديلات':'تمت إضافة الفيديو';await loadVideos();
+  }catch(e){s.textContent='تعذر الحفظ: '+e.message}
+  finally{saving=false;document.getElementById('saveVideo').disabled=false;document.getElementById('cancelEdit').disabled=false}
 }
 async function loadVideos(){
   const box=document.getElementById('videos');box.innerHTML='جاري التحميل...';
   try{
     const j=await api('/api/video-shop-admin');
+    videosById=new Map((j.videos||[]).map(v=>[v.id,v]));
     box.innerHTML=(j.videos||[]).map(v=>`<div class="video">
       <img class="thumb" src="${v.thumbnail_url||''}" onerror="this.style.opacity=.15">
       <div><div class="name">${esc(v.title)}</div><div class="meta">TikTok ${v.tiktok_video_id} • ترتيب ${v.sort_order} • منتجات: ${(v.product_ids||[]).join(', ')||'بدون'}</div><span class="pill">${v.is_active?'ظاهر':'مخفي'} ${esc(v.badge||'')}</span></div>
       <div class="actions row">
+        <button class="ghost" onclick="editVideo('${v.id}')">تعديل</button>
         <button class="ghost" onclick="toggleVideo('${v.id}',${!v.is_active})">${v.is_active?'إخفاء':'إظهار'}</button>
         <button class="danger" onclick="deleteVideo('${v.id}')">حذف</button>
       </div></div>`).join('')||'<div class="status">لا توجد فيديوهات</div>';
   }catch(e){box.innerHTML='<div class="status">'+esc(e.message)+'</div>'}
 }
 async function toggleVideo(id,is_active){await api('/api/video-shop-admin',{method:'PATCH',body:JSON.stringify({id,is_active})});loadVideos()}
-async function deleteVideo(id){if(!confirm('حذف الفيديو؟'))return;await api('/api/video-shop-admin?id='+encodeURIComponent(id),{method:'DELETE'});loadVideos()}
+async function deleteVideo(id){if(saving)return;if(!confirm('حذف الفيديو؟'))return;await api('/api/video-shop-admin?id='+encodeURIComponent(id),{method:'DELETE'});if(editingId===id)cancelEdit();loadVideos()}
 function val(id){return document.getElementById(id).value.trim()}
 function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 </script>
