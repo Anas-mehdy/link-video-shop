@@ -6,7 +6,10 @@ async function hydrate(videos) {
   const links = await sb(`video_shop_video_products?video_id=in.(${ids.join(',')})&order=sort_order.asc&select=video_id,external_product_id,sort_order`);
   const grouped = {};
   for (const l of links || []) (grouped[l.video_id] ||= []).push(l.external_product_id);
-  return videos.map(v=>({...v, product_ids:grouped[v.id] || []}));
+  const productIds = [...new Set((links || []).map(l=>String(l.external_product_id)))].filter(id=>/^\\d+$/.test(id));
+  const products = productIds.length ? await sb(`products?merchant_id=eq.${MERCHANT_ID}&external_product_id=in.(${productIds.join(',')})&select=external_product_id,name`) : [];
+  const names = Object.fromEntries((products || []).map(p=>[String(p.external_product_id),p.name]));
+  return videos.map(v=>({...v, product_ids:grouped[v.id] || [], product_names:Object.fromEntries((grouped[v.id] || []).map(id=>[String(id),names[String(id)]||('منتج #'+id)]))}));
 }
 
 module.exports = async function handler(req, res) {
