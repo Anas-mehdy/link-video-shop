@@ -1,0 +1,31 @@
+name: Protection 3D preview
+
+on:
+  push:
+    branches: [protection-3d-prototype]
+    paths:
+      - "prototype/blender/**"
+      - ".github/workflows/protection-3d-preview.yml"
+  workflow_dispatch:
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Blender and software rendering
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender xvfb
+      - name: Restore uploaded FBX
+        run: cat prototype/blender/source/part-* > prototype/blender/phone.fbx
+      - name: Inspect and render phone
+        run: xvfb-run -a blender --background --factory-startup --python-exit-code 1 --python prototype/blender/inspect_phone.py
+      - name: Upload report and previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-inspection
+          path: prototype/blender/output/
+          if-no-files-found: warn
