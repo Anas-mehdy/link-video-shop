@@ -1,6 +1,7 @@
 const { sb, json, cors, requireAdmin, MERCHANT_ID } = require('../lib/supabase');
 const catalog = require('../data/protection-catalog.json');
 const byId = new Map(catalog.map(p => [String(p.id), p]));
+const { modelKey, modelsIn } = require('../lib/protection-models');
 const modes = new Set(['off','protection','accessories']);
 const roles = new Set(['lens','camera_plate','case','screen','accessory','bundle','unknown']);
 
@@ -16,7 +17,7 @@ module.exports = async function handler(req, res) {
         sb(`products?merchant_id=eq.${MERCHANT_ID}&select=external_product_id,name,thumbnail_url,main_image_url,status,is_available&limit=1000`)
       ]);
       const seen = new Set();
-      const mapped = (live || []).map(p => { const id=String(p.external_product_id),hint=byId.get(id);seen.add(id);return {id,name:p.name||hint?.name||('منتج #'+id),image:p.thumbnail_url||p.main_image_url||null,status:p.is_available===false?'غير متاح':p.status==='hidden'?'مخفي':'متاح',brand:hint?.brand||null,role:hint?.role||'unknown',variable:hint?.variable??true,review:hint?.review??true}; });
+      const mapped = (live || []).map(p => { const id=String(p.external_product_id),hint=byId.get(id);seen.add(id);return {id,name:p.name||hint?.name||('منتج #'+id),image:p.thumbnail_url||p.main_image_url||null,status:p.is_available===false?'غير متاح':p.status==='hidden'?'مخفي':'متاح',brand:hint?.brand||null,role:hint?.role||'unknown',variable:hint?.variable??true,review:hint?.review??true,models:hint?.models||modelsIn(p.name)}; });
       return json(res, 200, {ok:true, settings:settings[0] || {enabled:false,default_mode:'off'}, rules:rules || [], catalog:[...mapped,...catalog.filter(p=>!seen.has(p.id))]});
     }
     const body = req.body && typeof req.body === 'object' ? req.body : {};
@@ -35,6 +36,13 @@ module.exports = async function handler(req, res) {
       const known=new Set((live||[]).map(p=>String(p.external_product_id)));
       if (ids.some(x=>!known.has(x) && !byId.has(x))) return json(res,400,{ok:false,error:'منتج غير موجود في الخريطة'});
       if (String(body.model || '').length > 100 || String(body.color || '').length > 30) return json(res,400,{ok:false,error:'النص طويل جدًا'});
+      if (body.mode !== 'off') {
+        const model=modelKey(body.model),source=byId.get(id);
+        if (!recs.length || (body.mode === 'protection' && !model)) return json(res,400,{ok:false,error:'حدد الموديل والمنتجات المقترحة'});
+        if (body.mode === 'protection' && source?.models?.length > 1) return json(res,400,{ok:false,error:'هذا المنتج يحتوي عدة موديلات؛ يلزم تحديد موديل الخيار في صفحة المتجر أولًا'});
+        if (body.mode === 'protection' && source?.models?.length === 1 && !source.models.some(x=>modelKey(x)===model)) return json(res,400,{ok:false,error:'موديل المنتج لا يطابق الموديل المحدد'});
+        if (body.mode === 'protection' && recs.some(x=>!byId.get(String(x))?.models?.some(m=>modelKey(m)===model))) return json(res,400,{ok:false,error:'بعض القطع المقترحة لا تدعم موديل الجهاز المحدد'});
+      }
       await sb('protection_product_rules', {method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify([{merchant_id:MERCHANT_ID,external_product_id:Number(id),mode:body.mode,brand:body.brand||null,model:String(body.model||'').trim()||null,role:body.role,color:String(body.color||'').trim()||null,recommendations:recs.map(Number),updated_at:new Date().toISOString()}])});
       return json(res,200,{ok:true});
     }
