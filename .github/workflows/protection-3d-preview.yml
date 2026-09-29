@@ -9,9 +9,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  preview:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Install Blender and software rendering
@@ -20,12 +22,27 @@ jobs:
           sudo apt-get install -y blender xvfb python3-numpy
       - name: Restore uploaded FBX
         run: cat prototype/blender/source/part-* > prototype/blender/phone.fbx
-      - name: Inspect and render phone
-        run: xvfb-run -a blender --background --factory-startup --python-exit-code 1 --python prototype/blender/inspect_phone.py
-      - name: Upload report and previews
+      - name: Build interactive character
+        run: xvfb-run -a blender --background --factory-startup --python-exit-code 1 --python prototype/blender/build_character.py
+      - name: Bundle viewer
+        run: |
+          npm install --no-save three@0.180.0 esbuild@0.25.9
+          npx esbuild prototype/web/app.js --bundle --format=iife --minify --outfile=public/protection-lab/app.js
+      - name: Upload model
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: phone-inspection
+          name: phone-character
           path: prototype/blender/output/
           if-no-files-found: warn
+      - name: Publish model on experiment branch
+        if: success()
+        run: |
+          mkdir -p public/protection-lab
+          cp prototype/blender/output/phone-mascot.glb public/protection-lab/phone-mascot.glb
+          cp prototype/blender/output/character-report.json public/protection-lab/character-report.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/protection-lab/phone-mascot.glb public/protection-lab/character-report.json public/protection-lab/app.js
+          git commit -m "Build interactive phone mascot from supplied FBX"
+          git push origin HEAD:protection-3d-prototype
