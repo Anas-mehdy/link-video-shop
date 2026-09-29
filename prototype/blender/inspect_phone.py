@@ -61,6 +61,7 @@ scene.camera = bpy.data.objects.new("PreviewCamera", bpy.data.cameras.new("Previ
 scene.collection.objects.link(scene.camera)
 scene.camera.data.type = "ORTHO"
 scene.camera.data.ortho_scale = size[tall] * 1.35
+scene.camera.data.clip_end = max(size[tall] * 10, 10000)
 
 up = Vector((0, 0, 0))
 up[tall] = 1
