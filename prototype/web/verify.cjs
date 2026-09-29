@@ -1,6 +1,6 @@
 const {chromium}=require("playwright");
 const fs=require("fs");
-const url="https://link-video-shop-git-protection-3d-prototype-anasmhdy1994-3118.vercel.app/protection-lab/";
+const url=process.env.PREVIEW_URL||"http://127.0.0.1:8765/protection-lab/";
 (async()=>{
   const browser=await chromium.launch({headless:true,args:["--use-gl=angle","--use-angle=swiftshader"]});
   const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
