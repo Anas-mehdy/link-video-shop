@@ -42,3 +42,27 @@ Enter the value of `VIDEO_SHOP_ADMIN_TOKEN`.
 Send the deployed Vercel URL back to ChatGPT.
 
 The Salla test section can then be switched from hard-coded videos to the feed, while retaining the current design as a fallback if the API is temporarily unavailable.
+
+
+## Protection Builder (experimental)
+
+The existing `/video-shop-admin` page now links to `/protection-admin`. Both pages use the same `VIDEO_SHOP_ADMIN_TOKEN`. The new page maps products to a device/model, protection role, appearance, and ordered recommendations. The source catalog is a 28 September 2026 export; review options and synchronize new products before enabling recommendations for them.
+
+1. Run [`protection-schema.sql`](./protection-schema.sql) **once** in the **same Supabase project used by this Vercel deployment**. It adds two RLS-enabled tables with no browser access and seeds one iPhone 18 Pro Max lens rule. The global switch is off by default. Existing Video Shop tables are unchanged.
+2. Open `/protection-admin` using the current admin token. Review the seeded rule, confirm the destination products, and then switch the feature on for the test theme.
+3. In Salla's **test theme custom JavaScript**, replace the old inline protection widget with this one-time loader:
+
+```js
+(function () {
+  if (document.getElementById('link-protection-loader')) return;
+  var s = document.createElement('script');
+  s.id = 'link-protection-loader';
+  s.src = 'https://link-video-shop.vercel.app/protection-widget.js';
+  s.async = true;
+  document.head.appendChild(s);
+})();
+```
+
+The loader fetches `/api/protection-feed?id=<current product>` without credentials. The feed checks the global switch, per-product mode, current catalog row and availability, and returns only storefront-public recommendation data. Products with model/color choices link to their product pages for selection; they are not added blindly. Do not enable the global default for the full catalog until model rules and product options are reviewed.
+
+If `/api/protection-admin` reports that setup is missing, run the SQL in the correct Supabase project. The public feed stays off when the table is missing or the database fails.

@@ -3,6 +3,10 @@
     {
       "source": "/video-shop-admin",
       "destination": "/admin.html"
+    },
+    {
+      "source": "/protection-admin",
+      "destination": "/protection-admin.html"
     }
   ]
 }
