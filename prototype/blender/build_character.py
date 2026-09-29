@@ -36,6 +36,27 @@ for o in meshes:
 rear_sign = 1 if (sum(rear_samples) / len(rear_samples) if rear_samples else lo.y) > center.y else -1
 print("CHARACTER_REAR_SIGN", rear_sign, "samples", len(rear_samples))
 
+# FBX arrives as hundreds of tiny meshes. Bake their world transforms and join
+# them before export so mobile browsers do not issue hundreds of draw calls.
+for obj in meshes:
+    world = obj.matrix_world.copy()
+    obj.parent = None
+    obj.matrix_world = world
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+bpy.ops.object.select_all(action="DESELECT")
+for obj in meshes:
+    obj.select_set(True)
+bpy.context.view_layer.objects.active = meshes[0]
+bpy.ops.object.join()
+meshes = [meshes[0]]
+for obj in list(bpy.context.scene.objects):
+    if obj.type == "EMPTY":
+        bpy.data.objects.remove(obj, do_unlink=True)
+print("CHARACTER_JOINED_MESHES", len(meshes))
+
 def mat(name, rgb, metallic=0, roughness=.4, alpha=1):
     m = bpy.data.materials.new(name)
     m.diffuse_color = (*rgb, alpha)
