@@ -44,5 +44,24 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/protection-lab/phone-mascot.glb public/protection-lab/character-report.json public/protection-lab/app.js
-          git commit -m "Build interactive phone mascot from supplied FBX"
-          git push origin HEAD:protection-3d-prototype
+          if ! git diff --cached --quiet; then
+            git commit -m "Build interactive phone mascot from supplied FBX"
+            git push origin HEAD:protection-3d-prototype
+          fi
+      - name: Install browser for mobile verification
+        if: success()
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Verify phone and case on preview
+        if: success()
+        run: |
+          sleep 15
+          node prototype/web/verify.cjs
+      - name: Upload mobile screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: protection-3d-mobile
+          path: prototype/web/screenshots/
+          if-no-files-found: warn
