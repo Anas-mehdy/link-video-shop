@@ -57,7 +57,7 @@ jobs:
         if: success()
         run: |
           python3 -m http.server 8765 --directory public > /tmp/protection-http.log 2>&1 &
-          node prototype/web/verify.cjs
+          timeout 95s node prototype/web/verify.cjs
       - name: Upload mobile screenshots
         if: always()
         uses: actions/upload-artifact@v4
