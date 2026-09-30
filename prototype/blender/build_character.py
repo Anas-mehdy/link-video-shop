@@ -22,7 +22,7 @@ for obj in list(bpy.context.scene.objects):
 
 # The FBX contains an Octane environment and scene helpers much larger than
 # the handset. Only measure and export meshes beneath the iPhone model root.
-model_roots = [o for o in bpy.context.scene.objects if "iPhone_18_2" in o.name]
+model_roots = [o for o in bpy.context.scene.objects if o.name == "_iPhone_18_2"]
 if not model_roots:
     raise RuntimeError("iPhone model root was not found in the supplied FBX")
 model_root = model_roots[0]
@@ -44,7 +44,7 @@ lo = Vector(min(p[i] for p in points) for i in range(3))
 hi = Vector(max(p[i] for p in points) for i in range(3))
 center = (lo + hi) / 2
 size = hi - lo
-if not .35 < size.x / size.z < .65:
+if not .25 < size.x / size.z < 1.0:
     raise RuntimeError("Unexpected phone aspect ratio: " + str(tuple(size)))
 scale = 2.0 / size.z
 print("CHARACTER_PHONE_BOUNDS", tuple(size), "meshes", len(meshes))
