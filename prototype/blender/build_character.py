@@ -104,6 +104,8 @@ white = mat("Eye white", (1, .96, .99), 0, .16)
 black = mat("Ink", (.035, .014, .07), 0, .14)
 blue = mat("Electric cyan", (.02, .73, .98), .25, .16)
 cheek = mat("Cheek", (.91, .28, .56), 0, .5, .8)
+lens_metal = mat("Camera lens metal", (.28, .43, .60), .72, .18)
+lens_dark = mat("Camera lens glass", (.012, .045, .10), .35, .08)
 
 for m in bpy.data.materials:
     target = None
@@ -176,6 +178,15 @@ tube("MouthNeutral", [(-.075, front_y, -.24), (0, front_y, -.245),
                        (.075, front_y, -.24)], .012, black)
 tube("MouthHappy", [(-.13, front_y, -.21), (0, front_y, -.30),
                      (.13, front_y, -.21)], .018, black)
+
+# Add three dark camera optics over the FBX's flat grey placeholders.
+for index, (lens_x, lens_z) in enumerate(((.30, .74), (-.01, .64), (.30, .45))):
+    sphere("Camera optic rim " + str(index),
+           (lens_x, rear_sign * .155, lens_z), (.095, .022, .095), lens_metal, seg=32)
+    sphere("Camera optic glass " + str(index),
+           (lens_x, rear_sign * .178, lens_z), (.078, .012, .078), lens_dark, seg=32)
+    sphere("Camera optic glint " + str(index),
+           (lens_x-.027, rear_sign * .192, lens_z+.028), (.014, .005, .018), blue, seg=16)
 
 for side in (-1, 1):
     tube("Arm " + str(side), [(side*.43, .0, -.22),
