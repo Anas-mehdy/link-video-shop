@@ -27,9 +27,15 @@ if not model_roots:
     raise RuntimeError("iPhone model root was not found in the supplied FBX")
 model_root = model_roots[0]
 model_root_name = model_root.name
+if len(model_root.children) < 2:
+    raise RuntimeError("Expected front and rear phone branches")
+# The FBX places two complete phone views side by side. The branch on the
+# positive X side is the rear handset with the camera island.
+rear_branch = max(model_root.children, key=lambda o: o.matrix_world.translation.x)
+rear_branch_name = rear_branch.name
 def within_phone(obj):
     while obj is not None:
-        if obj == model_root:
+        if obj == rear_branch:
             return True
         obj = obj.parent
     return False
@@ -226,7 +232,7 @@ bpy.ops.export_scene.gltf(
 with open(os.path.join(OUT, "character-report.json"), "w") as f:
     json.dump({"rear_sign":rear_sign, "source_vertices":sum(len(o.data.vertices) for o in meshes),
                "glb_bytes":os.path.getsize(os.path.join(OUT, "phone-mascot.glb")),
-               "phone_bounds":list(size), "model_root":model_root_name}, f)
+               "phone_bounds":list(size), "model_root":model_root_name, "rear_branch":rear_branch_name}, f)
 print("CHARACTER_COMPLETE", os.path.getsize(os.path.join(OUT, "phone-mascot.glb")))
 # A fast, static render lets us inspect the phone body even if browser automation stalls.
 case.hide_render = True
