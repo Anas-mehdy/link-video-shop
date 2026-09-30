@@ -36,8 +36,18 @@ for o in meshes:
 rear_sign = 1 if (sum(rear_samples) / len(rear_samples) if rear_samples else lo.y) > center.y else -1
 print("CHARACTER_REAR_SIGN", rear_sign, "samples", len(rear_samples))
 
-# Preserve each imported mesh and its parent transforms. Joining the FBX meshes
-# collapsed the large body to one hundredth of its intended scale.
+# Freeze each mesh in world coordinates, then discard FBX parent transforms.
+# The source has a nested 0.01 scale which otherwise shrinks the body in GLB.
+for obj in meshes:
+    world = obj.matrix_world.copy()
+    obj.data = obj.data.copy()
+    for vertex in obj.data.vertices:
+        vertex.co = world @ vertex.co
+    obj.parent = None
+    obj.matrix_world.identity()
+for obj in list(bpy.context.scene.objects):
+    if obj.type == "EMPTY":
+        bpy.data.objects.remove(obj, do_unlink=True)
 
 def mat(name, rgb, metallic=0, roughness=.4, alpha=1):
     m = bpy.data.materials.new(name)
@@ -68,20 +78,13 @@ for m in bpy.data.materials:
 
 phone = bpy.data.objects.new("Phone", None)
 bpy.context.collection.objects.link(phone)
-for obj in list(bpy.context.scene.objects):
-    if obj != phone and obj.parent is None:
-        obj.parent = phone
+for obj in meshes:
+    obj.parent = phone
 phone.scale = (scale,) * 3
 phone.location = -center * scale
 
-# All added parts are already in normalized phone coordinates, so keep them
-# separate inside a matching transformed root.
 mascot = bpy.data.objects.new("Mascot", None)
 bpy.context.collection.objects.link(mascot)
-phone.location = (0, 0, 0)
-for obj in [o for o in bpy.context.scene.objects if o.parent == phone]:
-    obj.location -= center
-phone.scale = (scale,) * 3
 
 def attach(obj, root=mascot):
     obj.parent = root
