@@ -14,14 +14,40 @@ scene.add(new THREE.HemisphereLight(0xffffff,0x9871ba,2.3));
 const key=new THREE.DirectionalLight(0xffffff,3.3);key.position.set(3,5,5);scene.add(key);
 const fill=new THREE.DirectionalLight(0x6edfff,2.0);fill.position.set(-3,1,-3);scene.add(fill);
 let character,caseMesh,lens,selected=false,progress=0,rearSign=1,dragging=false,spin=0;
+let caseStyle="clear";
+const styles={
+  clear:{edge:0xd5f3ff,back:0xecf8ff,edgeOpacity:.48,backOpacity:.08},
+  smoke:{edge:0x485266,back:0x465066,edgeOpacity:.78,backOpacity:.35},
+  violet:{edge:0x672380,back:0x75338e,edgeOpacity:.82,backOpacity:.42}
+};
+function paintCase(){
+  if(!caseMesh)return;
+  const style=styles[caseStyle];
+  caseMesh.traverse(o=>{
+    if(!o.isMesh)return;
+    const material=o.material;
+    if(!material)return;
+    const back=material.name==="Clear case back";
+    material.color.setHex(back?style.back:style.edge);
+    material.transparent=true;
+    material.opacity=back?style.backOpacity:style.edgeOpacity;
+    material.depthWrite=!back;
+    material.needsUpdate=true;
+  });
+}
+document.querySelectorAll("[data-case-style]").forEach(el=>el.addEventListener("click",()=>{
+  caseStyle=el.dataset.caseStyle;
+  document.querySelectorAll("[data-case-style]").forEach(chip=>chip.setAttribute("aria-pressed",String(chip===el)));
+  paintCase();
+}));
 function resize(){const w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
 new ResizeObserver(resize).observe(host);resize();
 function expression(){
   if(!character)return;
   character.traverse(o=>{
-    if(o.name==="MouthWorried")o.visible=!selected;
-    if(o.name==="MouthNeutral")o.visible=selected;
-    if(o.name==="MouthHappy")o.visible=false;
+    if(o.name.startsWith("MouthWorried"))o.visible=!selected;
+    if(o.name.startsWith("MouthNeutral"))o.visible=selected;
+    if(o.name.startsWith("MouthHappy"))o.visible=false;
   });
 }
 Promise.all([
@@ -32,8 +58,9 @@ Promise.all([
   character=gltf.scene;scene.add(character);
   caseMesh=character.getObjectByName("Case");
   lens=character.getObjectByName("Lens");
-  if(lens)lens.visible=true;
-  camera.position.set(2.7,1.6,-rearSign*5.7);camera.lookAt(0,0,0);
+  if(lens)lens.visible=false;
+  paintCase();
+  camera.position.set(1.9,1.35,-rearSign*5.7);camera.lookAt(0,0,0);
   expression();loading.classList.add("hidden");
 }).catch(e=>{loading.textContent="تعذر تحميل المجسم. أعد فتح الصفحة.";console.error(e)});
 button.addEventListener("click",()=>{
@@ -57,9 +84,12 @@ function animate(){
   const t=clock.getElapsedTime();
   if(character){
     progress+=(Number(selected)-progress)*.075;
-    caseMesh.position.set((-1.5)*(1-progress),.14*(1-progress),-.4*(1-progress));
-    caseMesh.rotation.y=.65*(1-progress);
-    caseMesh.rotation.z=-.32*(1-progress);
+    if(caseMesh){
+      caseMesh.position.set(-1.42*(1-progress),.10*(1-progress),-.25*(1-progress));
+      caseMesh.rotation.y=-.25*(1-progress);
+      caseMesh.rotation.z=-.12*(1-progress);
+      caseMesh.scale.setScalar(.78+.22*progress);
+    }
     character.rotation.y=spin+Math.sin(t*.7)*.045;
     character.position.y=Math.sin(t*1.8)*.025;
     if(lens)lens.rotation.y=Math.sin(t)*.06;
