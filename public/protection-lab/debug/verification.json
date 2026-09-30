@@ -1,0 +1,11 @@
+{
+  "url": "http://127.0.0.1:8765/protection-lab/",
+  "status": 200,
+  "title": "تجربة شخصية الحماية | لنك",
+  "selected": "true",
+  "count": "2",
+  "canvas": 1,
+  "errors": [
+    "Model load timeout: نجهّز شخصية جوالك…"
+  ]
+}
