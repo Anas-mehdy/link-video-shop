@@ -41,9 +41,10 @@ jobs:
           mkdir -p public/protection-lab
           cp prototype/blender/output/phone-mascot.glb public/protection-lab/phone-mascot.glb
           cp prototype/blender/output/character-report.json public/protection-lab/character-report.json
+          cp prototype/blender/output/preview-phone.png public/protection-lab/preview-phone.png
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/protection-lab/phone-mascot.glb public/protection-lab/character-report.json public/protection-lab/app.js
+          git add public/protection-lab/phone-mascot.glb public/protection-lab/character-report.json public/protection-lab/preview-phone.png public/protection-lab/app.js
           if ! git diff --cached --quiet; then
             git commit -m "Build interactive phone mascot from supplied FBX"
             git push origin HEAD:protection-3d-prototype
