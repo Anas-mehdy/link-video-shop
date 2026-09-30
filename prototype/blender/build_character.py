@@ -49,6 +49,14 @@ for obj in list(bpy.context.scene.objects):
     if obj.type == "EMPTY":
         bpy.data.objects.remove(obj, do_unlink=True)
 
+# All meshes now have identity transforms, so joining preserves the full body.
+bpy.ops.object.select_all(action="DESELECT")
+for obj in meshes:
+    obj.select_set(True)
+bpy.context.view_layer.objects.active = meshes[0]
+bpy.ops.object.join()
+meshes = [meshes[0]]
+
 def mat(name, rgb, metallic=0, roughness=.4, alpha=1):
     m = bpy.data.materials.new(name)
     m.diffuse_color = (*rgb, alpha)
