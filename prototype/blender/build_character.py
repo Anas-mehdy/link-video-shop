@@ -228,3 +228,24 @@ with open(os.path.join(OUT, "character-report.json"), "w") as f:
                "glb_bytes":os.path.getsize(os.path.join(OUT, "phone-mascot.glb")),
                "phone_bounds":list(size), "model_root":model_root_name}, f)
 print("CHARACTER_COMPLETE", os.path.getsize(os.path.join(OUT, "phone-mascot.glb")))
+# A fast, static render lets us inspect the phone body even if browser automation stalls.
+case.hide_render = True
+scene = bpy.context.scene
+scene.render.engine = "BLENDER_WORKBENCH"
+scene.display.shading.color_type = "MATERIAL"
+scene.display.shading.light = "STUDIO"
+scene.render.resolution_x = 480
+scene.render.resolution_y = 620
+scene.render.resolution_percentage = 100
+scene.render.film_transparent = True
+preview_camera = bpy.data.objects.new("Preview camera", bpy.data.cameras.new("Preview camera"))
+scene.collection.objects.link(preview_camera)
+scene.camera = preview_camera
+preview_camera.location = (2.0, rear_sign * 5.2, 1.4)
+preview_camera.rotation_euler = (Vector((0, 0, 0)) - preview_camera.location).to_track_quat("-Z", "Y").to_euler()
+preview_camera.data.type = "ORTHO"
+preview_camera.data.ortho_scale = 3.4
+scene.render.image_settings.file_format = "PNG"
+scene.render.filepath = os.path.join(OUT, "preview-phone.png")
+bpy.ops.render.render(write_still=True)
+print("CHARACTER_PREVIEW_COMPLETE")
