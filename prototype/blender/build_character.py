@@ -20,13 +20,34 @@ for obj in list(bpy.context.scene.objects):
     if obj.type in {"LIGHT", "CAMERA"}:
         bpy.data.objects.remove(obj, do_unlink=True)
 
-meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+# The FBX contains an Octane environment and scene helpers much larger than
+# the handset. Only measure and export meshes beneath the iPhone model root.
+model_roots = [o for o in bpy.context.scene.objects if "iPhone_18_2" in o.name]
+if not model_roots:
+    raise RuntimeError("iPhone model root was not found in the supplied FBX")
+model_root = model_roots[0]
+model_root_name = model_root.name
+def within_phone(obj):
+    while obj is not None:
+        if obj == model_root:
+            return True
+        obj = obj.parent
+    return False
+meshes = [o for o in bpy.context.scene.objects if o.type == "MESH" and within_phone(o)]
+if len(meshes) < 10:
+    raise RuntimeError("Phone subtree contains too few meshes: " + str(len(meshes)))
+for obj in list(bpy.context.scene.objects):
+    if obj.type == "MESH" and obj not in meshes:
+        bpy.data.objects.remove(obj, do_unlink=True)
 points = [o.matrix_world @ Vector(c) for o in meshes for c in o.bound_box]
 lo = Vector(min(p[i] for p in points) for i in range(3))
 hi = Vector(max(p[i] for p in points) for i in range(3))
 center = (lo + hi) / 2
 size = hi - lo
+if not .35 < size.x / size.z < .65:
+    raise RuntimeError("Unexpected phone aspect ratio: " + str(tuple(size)))
 scale = 2.0 / size.z
+print("CHARACTER_PHONE_BOUNDS", tuple(size), "meshes", len(meshes))
 
 # "back" FBX material identifies the actual rear surface independent of FBX axis.
 rear_samples = []
@@ -204,5 +225,6 @@ bpy.ops.export_scene.gltf(
     export_cameras=False, export_yup=True)
 with open(os.path.join(OUT, "character-report.json"), "w") as f:
     json.dump({"rear_sign":rear_sign, "source_vertices":sum(len(o.data.vertices) for o in meshes),
-               "glb_bytes":os.path.getsize(os.path.join(OUT, "phone-mascot.glb"))}, f)
+               "glb_bytes":os.path.getsize(os.path.join(OUT, "phone-mascot.glb")),
+               "phone_bounds":list(size), "model_root":model_root_name}, f)
 print("CHARACTER_COMPLETE", os.path.getsize(os.path.join(OUT, "phone-mascot.glb")))
