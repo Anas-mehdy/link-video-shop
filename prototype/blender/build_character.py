@@ -98,16 +98,24 @@ def mat(name, rgb, metallic=0, roughness=.4, alpha=1):
     return m
 
 burgundy = mat("Mascot burgundy", (.28, .055, .17), .48, .27)
-rim = mat("Clear case edge", (.61, .91, 1), .14, .13, .72)
-glass = mat("Clear case back", (.70, .91, 1), .05, .08, .16)
+rim = mat("Clear case edge", (.72, .90, .97), .08, .20, .52)
+glass = mat("Clear case back", (.85, .94, .98), .02, .13, .09)
 white = mat("Eye white", (1, .96, .99), 0, .16)
 black = mat("Ink", (.035, .014, .07), 0, .14)
 blue = mat("Electric cyan", (.02, .73, .98), .25, .16)
 cheek = mat("Cheek", (.91, .28, .56), 0, .5, .8)
 
 for m in bpy.data.materials:
+    target = None
     if "背面-背板" in m.name or "背面-边框" in m.name:
-        m.diffuse_color = (*burgundy.diffuse_color[:3], 1)
+        target = burgundy.diffuse_color[:3]
+    elif m.name == "logo":
+        # The imported white logo sits directly beneath the character's mouth.
+        target = (.25, .045, .145)
+    elif "镜头玻璃" in m.name or "镜面" in m.name:
+        target = (.025, .095, .17)
+    if target is not None:
+        m.diffuse_color = (*target, 1)
         if m.use_nodes and m.node_tree.nodes.get("Principled BSDF"):
             m.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = m.diffuse_color
 
@@ -154,8 +162,8 @@ face_y = rear_sign * (.103)
 front_y = face_y + rear_sign * .035
 for side in (-1, 1):
     x = side * .16
-    sphere("Eye white " + str(side), (x, face_y, .06), (.105, .032, .13), white)
-    sphere("Pupil " + str(side), (x-side*.014, front_y, .047), (.052, .026, .076), black)
+    sphere("Eye white " + str(side), (x, face_y, .06), (.088, .028, .11), white)
+    sphere("Pupil " + str(side), (x-side*.014, front_y, .047), (.045, .025, .065), black)
     sphere("Eye glint " + str(side), (x-side*.028, front_y+rear_sign*.02, .083), (.017, .011, .023), white, seg=16)
     sphere("Blush " + str(side), (side*.315, face_y, -.10), (.052, .008, .026), cheek)
     tube("Worried brow " + str(side),
@@ -197,11 +205,11 @@ def bar(name, at, dims, material):
     return attach(o, case)
 
 for x in (-.494, .494):
-    bar("Case vertical rail", (x, case_y, 0), (.035,.064,1.99), rim)
-for z in (-1.004, 1.004):
-    bar("Case horizontal rail", (0, case_y, z), (.99,.064,.035), rim)
-bar("Case left side", (-.49, 0, 0), (.026,.24,1.97), rim)
-bar("Case right side", (.49, 0, 0), (.026,.24,1.97), rim)
+    bar("Case vertical rail", (x, case_y, 0), (.023,.045,1.98), rim)
+for z in (-.994, .994):
+    bar("Case horizontal rail", (0, case_y, z), (.99,.045,.023), rim)
+bar("Case left side", (-.49, 0, 0), (.021,.19,1.96), rim)
+bar("Case right side", (.49, 0, 0), (.021,.19,1.96), rim)
 # Five transparent panels leave a camera island open on the upper left.
 bar("Case lower pane", (0, case_y, -.30), (.94,.012,1.35), glass)
 bar("Case upper right pane", (.18, case_y, .72), (.58,.012,.55), glass)
@@ -236,6 +244,13 @@ with open(os.path.join(OUT, "character-report.json"), "w") as f:
 print("CHARACTER_COMPLETE", os.path.getsize(os.path.join(OUT, "phone-mascot.glb")))
 # A fast, static render lets us inspect the phone body even if browser automation stalls.
 case.hide_render = True
+for obj in case.children:
+    obj.hide_render = True
+for obj in lens.children:
+    obj.hide_render = True
+for obj in bpy.context.scene.objects:
+    if obj.name.startswith("MouthNeutral") or obj.name.startswith("MouthHappy"):
+        obj.hide_render = True
 scene = bpy.context.scene
 scene.render.engine = "BLENDER_WORKBENCH"
 scene.display.shading.color_type = "MATERIAL"
