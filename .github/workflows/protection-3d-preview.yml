@@ -65,3 +65,16 @@ jobs:
           name: protection-3d-mobile
           path: prototype/web/screenshots/
           if-no-files-found: warn
+      - name: Publish verification screenshots on experiment branch
+        if: always()
+        run: |
+          if [ -f prototype/web/screenshots/verification.json ]; then
+            mkdir -p public/protection-lab/debug
+            cp prototype/web/screenshots/{before.png,after.png,verification.json} public/protection-lab/debug/
+            git pull --rebase origin protection-3d-prototype
+            git add public/protection-lab/debug
+            if ! git diff --cached --quiet; then
+              git commit -m "Capture mobile prototype verification"
+              git push origin HEAD:protection-3d-prototype
+            fi
+          fi
