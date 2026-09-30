@@ -180,7 +180,7 @@ tube("MouthHappy", [(-.13, front_y, -.21), (0, front_y, -.30),
                      (.13, front_y, -.21)], .018, black)
 
 # Add three dark camera optics over the FBX's flat grey placeholders.
-for index, (lens_x, lens_z) in enumerate(((.30, .74), (-.01, .64), (.30, .45))):
+for index, (lens_x, lens_z) in enumerate(((.30, .88), (.10, .73), (.30, .58))):
     sphere("Camera optic rim " + str(index),
            (lens_x, rear_sign * .155, lens_z), (.095, .022, .095), lens_metal, seg=32)
     sphere("Camera optic glass " + str(index),
