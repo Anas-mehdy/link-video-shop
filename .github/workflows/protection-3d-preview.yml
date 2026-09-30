@@ -5,6 +5,9 @@ on:
     branches: [protection-3d-prototype]
     paths:
       - "prototype/blender/**"
+      - "prototype/web/**"
+      - "public/protection-lab/index.html"
+      - "public/protection-lab/style.css"
       - ".github/workflows/protection-3d-preview.yml"
   workflow_dispatch:
 
