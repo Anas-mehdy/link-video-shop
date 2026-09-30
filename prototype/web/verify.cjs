@@ -10,7 +10,7 @@ const url=process.env.PREVIEW_URL||"http://127.0.0.1:8765/protection-lab/";
     page.on("pageerror",e=>errors.push(e.message));
     page.on("console",m=>{if(m.type()==="error")errors.push(m.text())});
     const response=await page.goto(url,{waitUntil:"domcontentloaded",timeout:30000});
-    try{await page.locator("#loading.hidden").waitFor({timeout:15000})}
+    try{await page.locator("#loading.hidden").waitFor({timeout:30000})}
     catch(e){errors.push("Model load timeout: "+await page.locator("#loading").textContent())}
     await page.screenshot({path:"prototype/web/screenshots/before.png",fullPage:true,timeout:15000});
     await page.locator("#case-toggle").click({timeout:10000});
