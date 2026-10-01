@@ -52,6 +52,20 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.176.0/examples/jsm/"}}
   </script>
+  <script>
+    if (new URLSearchParams(location.search).has('embed')) {
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+      const section = document.querySelector('.teaser');
+      const reportHeight = () => window.parent.postMessage({
+        type: 'link-wrap-3d-height',
+        height: Math.ceil(section.getBoundingClientRect().height)
+      }, '*');
+      new ResizeObserver(reportHeight).observe(section);
+      window.addEventListener('load', reportHeight);
+      reportHeight();
+    }
+  </script>
   <script type="module" src="/wrap-teaser-3d.js"></script>
 </body>
 </html>
