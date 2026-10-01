@@ -1,4 +1,4 @@
-/* Link Store product videos v1 — no database credentials, no autoplay on page load. */
+/* Link Store product videos v2 — no database credentials, no autoplay on page load. */
 (function () {
   'use strict';
   if (window.__linkProductVideos) return;
@@ -52,10 +52,11 @@
     const style = el('style');
     style.textContent = `
       :host{font-family:inherit;color:#24152e;direction:rtl}*{box-sizing:border-box}
-      h2{font-size:22px;margin:0 0 6px}p{font-size:14px;color:#777;margin:0 0 16px}
+      h2{font-size:22px;margin:0 0 6px;text-align:center}p{font-size:14px;color:#777;margin:0 0 16px;text-align:center}
       .rail{display:flex;gap:12px;overflow-x:auto;padding:2px 2px 12px;scroll-snap-type:x mandatory}
       button{font:inherit;cursor:pointer}button:focus-visible{outline:3px solid #ab6bdd;outline-offset:3px}
       .card{position:relative;flex:0 0 156px;aspect-ratio:9/16;overflow:hidden;border:0;border-radius:18px;background:linear-gradient(145deg,#351347,#702790);color:white;scroll-snap-align:start;padding:0}
+      .card:first-child{margin-inline-start:auto}.card:last-child{margin-inline-end:auto}
       .card img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
       .play{position:absolute;top:40%;left:calc(50% - 25px);width:50px;height:50px;border-radius:50%;background:#fff;color:#51007a;display:grid;place-items:center;font-size:22px}
       .label{position:absolute;bottom:0;right:0;left:0;padding:35px 10px 12px;background:linear-gradient(transparent,rgba(0,0,0,.8));font-size:13px;line-height:1.6}
@@ -110,7 +111,7 @@
     videos.forEach(video => {
       const card = el('button', '', 'card'); card.type = 'button';
       card.setAttribute('aria-label', 'مشاهدة ' + (video.title || 'فيديو المنتج'));
-      const img = el('img'); img.alt = ''; img.loading = 'lazy'; img.hidden = true;
+      const img = el('img'); img.alt = ''; img.loading = 'eager'; img.decoding = 'async'; img.style.opacity = '0';
       const play = el('span', '▶', 'play'); play.setAttribute('aria-hidden', 'true');
       card.append(img, play, el('span', video.title || 'شاهد الفيديو', 'label')); rail.append(card);
       card.onclick = () => {
@@ -121,7 +122,9 @@
       const key = 'lvs-tiktok-cover-v2-' + video.tiktok_video_id;
       function show(url) {
         if (typeof url !== 'string' || !url.startsWith('https://')) return;
-        img.onload = () => { img.hidden = false; }; img.src = url;
+        img.onload = () => { img.style.opacity = '1'; };
+        img.onerror = () => { img.style.opacity = '0'; try { localStorage.removeItem(key); } catch (_) {} };
+        img.src = url;
       }
       async function cover() {
         try {
