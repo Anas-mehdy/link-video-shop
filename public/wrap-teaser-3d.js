@@ -72,8 +72,8 @@ function coatMaterial() {
         float ribbon = pow(max(0.0, sin(vSurface.z * 0.014 - uReveal * 0.019)), 13.0);
         float glint = pow(1.0 - abs(vNormal.z), 2.0);
         vec3 tint = mix(vec3(0.25, 0.75, 1.0), vec3(0.91, 0.98, 1.0), min(1.0, front * 1.4 + ribbon * 0.55));
-        float alpha = (0.20 + front * 0.61 + ribbon * 0.14 + glint * 0.10) * uOpacity;
-        gl_FragColor = vec4(tint, clamp(alpha, 0.0, 0.87));
+        float alpha = (0.07 + front * 0.67 + ribbon * 0.10 + glint * 0.05) * uOpacity;
+        gl_FragColor = vec4(tint, clamp(alpha, 0.0, 0.80));
       }
     `,
   });
@@ -163,8 +163,12 @@ function init(sceneModel) {
   rim.position.set(4, 1, -4); scene.add(rim);
 
   sceneModel.updateMatrixWorld(true);
-  const target = sceneModel.getObjectByName('_iPhone_18_2') ||
-    sceneModel.getObjectByName('_iPhone_18') || sceneModel;
+  // The FBX contains two complete phones staged beside one another. Use only
+  // the back-facing assembly; the other assembly is a separate duplicate.
+  const assembly = sceneModel.getObjectByName('_iPhone_18_2');
+  const target = assembly?.children.find(child => child.name === 'hWnSpblQztGYOgB') ||
+    assembly?.children.filter(child => child.children.length)
+      .sort((a, b) => a.position.x - b.position.x)[0] || sceneModel;
   const model = target.clone(true);
   if (target.parent) model.applyMatrix4(target.parent.matrixWorld);
   let meshCount = 0;
