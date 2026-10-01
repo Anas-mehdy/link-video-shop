@@ -8,7 +8,6 @@ const reaction = document.getElementById('reaction');
 const status = document.getElementById('model-status');
 const canvas = document.getElementById('phone-canvas');
 
-let dragging = false;
 let finishTimer;
 let renderer, scene, camera, rig, filmMaterials = [];
 let progress = 0;
@@ -97,7 +96,7 @@ function setProgress(value) {
   for (const material of filmMaterials) material.uniforms.uOpacity.value = 1;
   phone.classList.remove('finished');
   reaction.classList.remove('visible');
-  prompt.textContent = 'اسحب ولف الجوال وركّب التغليف ↔';
+  prompt.textContent = 'اسحب الخط الأزرق ولف الجوال ↔';
   if (progress >= 99) {
     prompt.textContent = 'لحظة… شوف النتيجة';
     finishTimer = setTimeout(() => {
@@ -117,19 +116,6 @@ function setProgress(value) {
   render();
 }
 
-function fromPointer(event) {
-  const rect = phone.getBoundingClientRect();
-  setProgress((event.clientX - rect.left) / rect.width * 100);
-}
-
-phone.addEventListener('pointerdown', event => {
-  dragging = true;
-  phone.setPointerCapture(event.pointerId);
-  fromPointer(event);
-});
-phone.addEventListener('pointermove', event => { if (dragging) fromPointer(event); });
-phone.addEventListener('pointerup', () => { dragging = false; });
-phone.addEventListener('pointercancel', () => { dragging = false; });
 slider.addEventListener('input', () => setProgress(slider.value));
 
 async function loadModel() {
