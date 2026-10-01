@@ -193,9 +193,11 @@ function init(sceneModel) {
   const center = bounds.getCenter(new THREE.Vector3());
   const size = bounds.getSize(new THREE.Vector3());
   centerHolder.position.sub(center);
-  rig.add(centerHolder);
+  const oriented = new THREE.Group();
+  oriented.add(centerHolder);
+  rig.add(oriented);
   rig.scale.setScalar(4.5 / Math.max(size.x,size.y,size.z));
-  if (size.z > size.y * 1.2) rig.rotation.x = -Math.PI / 2;
+  if (size.z > size.y * 1.2) oriented.rotation.x = -Math.PI / 2;
 
   function resize() {
     const width = phone.clientWidth;
