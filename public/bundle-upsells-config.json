@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "bundles": {
+    "1545880750": {
+      "model": "S24 Ultra",
+      "price": 139,
+      "screens": [
+        {
+          "id": 1532361636,
+          "name": "لامع شفاف",
+          "price": 79,
+          "options": {
+            "647266834": 1324172275
+          },
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-galaxy-s24-ultra/p1532361636"
+        },
+        {
+          "id": 1419612280,
+          "name": "لامع خصوصية",
+          "price": 69,
+          "options": {
+            "548196364": 86076602
+          },
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-خصوصي-galaxy-s24-ultra/p1419612280"
+        }
+      ],
+      "accessories": [
+        {
+          "id": 387390654,
+          "name": "حامل Link المغناطيسي للسيارة – LUX",
+          "price": 45,
+          "image": "https://cdn.salla.sa/Zpqzp/75f2866a-e73a-441f-aff0-57af073887fb-500x500-UIC6zqHbtxGZJaJ08zPeanCmdE6PQfRFaZ1Qcm8E.png",
+          "url": "https://linkstore-sa.com/حامل-link-lux-المغناطيسي-للسيارة-magsafe-مع-قاعدة-شفط/p387390654"
+        },
+        {
+          "id": 102701081,
+          "name": "باور بنك Link 10000mAh – شحن سريع 20W",
+          "price": 89,
+          "image": "https://cdn.salla.sa/Zpqzp/a8c82c42-0838-41ee-93f9-9162301de5f9-500x500-zYYoLNkmMUlUEJwYXNvEczg8rmbhmVgnLivb2XVk.jpg",
+          "url": "https://linkstore-sa.com/باور-بنك-link-10000mah-شحن-سريع-20w-تصميم-سليم/p102701081"
+        }
+      ]
+    },
+    "1721100195": {
+      "model": "S25 Ultra",
+      "price": 139,
+      "screens": [
+        {
+          "id": 507932650,
+          "name": "لامع شفاف",
+          "price": 79,
+          "options": {
+            "1804210818": 2140376548
+          },
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-galaxy-s25-ultra/p507932650"
+        },
+        {
+          "id": 1176062352,
+          "name": "لامع خصوصية",
+          "price": 109,
+          "options": {
+            "1662176703": 96167858
+          },
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-خصوصي-galaxy-s25-ultra/p1176062352"
+        },
+        {
+          "id": 476321222,
+          "name": "مطفي خصوصية",
+          "price": 79,
+          "options": {
+            "1407253324": 1987214374
+          },
+          "url": "https://linkstore-sa.com/استيكر-link-مطفي-خصوصي-galaxy-s25/p476321222"
+        }
+      ],
+      "accessories": [
+        {
+          "id": 387390654,
+          "name": "حامل Link المغناطيسي للسيارة – LUX",
+          "price": 45,
+          "image": "https://cdn.salla.sa/Zpqzp/75f2866a-e73a-441f-aff0-57af073887fb-500x500-UIC6zqHbtxGZJaJ08zPeanCmdE6PQfRFaZ1Qcm8E.png",
+          "url": "https://linkstore-sa.com/حامل-link-lux-المغناطيسي-للسيارة-magsafe-مع-قاعدة-شفط/p387390654"
+        },
+        {
+          "id": 102701081,
+          "name": "باور بنك Link 10000mAh – شحن سريع 20W",
+          "price": 89,
+          "image": "https://cdn.salla.sa/Zpqzp/a8c82c42-0838-41ee-93f9-9162301de5f9-500x500-zYYoLNkmMUlUEJwYXNvEczg8rmbhmVgnLivb2XVk.jpg",
+          "url": "https://linkstore-sa.com/باور-بنك-link-10000mah-شحن-سريع-20w-تصميم-سليم/p102701081"
+        }
+      ]
+    },
+    "2079294120": {
+      "model": "S23 Ultra",
+      "price": 139,
+      "screens": [
+        {
+          "id": 1955030432,
+          "name": "لامع شفاف",
+          "price": 79,
+          "options": {
+            "1971685499": 299688789
+          },
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-galaxy-s23-ultra/p1955030432"
+        }
+      ],
+      "accessories": [
+        {
+          "id": 387390654,
+          "name": "حامل Link المغناطيسي للسيارة – LUX",
+          "price": 45,
+          "image": "https://cdn.salla.sa/Zpqzp/75f2866a-e73a-441f-aff0-57af073887fb-500x500-UIC6zqHbtxGZJaJ08zPeanCmdE6PQfRFaZ1Qcm8E.png",
+          "url": "https://linkstore-sa.com/حامل-link-lux-المغناطيسي-للسيارة-magsafe-مع-قاعدة-شفط/p387390654"
+        },
+        {
+          "id": 102701081,
+          "name": "باور بنك Link 10000mAh – شحن سريع 20W",
+          "price": 89,
+          "image": "https://cdn.salla.sa/Zpqzp/a8c82c42-0838-41ee-93f9-9162301de5f9-500x500-zYYoLNkmMUlUEJwYXNvEczg8rmbhmVgnLivb2XVk.jpg",
+          "url": "https://linkstore-sa.com/باور-بنك-link-10000mah-شحن-سريع-20w-تصميم-سليم/p102701081"
+        }
+      ]
+    }
+  }
+}
