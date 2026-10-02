@@ -23,6 +23,7 @@
     const style = el('style');
     style.textContent = '.link-bundle-extra{direction:rtl;font-family:inherit;box-sizing:border-box;color:#281b30;width:100%;margin:20px 0;padding:18px;border:1px solid #e6d9ec;border-radius:16px;background:#fcf9fe}.link-bundle-extra h2{font-size:19px;font-weight:700;margin:0 0 6px}.link-bundle-extra p{font-size:13px;line-height:1.7;margin:5px 0;color:#74617e}.link-bundle-extra label{display:flex;gap:10px;align-items:center;padding:12px;border:1px solid #e9e1ed;border-radius:12px;background:white;margin:8px 0;cursor:pointer}.link-bundle-extra label:has(input:checked){border-color:#51007a;background:#f3eaf8}.link-bundle-extra input{accent-color:#51007a;width:18px;height:18px}.link-bundle-extra strong{margin-inline-start:auto;color:#51007a;white-space:nowrap}.link-bundle-extra .lb-summary{color:#51007a;font-weight:700}.link-bundle-extra button{font:inherit;border:0;border-radius:10px;padding:10px 14px;cursor:pointer;background:#51007a;color:white}.link-bundle-extra button:disabled{opacity:.5;cursor:wait}.link-bundle-extra button:focus-visible,.link-bundle-extra a:focus-visible{outline:3px solid #b479d0;outline-offset:3px}.link-bundle-extra .lb-row{display:flex;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid #eee5f2}.link-bundle-extra .lb-row:last-child{border-bottom:0}.link-bundle-extra img{width:70px;height:70px;object-fit:contain;background:white;border-radius:10px}.link-bundle-extra .lb-copy{flex:1;min-width:0}.link-bundle-extra a{color:inherit;font-weight:600;font-size:14px;text-decoration:none}.link-bundle-extra .lb-status{color:#51007a}@media(max-width:390px){.link-bundle-extra{padding:12px}.link-bundle-extra .lb-row{gap:8px}.link-bundle-extra img{width:52px;height:52px}.link-bundle-extra .lb-row button{padding:9px;font-size:12px}}';
     document.head.append(style);
+    style.textContent += 'form[data-link-screen-selected] salla-mini-checkout-widget,form[data-link-screen-selected] salla-quick-buy{display:none!important}';
     const screen = el('section', '', 'link-bundle-extra');
     screen.id = 'link-bundle-screen';
     screen.setAttribute('aria-label', 'كمّل حماية جوالك');
@@ -44,6 +45,8 @@
     });
     function quantity() {const q = Number(form.querySelector('[name="quantity"]')?.value || 1); return Number.isInteger(q) && q > 0 ? q : 1;}
     function updateSummary() {
+      // Checkout shortcuts purchase only the native bundle. Use the cart flow when an add-on is selected.
+      form.toggleAttribute('data-link-screen-selected', Boolean(selected));
       summary.textContent = selected ? 'الباكج مع الاستيكر: ' + money(config.price + selected.price) + ' للقطعة' : 'الباكج: ' + money(config.price);
     }
     screen.append(summary, el('p', 'اختياري. يُضاف الاستيكر كمنتج مستقل بنفس عدد الباكجات، مع تحديد موديل Ultra تلقائيًا. السعر النهائي والتوفر يُؤكّدان في السلة.'), status, retry);
