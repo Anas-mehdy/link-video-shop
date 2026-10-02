@@ -49,7 +49,7 @@
       form.toggleAttribute('data-link-screen-selected', Boolean(selected));
       summary.textContent = selected ? 'الباكج مع الاستيكر: ' + money(config.price + selected.price) + ' للقطعة' : 'الباكج: ' + money(config.price);
     }
-    screen.append(summary, el('p', 'اختياري. يُضاف الاستيكر كمنتج مستقل بنفس عدد الباكجات، مع تحديد موديل Ultra تلقائيًا. السعر النهائي والتوفر يُؤكّدان في السلة.'), status, retry);
+    screen.append(summary, el('p', 'اختياري. اختر الاستيكر واضغط «أضف للسلة». الأسعار الموضحة قبل خصومات السلة.'), status, retry);
     // Unnamed picker fields are excluded from Salla's native FormData.
     const pickerAnchor = button.closest('.sticky-product-bar') || button.parentElement;
     pickerAnchor.before(screen);
