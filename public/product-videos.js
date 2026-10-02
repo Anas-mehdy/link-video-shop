@@ -161,3 +161,21 @@
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true}); else start();
 })();
+
+
+/* Optional add-ons: restricted to the three Samsung Ultra bundle pages. */
+(function () {
+  if (window.__linkBundleLoader) return;
+  window.__linkBundleLoader = true;
+  function loadBundleAdditions() {
+    if (!/\/p(1721100195|1545880750|2079294120)\/?$/.test(location.pathname)) return;
+    if (document.getElementById('link-bundle-upsells-loader')) return;
+    var script = document.createElement('script');
+    script.id = 'link-bundle-upsells-loader';
+    script.src = 'https://link-video-shop.vercel.app/bundle-upsells.js?v=1';
+    script.async = true;
+    document.head.appendChild(script);
+  }
+  loadBundleAdditions();
+  window.addEventListener('pageshow', loadBundleAdditions);
+})();
