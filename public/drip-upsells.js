@@ -126,7 +126,7 @@
       });
       row.append(image,copy,add);accessories.append(row);
     }
-    form.after(accessories);return true;
+    (button.closest('.sticky-product-bar')||button.parentElement).after(accessories);return true;
   }
   fetch(base+'/drip-upsells-config.json?v=1',{credentials:'omit'}).then(r=>r.ok?r.json():null).then(data=>{
     const config=data?.products?.[id];if(!config)return;
