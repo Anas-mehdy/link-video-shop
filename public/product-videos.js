@@ -179,3 +179,20 @@
   loadBundleAdditions();
   window.addEventListener('pageshow', loadBundleAdditions);
 })();
+
+/* Model-specific Drip case protection and accessory additions. */
+(function () {
+  if (window.__linkDripLoader) return;
+  window.__linkDripLoader = true;
+  function loadDripAdditions() {
+    if (!/\/p(101121129|1335345819|1622979904|284157041)\/?$/.test(location.pathname)) return;
+    if (document.getElementById('link-drip-upsells-loader')) return;
+    var script = document.createElement('script');
+    script.id = 'link-drip-upsells-loader';
+    script.src = 'https://link-video-shop.vercel.app/drip-upsells.js?v=1';
+    script.async = true;
+    document.head.appendChild(script);
+  }
+  loadDripAdditions();
+  window.addEventListener('pageshow', loadDripAdditions);
+})();
