@@ -236,6 +236,74 @@
         }
       ]
     },
+    "387390654": {
+      "accessoriesOnly": true,
+      "accessories": [
+        {
+          "id": 346029211,
+          "name": "شاحن سيارة لنك سريع 60W بمنفذين Type-C",
+          "price": 89,
+          "image": "https://cdn.salla.sa/Zpqzp/36e2f3e2-b1ae-4cd7-96ed-e11a620b1265-500x500-Yaph4yNkFR8WuexECkP0r7tDqeeh0QsX8Mk0TN9x.jpg",
+          "url": "https://linkstore-sa.com/شاحن-سيارة-لنك-سريع-60w-بمنفذين-type-c/p346029211",
+          "available": true,
+          "choices": []
+        },
+        {
+          "id": 2112678166,
+          "name": "شاحن لنك الجداري السريع 45W Type-C",
+          "price": 89,
+          "image": "https://cdn.salla.sa/Zpqzp/f8c9a963-d869-4122-a8b7-4db6036aacec-500x500-3DfGLBpE0wodjokWzgCV5mVc0yKUWuk3hLRPq7Kh.jpg",
+          "url": "https://linkstore-sa.com/شاحن-لنك-الجداري-السريع-45w-type-c/p2112678166",
+          "available": true,
+          "choices": []
+        },
+        {
+          "id": 2114039606,
+          "name": "وصلة شحن Link تايب سي × تايب سي | 2 م",
+          "price": 55,
+          "image": "https://cdn.salla.sa/Zpqzp/b0029e9c-e21b-4303-988f-364c3f1ef6c4-500x500-M2q0XB6V9I7GCfaFRhkPNJ8gZ5q2kKMerGIAqtjb.png",
+          "url": "https://linkstore-sa.com/وصلة-شحن-link-تايب-سي-تايب-سي-2-م/p2114039606",
+          "available": true,
+          "choices": []
+        },
+        {
+          "id": 360076697,
+          "name": "وصلة شحن Link تايب سي × آيفون | 1.2 م",
+          "price": 55,
+          "image": "https://cdn.salla.sa/Zpqzp/f06ce66b-178b-4f8b-8962-8c7857ca632a-500x500-Hl5dOtA5QMOgz1o6FPjsi7dnOvQbOv7fEkqFpgYY.png",
+          "url": "https://linkstore-sa.com/وصلة-شحن-link-تايب-سي-آيفون-12-م/p360076697",
+          "available": true,
+          "choices": []
+        },
+        {
+          "id": 168140647,
+          "name": "وصلة شحن Link تايب سي × آيفون | 2 م",
+          "price": 55,
+          "image": "https://cdn.salla.sa/Zpqzp/2d805b20-7406-46de-b19d-44ebe4e63fc0-500x500-wfsPxtyg11wFaIPnEN4mgVI2zw21365RNmPV7alz.png",
+          "url": "https://linkstore-sa.com/وصلة-شحن-link-تايب-سي-آيفون-2-م/p168140647",
+          "available": true,
+          "choices": []
+        },
+        {
+          "id": 102701081,
+          "name": "باور بنك Link 10000mAh – شحن سريع 20W",
+          "price": 89,
+          "image": "https://cdn.salla.sa/Zpqzp/a8c82c42-0838-41ee-93f9-9162301de5f9-500x500-zYYoLNkmMUlUEJwYXNvEczg8rmbhmVgnLivb2XVk.jpg",
+          "url": "https://linkstore-sa.com/باور-بنك-link-10000mah-شحن-سريع-20w-تصميم-سليم/p102701081",
+          "available": true,
+          "choices": []
+        },
+        {
+          "id": 1380241917,
+          "name": "باور بنك Link مغناطيسي 3×1 – سعة 10000mAh",
+          "price": 119,
+          "image": "https://cdn.salla.sa/Zpqzp/29131435-87d1-45fb-bc26-cbec016bfb8e-500x500-am1iwYzjLxgL5m4Oy48th8XXWME8gYFVu0ttyY1T.jpg",
+          "url": "https://linkstore-sa.com/باور-بنك-link-مغناطيسي-10000mah-شحن-لاسلكي-magsafe-وpd-20w/p1380241917",
+          "available": true,
+          "choices": []
+        }
+      ]
+    },
     "1335345819": {
       "model": "iPhone 17 Pro Max",
       "items": [
