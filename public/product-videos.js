@@ -141,7 +141,7 @@
       cover();
     });
     if (token !== generation) return;
-    if (ctx.mount) ctx.mount.append(host); else ctx.anchor.after(host);
+    if (ctx.mount) ctx.mount.append(host); else (document.getElementById('link-drip-accessories') || ctx.anchor).after(host);
     cleanup = () => { if (dialog.open) { dialog.close(); stop(); } host.remove(); };
   }
   function check() {
