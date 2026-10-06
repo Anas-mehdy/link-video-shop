@@ -1,0 +1,20 @@
+:root{color-scheme:dark;--admin-bg:#0e111a;--admin-surface:#171a25;--admin-raised:#202432;--admin-line:#303446;--admin-text:#f0edf6;--admin-muted:#adb0c2;--admin-accent:#c5a0ff}
+body{background:var(--admin-bg);color:var(--admin-text);font-size:17px;line-height:1.7}
+.card,.panel,.login,.top{background:var(--admin-surface);border-color:var(--admin-line)}
+.catalog,.selected{background:var(--admin-raised)}
+input,textarea,select,input[type=text],input[type=search]{background:var(--admin-raised);color:var(--admin-text);border-color:#3a3f53;font:inherit}
+input::placeholder,textarea::placeholder{color:var(--admin-muted)}
+input[type=checkbox]{accent-color:var(--admin-accent)}
+button{font:inherit;font-weight:600;color:var(--admin-text)}
+.primary{background:#8141c2;color:#fff}.primary:hover{background:#9456d3}
+.ghost,.pill,.master,.item.on{background:#30223f;color:#e3caff}
+.danger{background:#3e242e;color:#ff91a1}
+.sub,.meta,.muted,.item small,.choice small{color:var(--admin-muted);font-size:15px}
+label,.item b,.choice,.top a,.status,.tag{font-size:16px}
+.pill{font-size:14px}.name{font-size:18px}
+.tag,.status,.top b,.top a{color:var(--admin-accent)}
+.product,.item,.choices,.choice{border-color:var(--admin-line)}
+.notice{background:#332b20;color:#eed299;font-size:16px}
+.thumb{background:var(--admin-raised)}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #b995ff;outline-offset:3px}
+@media(max-width:620px){.top{flex-wrap:wrap}.top .links{flex-wrap:wrap}.top a{font-size:14px}.layout{min-width:0}}
