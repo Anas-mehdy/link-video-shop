@@ -7,6 +7,7 @@
     customers: '<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0112 0v3M16 5a3 3 0 010 6M21 21v-3a6 6 0 00-3-5"/>',
     carts: '<path d="M3 3h2l3 12h11l2-8H6M9 20h.01M18 20h.01"/>',
     ads: '<path d="M4 20h16M6 16V9M12 16V4M18 16v-5"/>',
+    whatsapp: '<path d="M21 11.5a9 9 0 01-13 8L3 21l1.5-5A9 9 0 1121 11.5zM8 8c0 4 4 7 7 7"/>',
     automations: '<path d="M13 2L4 14h7l-1 8 10-13h-7z"/>',
     integrations: '<path d="M9 7H7a5 5 0 000 10h2M15 7h2a5 5 0 010 10h-2M8 12h8"/>',
     events: '<path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/>',
@@ -14,7 +15,7 @@
     protection: '<path d="M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
   };
-  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['customers','العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
+  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['customers','العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.overview}</svg>`;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt = value => value == null ? '—' : Number(value).toLocaleString('ar-SA');
@@ -118,6 +119,7 @@
       }catch(e){toast(e.message);b.disabled=false;}
     });
     if (page==='ads') window.LinkAds.bind({navigate,toast});
+    if (page==='whatsapp') window.LinkWhatsApp.bind({navigate,toast,api});
     if (recordState[page]) {
       const resource=page,state=recordState[resource];
       $('records-search')?.addEventListener('submit',e=>{e.preventDefault();state.search=e.target.elements.search.value.trim();state.page=1;navigate(resource);});
@@ -125,7 +127,7 @@
       $('records-prev')?.addEventListener('click',()=>{state.page=Math.max(1,state.page-1);navigate(resource);});
       $('records-next')?.addEventListener('click',()=>{state.page++;navigate(resource);});
     }
-    $('content').querySelectorAll('[data-page]').forEach(b => b.addEventListener('click', () => navigate(b.dataset.page)));
+    $('content').querySelectorAll('[data-page]').forEach(b => { if(b.closest('#wa-section'))return; b.addEventListener('click', () => navigate(b.dataset.page)); });
     $('content').querySelectorAll('[data-rule]').forEach(form => form.addEventListener('submit', async e => {
       e.preventDefault(); const b = form.querySelector('button'); b.disabled = true;
       try { await api('rules',{method:'PATCH',body:JSON.stringify({id:form.dataset.rule,enabled:form.elements.enabled.checked,delay_minutes:Number(form.elements.delay.value)})}); toast('تم حفظ إعدادات الاختبار'); } catch(e) { toast(e.message); } finally { b.disabled = false; }
@@ -156,6 +158,7 @@
     try {
       let html;
       if (page==='overview') { overview=await api('overview'); html=home(overview); }
+      else if (page==='whatsapp') { html=window.LinkWhatsApp.render(await api('whatsapp')); }
       else if (page==='ads') { html=await window.LinkAds.load(token); }
       else if (recordState[page]) { const state=recordState[page]; html=recordsView(page,await api(`${page}&${new URLSearchParams({page:state.page,search:state.search})}`)); }
       else if (page==='automations') { const {rules}=await api('rules'); html=rulesView(rules); }
@@ -171,7 +174,7 @@
           (message?`<div class="notice ${result.get('result')==='success'?'':'warn'}">${message}</div>`:'')+
           `<section class="panel">${connectionRows(overview.data.connections)}</section><section class="panel"><h3>ربط إعلانات سناب شات</h3><p class="muted">وافق من حساب سناب الذي لديه صلاحية الوصول إلى إعلانات لنك. نحفظ التفويض مشفراً، ثم تختار الحساب الإعلاني لعرض إحصائياته في صفحة الإعلانات.</p>`+
           (!snapConfig?.ready?`<div class="notice warn">${snapConfig?.missing?.length?'أكمل متغيرات Vercel: '+snapConfig.missing.map(esc).join('، '):'تحقق من إعدادات الربط؛ رابط الرجوع أو مفتاح التشفير غير صالح، أو الخدمة غير متاحة.'}</div>`:'')+
-          `<div class="form-row"><button class="primary" id="snapchat-start" ${snapConfig?.ready?'':'disabled'}>${snap?.status==='connected'?'إعادة تفويض سناب شات':'ربط سناب شات'}</button>${snap?.status==='connected'?`<button class="secondary" id="snapchat-refresh" ${snapConfig?.ready?'':'disabled'}>تجديد التفويض</button>`:''}</div><p class="muted">اختر الحساب الذي تريد عرض إحصائياته.</p><button class="secondary" id="snapchat-accounts" ${snap?.status==='connected'?'':'disabled'}>اختيار الحساب الإعلاني</button><div id="snapchat-account-picker"></div></section><section class="panel"><h3>ربط سلة</h3><p class="muted">بعد تفعيل التطبيق، نستقبل تفويض المتجر ونحفظ بياناته المشفرة. ظهور الحالة «متصل» يعني وصول التفويض، ولا يعني اكتمال مزامنة الطلبات والعملاء.</p></section>`;
+          `<div class="form-row"><button class="primary" id="snapchat-start" ${snapConfig?.ready?'':'disabled'}>${snap?.status==='connected'?'إعادة تفويض سناب شات':'ربط سناب شات'}</button>${snap?.status==='connected'?`<button class="secondary" id="snapchat-refresh" ${snapConfig?.ready?'':'disabled'}>تجديد التفويض</button>`:''}</div><p class="muted">اختر الحساب الذي تريد عرض إحصائياته.</p><button class="secondary" id="snapchat-accounts" ${snap?.status==='connected'?'':'disabled'}>اختيار الحساب الإعلاني</button><div id="snapchat-account-picker"></div></section><section class="panel"><h3>ربط واتساب</h3><p class="muted">جهّز الرقم ومسودات متابعة العملاء من مساحة واتساب.</p><button class="secondary" data-page="whatsapp">فتح قسم واتساب ←</button></section><section class="panel"><h3>ربط سلة</h3><p class="muted">بعد تفعيل التطبيق، نستقبل تفويض المتجر ونحفظ بياناته المشفرة. ظهور الحالة «متصل» يعني وصول التفويض، ولا يعني اكتمال مزامنة الطلبات والعملاء.</p></section>`;
         if(message)history.replaceState(null,'',`${location.pathname}#integrations`);
       }
       else if (page==='videos' || page==='protection') { const url=page==='videos'?'/video-shop-admin':'/protection-admin'; html=heading(title,'أدوات المتجر الحالية داخل مساحة لنك.',`<a class="back-link" href="${url}" target="_blank" rel="noopener">فتح في صفحة مستقلة ↗</a>`)+`<iframe class="embed" title="${title}" src="${url}"></iframe>`; }
