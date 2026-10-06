@@ -6,6 +6,7 @@
     orders: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h3"/>',
     customers: '<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0112 0v3M16 5a3 3 0 010 6M21 21v-3a6 6 0 00-3-5"/>',
     carts: '<path d="M3 3h2l3 12h11l2-8H6M9 20h.01M18 20h.01"/>',
+    ads: '<path d="M4 20h16M6 16V9M12 16V4M18 16v-5"/>',
     automations: '<path d="M13 2L4 14h7l-1 8 10-13h-7z"/>',
     integrations: '<path d="M9 7H7a5 5 0 000 10h2M15 7h2a5 5 0 010 10h-2M8 12h8"/>',
     events: '<path d="M5 3h14v18H5zM8 7h8M8 11h8M8 15h5"/>',
@@ -13,7 +14,7 @@
     protection: '<path d="M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
   };
-  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['customers','العملاء'],['carts','السلات المتروكة'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
+  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['customers','العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.overview}</svg>`;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt = value => value == null ? '—' : Number(value).toLocaleString('ar-SA');
@@ -78,6 +79,7 @@
       `<section class="panel"><form id="records-search" class="form-row"><div class="form-field"><label for="search-term">البحث</label><input id="search-term" name="search" maxlength="100" value="${esc(state.search)}" placeholder="${placeholder}"></div><button class="primary" type="submit">بحث</button><button class="secondary" type="button" id="clear-search">مسح البحث</button></form></section><section class="panel">${table}<div class="records-pagination"><button class="secondary" id="records-prev" ${result.page===1 ? 'disabled' : ''}>السابق</button><span>الصفحة ${fmt(result.page)} · ${fmt(result.records.length)} سجل</span><button class="secondary" id="records-next" ${result.has_more ? '' : 'disabled'}>التالي</button></div></section>`;
   }
   function bindContent() {
+    if (page==='ads') window.LinkAds.bind({navigate,toast});
     if (recordState[page]) {
       const resource=page,state=recordState[resource];
       $('records-search')?.addEventListener('submit',e=>{e.preventDefault();state.search=e.target.elements.search.value.trim();state.page=1;navigate(resource);});
@@ -116,6 +118,7 @@
     try {
       let html;
       if (page==='overview') { overview=await api('overview'); html=home(overview); }
+      else if (page==='ads') { html=window.LinkAds.render(); }
       else if (recordState[page]) { const state=recordState[page]; html=recordsView(page,await api(`${page}&${new URLSearchParams({page:state.page,search:state.search})}`)); }
       else if (page==='automations') { const {rules}=await api('rules'); html=rulesView(rules); }
       else if (page==='events') { const {events}=await api('events'); html=heading(title,'كل حدث يصل إلى اللوحة، مع حالته ووقت استقباله.')+`<section class="panel">${eventTable(events)}</section>`; }
