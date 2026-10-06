@@ -5,8 +5,19 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 module.exports = async function handler(req, res) {
   noCache(res);
   try {
-    requireAdmin(req);
     const resource = req.query?.resource || 'overview';
+    if(resource==='auth') {
+      const auth=require('../lib/admin-auth'),action=req.query?.action||'session';
+      try {
+        if(req.method==='GET'&&action==='config')return json(res,200,{ok:true,mode:auth.mode()});
+        if(auth.mode()!=='supabase')return json(res,400,{ok:false,error:'تسجيل حسابات سوبابيس لم يُفعّل بعد'});
+        if(req.method==='POST'&&action==='login')return json(res,200,{ok:true,user:await auth.login(req,res,bodyObject(req))});
+        if(req.method==='GET'&&action==='session')return json(res,200,{ok:true,user:await auth.session(req,res)});
+        if(req.method==='POST'&&action==='logout'){await auth.logout(req,res);return json(res,200,{ok:true});}
+        return json(res,405,{ok:false,error:'Method not allowed'});
+      }catch(e){if(e.statusCode===401&&action==='session')auth.clearSession(res);return json(res,[400,401,403,429,503].includes(e.statusCode)?e.statusCode:503,{ok:false,error:e.statusCode?e.message:'تعذر تسجيل الدخول'});}
+    }
+    await requireAdmin(req);
     if (resource === 'whatsapp' && req.method === 'GET') return json(res,200,{ok:true,...await require('../lib/whatsapp-workspace').load()});
     if (resource === 'whatsapp' && req.method === 'PUT') return json(res,200,{ok:true,...await require('../lib/whatsapp-workspace').save(bodyObject(req))});
     if (req.method === 'GET' && resource === 'overview') {

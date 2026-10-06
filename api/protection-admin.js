@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
   cors(req, res);
   if (req.method === 'OPTIONS') return json(res, 204, {});
   try {
-    requireAdmin(req);
+    await requireAdmin(req);
     if (req.method === 'GET') {
       const [settings, rules, live] = await Promise.all([
         sb(`protection_settings?merchant_id=eq.${MERCHANT_ID}&select=enabled,default_mode`),

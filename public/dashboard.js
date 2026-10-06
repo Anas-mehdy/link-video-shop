@@ -24,7 +24,7 @@
   const recordState = Object.fromEntries(['orders','customers','carts'].map(key => [key,{page:1,search:''}]));
   const money = (value, currency) => `${fmt(value)} ${esc(currency || '—')}`;
   async function api(resource, options = {}) {
-    const res = await fetch(`/api/crm-admin?resource=${resource}`, { ...options, headers: { Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, cache:'no-store' });
+    const res = await window.LinkAuth.fetch(`/api/crm-admin?resource=${resource}`, { ...options, headers: { Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, cache:'no-store' });
     let data;
     try { data = await res.json(); } catch { throw new Error('تعذر قراءة استجابة الخادم'); }
     if (res.status === 401) { token = ''; sessionStorage.removeItem('lvs_admin'); $('app').hidden = true; $('login').hidden = false; throw new Error('رمز الإدارة غير صحيح أو انتهت الجلسة'); }
@@ -84,7 +84,7 @@
       const b=e.currentTarget;b.disabled=true;
       const target=$('snapchat-account-picker');
       try{
-        const res=await fetch('/api/snapchat-connect?action=accounts',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+        const res=await window.LinkAuth.fetch('/api/snapchat-connect?action=accounts',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
         const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||'تعذر تحميل الحسابات');
         if(!target.isConnected)return;
         if(!data.accounts.length){target.innerHTML='<p class="muted">لا توجد حسابات إعلانية متاحة لهذا التفويض.</p>';return;}
@@ -92,7 +92,7 @@
         $('snapchat-account-form').addEventListener('submit',async event=>{
           event.preventDefault();const form=event.currentTarget,save=form.querySelector('button');save.disabled=true;
           try{
-            const response=await fetch('/api/snapchat-connect?action=select',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({account_id:form.elements.account.value}),cache:'no-store'});
+            const response=await window.LinkAuth.fetch('/api/snapchat-connect?action=select',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({account_id:form.elements.account.value}),cache:'no-store'});
             const saved=await response.json();if(!response.ok||!saved.ok)throw new Error(saved.error||'تعذر حفظ الحساب');
             window.LinkAds.invalidate();await navigate('ads');toast('تم حفظ الحساب؛ تحميل إحصائيات سناب');
           }catch(error){toast(error.message);save.disabled=false;}
@@ -102,7 +102,7 @@
     $('snapchat-start')?.addEventListener('click',async e=>{
       const b=e.currentTarget;b.disabled=true;
       try {
-        const res=await fetch('/api/snapchat-connect?action=start',{method:'POST',headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+        const res=await window.LinkAuth.fetch('/api/snapchat-connect?action=start',{method:'POST',headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
         const data=await res.json();
         if(!res.ok||!data.ok)throw new Error(data.error||'تعذر بدء التفويض');
         const url=new URL(data.url);
@@ -113,7 +113,7 @@
     $('snapchat-refresh')?.addEventListener('click',async e=>{
       const b=e.currentTarget;b.disabled=true;
       try {
-        const res=await fetch('/api/snapchat-connect?action=refresh',{method:'POST',headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+        const res=await window.LinkAuth.fetch('/api/snapchat-connect?action=refresh',{method:'POST',headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
         const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||'تعذر تجديد التفويض');
         await navigate('integrations');toast('تم تجديد تفويض سناب');
       }catch(e){toast(e.message);b.disabled=false;}
@@ -166,7 +166,7 @@
       else if (page==='integrations') {
         overview=await api('overview');
         let snapConfig=null;
-        try { const r=await fetch('/api/snapchat-connect',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});if(r.ok)snapConfig=await r.json(); } catch {}
+        try { const r=await window.LinkAuth.fetch('/api/snapchat-connect',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});if(r.ok)snapConfig=await r.json(); } catch {}
         const snap=overview.data.connections?.find(c=>c.provider==='snapchat');
         const result=new URLSearchParams(location.search);
         const message=result.get('connection')==='snapchat'?({success:snap?.status==='connected'?'تم حفظ تفويض سناب بنجاح. اختر الحساب الإعلاني أدناه لعرض إحصائياته.':'تحقق من حالة الاتصال؛ تعذر تأكيد التفويض المحفوظ.',cancelled:'تم إلغاء الموافقة من سناب. يمكنك إعادة المحاولة.',failed:'لم يكتمل تفويض سناب. ابدأ الربط مجدداً من هذا المتصفح، وتحقق من إعدادات Vercel.'}[result.get('result')]||''):'';
@@ -178,24 +178,33 @@
         if(message)history.replaceState(null,'',`${location.pathname}#integrations`);
       }
       else if (page==='videos' || page==='protection') { const url=page==='videos'?'/video-shop-admin':'/protection-admin'; html=heading(title,'أدوات المتجر الحالية داخل مساحة لنك.',`<a class="back-link" href="${url}" target="_blank" rel="noopener">فتح في صفحة مستقلة ↗</a>`)+`<iframe class="embed" title="${title}" src="${url}"></iframe>`; }
-      else if (page==='settings') { html=heading(title,'إعدادات مساحة العمل وتجهيز المرحلة التالية.')+`<section class="panel"><div class="settings-list"><div><span>المتجر</span><b>Link Store</b></div><div><span>معرّف المتجر</span><code>1829345766</code></div><div><span>المنطقة الزمنية للعرض</span><b>السعودية</b></div><div><span>المصادقة الحالية</span><b>رمز إدارة الفيديو شوب</b></div><div><span>تشغيل الأتمتة</span><span class="badge">اختبار فقط</span></div></div></section><section class="panel"><h3>الطلبات والعملاء والسلات</h3><p class="muted">تمت مراجعة أعمدة الجداول وإعداد عرض سجلاتها. الخطوة القادمة تفعيل تطبيق سلة وربط الأحداث والمزامنة بالجداول.</p></section>`; }
+      else if (page==='settings') { html=heading(title,'إعدادات مساحة العمل وتجهيز المرحلة التالية.')+`<section class="panel"><div class="settings-list"><div><span>المتجر</span><b>Link Store</b></div><div><span>معرّف المتجر</span><code>1829345766</code></div><div><span>المنطقة الزمنية للعرض</span><b>السعودية</b></div><div><span>المصادقة الحالية</span><b>${window.LinkAuth.mode==='supabase'?'Supabase Auth · حسابات مصرح لها':'رمز إدارة الفيديو شوب'}</b></div><div><span>تشغيل الأتمتة</span><span class="badge">اختبار فقط</span></div></div></section><section class="panel"><h3>الطلبات والعملاء والسلات</h3><p class="muted">تمت مراجعة أعمدة الجداول وإعداد عرض سجلاتها. الخطوة القادمة تفعيل تطبيق سلة وربط الأحداث والمزامنة بالجداول.</p></section>`; }
       else { html=heading(title,'مساحة جاهزة لاستقبال بيانات المتجر.')+`<section class="panel">${empty('الربط في المرحلة التالية','الجدول موجود في قاعدة البيانات. سنربطه هنا بعد مراجعة أعمدته وتجهيز مزامنة سلة، لتظهر بيانات دقيقة وقابلة للاستخدام.',page)}</section>`; }
       if(id!==requestId || currentPage!==page)return;
       $('content').innerHTML=html; bindContent();
     }catch(e){if(id===requestId){$('content').innerHTML=heading(title,'')+`<section class="panel">${empty('تعذر تحميل هذا القسم',esc(e.message))}</section>`;}}
   }
   async function enter() {
-    overview=await api('overview'); sessionStorage.setItem('lvs_admin',token); $('login').hidden=true; $('app').hidden=false;
+    overview=await api('overview'); if(window.LinkAuth.mode==='legacy')sessionStorage.setItem('lvs_admin',token); $('login').hidden=true; $('app').hidden=false;
     await navigate(location.hash.slice(1)||'overview');
   }
   $('nav').innerHTML=pages.map(([id,label])=>`<button class="nav-button" data-page="${id}">${svg(id)}<span>${label}</span></button>`).join('');
   $('nav').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
-  $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('admin-token').value.trim();const b=e.target.querySelector('button');b.disabled=true;$('login-error').textContent='';try{await enter();$('admin-token').value='';}catch(e){$('login-error').textContent=e.message;}finally{b.disabled=false;}});
-  $('logout').addEventListener('click',()=>{sessionStorage.removeItem('lvs_admin');location.reload();});
+  $('login-form').addEventListener('submit',async e=>{
+    e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;$('login-error').textContent='';
+    try{await window.LinkAuth.init();if(window.LinkAuth.mode==='supabase'){const result=await window.LinkAuth.login($('login-email').value.trim(),$('login-password').value);token='session';$('user-avatar').textContent=(result.user.email||'L').slice(0,1).toUpperCase();$('user-avatar').title=result.user.email;$('login-password').value='';}else token=$('admin-token').value.trim();await enter();$('admin-token').value='';}catch(error){$('login-error').textContent=error.message;}finally{b.disabled=false;}
+  });
+  $('logout').addEventListener('click',async()=>{try{await window.LinkAuth.logout();location.reload();}catch(e){toast(e.message);}});
+  window.addEventListener('link-auth-expired',()=>{token='';$('app').hidden=true;$('login').hidden=false;$('login-error').textContent='انتهت الجلسة؛ سجّل الدخول مجدداً';});
   $('refresh').addEventListener('click',()=>{if(page==='ads')window.LinkAds.invalidate();navigate(page);});
   $('menu-toggle').addEventListener('click',()=>{const open=$('sidebar').classList.toggle('open');$('menu-toggle').setAttribute('aria-expanded',String(open));});
   document.addEventListener('click',e=>{if(!e.target.closest('#sidebar')&&!e.target.closest('#menu-toggle')){$('sidebar').classList.remove('open');$('menu-toggle').setAttribute('aria-expanded','false');}});
   window.addEventListener('hashchange',()=>{const next=location.hash.slice(1);if(token&&next!==page)navigate(next);});
   $('today').textContent=new Date().toLocaleDateString('ar-SA',{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Riyadh'});
-  if(token)enter().catch(e=>{$('login-error').textContent=e.message;});
+  window.LinkAuth.init().then(async mode=>{
+    $('account-login').hidden=mode!=='supabase';$('legacy-login').hidden=mode==='supabase';$('admin-token').required=mode==='legacy';$('login-email').required=mode==='supabase';$('login-password').required=mode==='supabase';
+    $('login-note').textContent=mode==='supabase'?'الدخول متاح للحسابات المصرح لها بإدارة لنك فقط.':'الدخول الحالي يعمل حتى إكمال إعداد حسابات Supabase.';
+    if(mode==='supabase'){token='';try{const result=await window.LinkAuth.session();token='session';$('user-avatar').textContent=(result.user.email||'L').slice(0,1).toUpperCase();$('user-avatar').title=result.user.email;await enter();}catch(e){if(e.status!==401)$('login-error').textContent=e.message;}}
+    else if(token)await enter();
+  }).catch(e=>{$('login-error').textContent=e.message;});
 })();

@@ -4,7 +4,7 @@ module.exports = async function handler(req, res) {
   cors(req, res);
   if (req.method === 'OPTIONS') return json(res, 204, {});
   try {
-    requireAdmin(req);
+    await requireAdmin(req);
     if (req.method !== 'GET') return json(res, 405, {ok:false,error:'Method not allowed'});
 
     const q = String(req.query?.q || '').trim().slice(0,80);

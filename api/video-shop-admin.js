@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return json(res, 204, {});
 
   try {
-    requireAdmin(req);
+    await requireAdmin(req);
 
     if (req.method === 'GET') {
       const videos = await sb(`video_shop_videos?merchant_id=eq.${MERCHANT_ID}&order=sort_order.asc&select=*`);

@@ -3,7 +3,7 @@ const snap = require('../lib/snapchat');
 module.exports = async function handler(req,res) {
   noCache(res);
   try {
-    requireAdmin(req);
+    await requireAdmin(req);
     if (req.method==='GET') {
       if(req.query?.action==='accounts')return json(res,200,{ok:true,...await require('../lib/snapchat-reporting').accounts()});
       if(req.query?.action==='report')return json(res,200,{ok:true,...await require('../lib/snapchat-reporting').report(req.query.from,req.query.to)});

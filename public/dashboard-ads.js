@@ -38,7 +38,7 @@
       const key=reportKey(),from=state.from,to=state.to,cached=reports.get(key);
       if(!cached||Date.now()-cached.at>60000){
         try{
-          const response=await fetch(`/api/snapchat-connect?${new URLSearchParams({action:'report',from,to})}`,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+          const response=await window.LinkAuth.fetch(`/api/snapchat-connect?${new URLSearchParams({action:'report',from,to})}`,{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
           const data=await response.json();
           if(!response.ok||!data.ok)throw new Error(data.error||'تعذر تحميل تقرير سناب');
           reports.set(key,{at:Date.now(),data});

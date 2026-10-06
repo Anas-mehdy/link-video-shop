@@ -17,14 +17,14 @@ button{border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:poin
 .login{max-width:430px;margin:80px auto}.hidden{display:none!important}.status{font-size:12px;color:#777}
 @media(max-width:720px){.grid{grid-template-columns:1fr}.video{grid-template-columns:56px 1fr}.video .actions{grid-column:1/-1}.thumb{width:56px;height:75px}}
 </style><link rel="stylesheet" href="/admin-dark.css">
-</head>
+<script src="/dashboard-auth.js"></script></head>
 <body>
 <div id="login" class="wrap login">
   <div class="card">
     <h1>Link Video Shop</h1>
     <p class="sub">لوحة إدارة فيديوهات الصفحة الرئيسية</p>
-    <label>رمز الإدارة</label>
-    <input id="token" type="password" placeholder="VIDEO_SHOP_ADMIN_TOKEN">
+    <div id="legacy-login"><label>رمز الإدارة</label>
+    <input id="token" type="password" placeholder="VIDEO_SHOP_ADMIN_TOKEN"></div><div id="account-login" hidden><label for="email">البريد الإلكتروني</label><input id="email" type="email" autocomplete="username"><label for="password">كلمة المرور</label><input id="password" type="password" autocomplete="current-password"></div>
     <button class="primary" style="width:100%;margin-top:10px" onclick="login()">دخول</button>
     <div id="loginStatus" class="status" style="margin-top:8px"></div>
   </div>
@@ -72,17 +72,16 @@ let videosById=new Map(), editingId=null, saving=false, originalProductIds=[];
 
 async function api(url,opt={}){
   opt.headers={...(opt.headers||{}),'Authorization':'Bearer '+TOKEN,'Content-Type':'application/json'};
-  const r=await fetch(url,opt); const j=await r.json().catch(()=>({}));
+  const r=await LinkAuth.fetch(url,opt); const j=await r.json().catch(()=>({}));
   if(!r.ok) throw new Error(j.error||('HTTP '+r.status)); return j;
 }
 async function login(){
-  TOKEN=document.getElementById('token').value.trim();
-  try{await api('/api/video-shop-admin');sessionStorage.setItem('lvs_admin',TOKEN);showApp()}
-  catch(e){document.getElementById('loginStatus').textContent='الرمز غير صحيح أو إعدادات السيرفر غير مكتملة'}
+  try{await LinkAuth.init();if(LinkAuth.mode==='supabase'){await LinkAuth.login(document.getElementById('email').value.trim(),document.getElementById('password').value);document.getElementById('password').value='';TOKEN='session';}else{TOKEN=document.getElementById('token').value.trim();await api('/api/video-shop-admin');sessionStorage.setItem('lvs_admin',TOKEN);}await showApp();}catch(e){document.getElementById('loginStatus').textContent=e.message;}
 }
-function logout(){sessionStorage.removeItem('lvs_admin');location.reload()}
-async function showApp(){document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');await loadVideos()}
-if(TOKEN){showApp().catch(()=>logout())}
+async function logout(){try{await LinkAuth.logout();location.reload();}catch(e){document.getElementById('formStatus').textContent=e.message;}}
+async function showApp(){await loadVideos();document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');}
+LinkAuth.init().then(async mode=>{document.getElementById('account-login').hidden=mode!=='supabase';document.getElementById('legacy-login').hidden=mode==='supabase';if(mode==='supabase'){try{await LinkAuth.session();TOKEN='session';await showApp();}catch(e){if(e.status!==401)document.getElementById('loginStatus').textContent=e.message;}}else if(TOKEN)await showApp();}).catch(e=>document.getElementById('loginStatus').textContent=e.message);
+window.addEventListener('link-auth-expired',()=>{document.getElementById('app').classList.add('hidden');document.getElementById('login').classList.remove('hidden');});
 
 let timer;
 function searchProducts(){
