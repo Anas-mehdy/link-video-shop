@@ -79,6 +79,25 @@
       `<section class="panel"><form id="records-search" class="form-row"><div class="form-field"><label for="search-term">البحث</label><input id="search-term" name="search" maxlength="100" value="${esc(state.search)}" placeholder="${placeholder}"></div><button class="primary" type="submit">بحث</button><button class="secondary" type="button" id="clear-search">مسح البحث</button></form></section><section class="panel">${table}<div class="records-pagination"><button class="secondary" id="records-prev" ${result.page===1 ? 'disabled' : ''}>السابق</button><span>الصفحة ${fmt(result.page)} · ${fmt(result.records.length)} سجل</span><button class="secondary" id="records-next" ${result.has_more ? '' : 'disabled'}>التالي</button></div></section>`;
   }
   function bindContent() {
+    $('snapchat-accounts')?.addEventListener('click',async e=>{
+      const b=e.currentTarget;b.disabled=true;
+      const target=$('snapchat-account-picker');
+      try{
+        const res=await fetch('/api/snapchat-connect?action=accounts',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+        const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||'تعذر تحميل الحسابات');
+        if(!target.isConnected)return;
+        if(!data.accounts.length){target.innerHTML='<p class="muted">لا توجد حسابات إعلانية متاحة لهذا التفويض.</p>';return;}
+        target.innerHTML=`<form id="snapchat-account-form" class="form-row" style="margin-top:16px"><div class="form-field"><label for="snapchat-account-id">الحساب الإعلاني</label><select id="snapchat-account-id" name="account" required><option value="">اختر حساب لنك</option>${data.accounts.map(a=>`<option value="${esc(a.id)}" ${data.selected?.id===a.id?'selected':''}>${esc(a.name)} · ${esc(a.currency)} · ${esc(a.timezone)} · ${esc(a.id)}</option>`).join('')}</select></div><button class="primary" type="submit">حفظ الحساب</button></form>`;
+        $('snapchat-account-form').addEventListener('submit',async event=>{
+          event.preventDefault();const form=event.currentTarget,save=form.querySelector('button');save.disabled=true;
+          try{
+            const response=await fetch('/api/snapchat-connect?action=select',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({account_id:form.elements.account.value}),cache:'no-store'});
+            const saved=await response.json();if(!response.ok||!saved.ok)throw new Error(saved.error||'تعذر حفظ الحساب');
+            window.LinkAds.invalidate();await navigate('ads');toast('تم حفظ الحساب؛ تحميل إحصائيات سناب');
+          }catch(error){toast(error.message);save.disabled=false;}
+        });
+      }catch(error){toast(error.message);}finally{b.disabled=false;}
+    });
     $('snapchat-start')?.addEventListener('click',async e=>{
       const b=e.currentTarget;b.disabled=true;
       try {
@@ -137,7 +156,7 @@
     try {
       let html;
       if (page==='overview') { overview=await api('overview'); html=home(overview); }
-      else if (page==='ads') { html=window.LinkAds.render(); }
+      else if (page==='ads') { html=await window.LinkAds.load(token); }
       else if (recordState[page]) { const state=recordState[page]; html=recordsView(page,await api(`${page}&${new URLSearchParams({page:state.page,search:state.search})}`)); }
       else if (page==='automations') { const {rules}=await api('rules'); html=rulesView(rules); }
       else if (page==='events') { const {events}=await api('events'); html=heading(title,'كل حدث يصل إلى اللوحة، مع حالته ووقت استقباله.')+`<section class="panel">${eventTable(events)}</section>`; }
@@ -147,12 +166,12 @@
         try { const r=await fetch('/api/snapchat-connect',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});if(r.ok)snapConfig=await r.json(); } catch {}
         const snap=overview.data.connections?.find(c=>c.provider==='snapchat');
         const result=new URLSearchParams(location.search);
-        const message=result.get('connection')==='snapchat'?({success:snap?.status==='connected'?'تم حفظ تفويض سناب بنجاح. الخطوة التالية تحديد الحساب الإعلاني وربط إحصائياته.':'تحقق من حالة الاتصال؛ تعذر تأكيد التفويض المحفوظ.',cancelled:'تم إلغاء الموافقة من سناب. يمكنك إعادة المحاولة.',failed:'لم يكتمل تفويض سناب. ابدأ الربط مجدداً من هذا المتصفح، وتحقق من إعدادات Vercel.'}[result.get('result')]||''):'';
+        const message=result.get('connection')==='snapchat'?({success:snap?.status==='connected'?'تم حفظ تفويض سناب بنجاح. اختر الحساب الإعلاني أدناه لعرض إحصائياته.':'تحقق من حالة الاتصال؛ تعذر تأكيد التفويض المحفوظ.',cancelled:'تم إلغاء الموافقة من سناب. يمكنك إعادة المحاولة.',failed:'لم يكتمل تفويض سناب. ابدأ الربط مجدداً من هذا المتصفح، وتحقق من إعدادات Vercel.'}[result.get('result')]||''):'';
         html=heading(title,'حالة اتصال المتجر والقنوات التي سنجمعها في مساحة واحدة.')+
           (message?`<div class="notice ${result.get('result')==='success'?'':'warn'}">${message}</div>`:'')+
-          `<section class="panel">${connectionRows(overview.data.connections)}</section><section class="panel"><h3>ربط إعلانات سناب شات</h3><p class="muted">وافق من حساب سناب الذي لديه صلاحية الوصول إلى إعلانات لنك. نحفظ التفويض مشفراً، ثم نحدد الحساب الإعلاني ونربط إحصائياته في الخطوة التالية.</p>`+
+          `<section class="panel">${connectionRows(overview.data.connections)}</section><section class="panel"><h3>ربط إعلانات سناب شات</h3><p class="muted">وافق من حساب سناب الذي لديه صلاحية الوصول إلى إعلانات لنك. نحفظ التفويض مشفراً، ثم تختار الحساب الإعلاني لعرض إحصائياته في صفحة الإعلانات.</p>`+
           (!snapConfig?.ready?`<div class="notice warn">${snapConfig?.missing?.length?'أكمل متغيرات Vercel: '+snapConfig.missing.map(esc).join('، '):'تحقق من إعدادات الربط؛ رابط الرجوع أو مفتاح التشفير غير صالح، أو الخدمة غير متاحة.'}</div>`:'')+
-          `<div class="form-row"><button class="primary" id="snapchat-start" ${snapConfig?.ready?'':'disabled'}>${snap?.status==='connected'?'إعادة تفويض سناب شات':'ربط سناب شات'}</button>${snap?.status==='connected'?`<button class="secondary" id="snapchat-refresh" ${snapConfig?.ready?'':'disabled'}>تجديد التفويض</button>`:''}</div><p class="muted">تفويض المنصة لا يعني أن إحصائيات الإعلانات بدأت بالمزامنة.</p></section><section class="panel"><h3>ربط سلة</h3><p class="muted">بعد تفعيل التطبيق، نستقبل تفويض المتجر ونحفظ بياناته المشفرة. ظهور الحالة «متصل» يعني وصول التفويض، ولا يعني اكتمال مزامنة الطلبات والعملاء.</p></section>`;
+          `<div class="form-row"><button class="primary" id="snapchat-start" ${snapConfig?.ready?'':'disabled'}>${snap?.status==='connected'?'إعادة تفويض سناب شات':'ربط سناب شات'}</button>${snap?.status==='connected'?`<button class="secondary" id="snapchat-refresh" ${snapConfig?.ready?'':'disabled'}>تجديد التفويض</button>`:''}</div><p class="muted">اختر الحساب الذي تريد عرض إحصائياته.</p><button class="secondary" id="snapchat-accounts" ${snap?.status==='connected'?'':'disabled'}>اختيار الحساب الإعلاني</button><div id="snapchat-account-picker"></div></section><section class="panel"><h3>ربط سلة</h3><p class="muted">بعد تفعيل التطبيق، نستقبل تفويض المتجر ونحفظ بياناته المشفرة. ظهور الحالة «متصل» يعني وصول التفويض، ولا يعني اكتمال مزامنة الطلبات والعملاء.</p></section>`;
         if(message)history.replaceState(null,'',`${location.pathname}#integrations`);
       }
       else if (page==='videos' || page==='protection') { const url=page==='videos'?'/video-shop-admin':'/protection-admin'; html=heading(title,'أدوات المتجر الحالية داخل مساحة لنك.',`<a class="back-link" href="${url}" target="_blank" rel="noopener">فتح في صفحة مستقلة ↗</a>`)+`<iframe class="embed" title="${title}" src="${url}"></iframe>`; }
@@ -170,7 +189,7 @@
   $('nav').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
   $('login-form').addEventListener('submit',async e=>{e.preventDefault();token=$('admin-token').value.trim();const b=e.target.querySelector('button');b.disabled=true;$('login-error').textContent='';try{await enter();$('admin-token').value='';}catch(e){$('login-error').textContent=e.message;}finally{b.disabled=false;}});
   $('logout').addEventListener('click',()=>{sessionStorage.removeItem('lvs_admin');location.reload();});
-  $('refresh').addEventListener('click',()=>navigate(page));
+  $('refresh').addEventListener('click',()=>{if(page==='ads')window.LinkAds.invalidate();navigate(page);});
   $('menu-toggle').addEventListener('click',()=>{const open=$('sidebar').classList.toggle('open');$('menu-toggle').setAttribute('aria-expanded',String(open));});
   document.addEventListener('click',e=>{if(!e.target.closest('#sidebar')&&!e.target.closest('#menu-toggle')){$('sidebar').classList.remove('open');$('menu-toggle').setAttribute('aria-expanded','false');}});
   window.addEventListener('hashchange',()=>{const next=location.hash.slice(1);if(token&&next!==page)navigate(next);});

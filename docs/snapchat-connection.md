@@ -30,8 +30,31 @@ Do not log incoming callback URLs in custom request logging.
 
 The authenticated refresh action renews expired/nearly expired tokens using the
 saved refresh token; conditional updates avoid overwriting a newer connection.
-There is no scheduled refresh until reporting ingestion is implemented.
+Reporting and account discovery refresh tokens on demand. There is no background schedule.
 
-Connected means OAuth credentials were durably saved. Advertiser account selection,
-reporting ingestion and dashboard statistics are the next step and are not enabled.
+Connected means OAuth credentials were durably saved. Click Choose advertiser account
+on the integrations page, choose the Link Store account and save. The backend checks
+permission via GET /v1/adaccounts/{id} before saving an allowlisted account object
+inside the encrypted credential blob using a conditional update. Refresh preserves it.
+
+Reporting uses GET /v1/adaccounts/{id}/stats with DAY granularity and no campaign/ad
+breakdown. It requests spend, impressions, swipes, conversion_purchases and
+conversion_purchases_value. All monetary values are converted from microcurrency
+by dividing by 1,000,000 exactly once. Dates include both endpoints using the
+account's local midnight; end_time is next-day midnight, including DST offsets.
+Ranges are validated and limited to 366 days per request. Missing days/fields
+remain unavailable rather than silently becoming zero. CTR/CPC/CPM/ROAS use
+period totals; a zero denominator produces an unavailable ratio.
+
+Attribution is explicit: 28-day swipe-up, 1-day view, conversion reporting time.
+The UI labels it and identifies swipes as Snapchat clicks. Reports are fetched
+on page load/filter change and cached only in the admin tab for 60 seconds per
+period. The refresh button clears that cache. Nothing is aggregated with other
+unconnected platforms; all-platform totals are explicitly Snapchat-only for now.
+There is no scheduled n8n sync or persisted reporting table yet. No SQL is needed.
+
+Official API references:
+- https://developers.snap.com/marketing-api/Ads-API/organizations
+- https://developers.snap.com/marketing-api/Ads-API/ad-accounts
+- https://developers.snap.com/marketing-api/Ads-API/measurement
 The setup endpoint reports missing variable names only to an authenticated admin.

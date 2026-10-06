@@ -64,9 +64,9 @@ test('provider or storage failures never report success or disclose raw errors',
   }
 });
 test('refresh uses stored refresh token and conditional encrypted update',async()=>{
-  const encrypted=snap.encrypt({...tokens,client_id:'client-id'});let calls=0;
+  const encrypted=snap.encrypt({...tokens,client_id:'client-id',account:{id:'selected-account'}});let calls=0;
   global.fetch=async(url,opts)=>{calls++;if(opts.method==='POST'){assert.equal(new URLSearchParams(opts.body).get('grant_type'),'refresh_token');assert.equal(new URLSearchParams(opts.body).get('refresh_token'),'refresh-private');return json({...tokens,access_token:'new-private'});}
-    if(opts.method==='PATCH'){assert.ok(String(url).includes('credentials_encrypted=eq.'));const body=JSON.parse(opts.body);assert.equal(snap.decrypt(body.credentials_encrypted).access_token,'new-private');assert.ok(!opts.body.includes('new-private'));return json([{provider:'snapchat'}]);}
+    if(opts.method==='PATCH'){assert.ok(String(url).includes('credentials_encrypted=eq.'));const body=JSON.parse(opts.body);assert.equal(snap.decrypt(body.credentials_encrypted).access_token,'new-private');assert.equal(snap.decrypt(body.credentials_encrypted).account.id,'selected-account');assert.ok(!opts.body.includes('new-private'));return json([{provider:'snapchat'}]);}
     return json([{status:'connected',credentials_encrypted:encrypted,token_expires_at:'2026-01-01T00:00:00Z'}]);};
   const r=response();await connect(request('POST',{action:'refresh'}),r);assert.equal(r.statusCode,200);assert.equal(calls,3);assert.deepEqual(JSON.parse(r.body),{ok:true});
 });
