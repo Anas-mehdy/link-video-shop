@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light"><title>لنك | لوحة إدارة المتجر</title>
+  <link rel="stylesheet" href="/dashboard.css"><script src="/dashboard.js" defer></script>
+</head>
+<body>
+  <section id="login" class="login-shell">
+    <div class="login-brand"><span class="brand-mark">L<span>↗</span></span><p>متجرك، في مكان واحد.</p><h1>مساحة لنك لإدارة<br>العلاقات والنمو</h1><p>المنتجات، الفيديوهات، والتكاملات.<br>أساس واحد لكل ما سنبنيه معًا.</p><div class="brand-orbit"></div></div>
+    <form id="login-form" class="login-card"><span class="eyebrow">LINK STORE · CONTROL ROOM</span><h2>أهلًا بك في لنك</h2><p class="muted">سجّل دخولك إلى لوحة إدارة المتجر</p><label for="admin-token">رمز الإدارة الحالي</label><input id="admin-token" type="password" autocomplete="current-password" required placeholder="أدخل رمز إدارة الفيديو شوب"><button class="primary" type="submit">الدخول إلى اللوحة <span>←</span></button><p id="login-error" class="error" role="alert"></p><small class="muted">استخدم رمز الإدارة الذي تستخدمه حاليًا للفيديو شوب.</small></form>
+  </section>
+  <div id="app" class="app" hidden>
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="/dashboard"><span class="brand-mark small">L<span>↗</span></span><div><b>لنك</b><small>لوحة إدارة المتجر</small></div></a>
+      <div class="store-chip"><span class="store-avatar">ل</span><div><b>Link Store</b><small dir="ltr">linkstore-sa.com</small></div><span class="store-dot"></span></div>
+      <span class="nav-caption">إدارة المتجر</span><nav id="nav" aria-label="القائمة الرئيسية"></nav>
+      <div class="sidebar-bottom"><div class="foundation-note"><span class="tiny-dot"></span>نبني الأساس، خطوة بخطوة<small>النسخة الأولى · استقبال وربط واختبار</small></div><button id="logout" class="logout">تسجيل الخروج <span>↗</span></button></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><div class="breadcrumb"><button id="menu-toggle" class="icon-button" aria-label="فتح القائمة" aria-expanded="false">☰</button><span>مساحة العمل</span><span>/</span><b id="breadcrumb-title">نظرة عامة</b></div><div class="top-actions"><span class="date" id="today"></span><button id="refresh" class="icon-button" aria-label="تحديث البيانات">↻</button><span class="avatar">L</span></div></header>
+      <main id="content" tabindex="-1"></main>
+      <footer>لنك · مساحة إدارة المتجر <span>بياناتك تبدأ هنا</span></footer>
+    </div>
+  </div>
+  <div id="toast" role="status" class="toast" hidden></div>
+</body></html>
