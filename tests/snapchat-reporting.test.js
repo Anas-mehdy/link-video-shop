@@ -34,11 +34,28 @@ let saved;global.fetch=async(url,opts)=>{if(String(url).includes('supabase.co'))
 assert.deepEqual(await reporting.selectAccount(id),account);assert.equal(saved.refresh_token,'refresh-private');assert.deepEqual(saved.account,account);
 global.fetch=async url=>String(url).includes('supabase.co')?json([row]):json({private_error:'secret'},403);await assert.rejects(reporting.selectAccount(id),e=>e.statusCode===400&&!e.message.includes('secret'));
 });
-test('report queries only selected account, inclusive range, explicit attribution and no ad/campaign breakdown',async()=>{
-global.fetch=async(url,opts)=>{const u=new URL(url);if(u.hostname==='test.supabase.co')return json([row]);assert.equal(opts.headers.Authorization,'Bearer access-private');if(!u.pathname.endsWith('/stats'))return json({request_status:'SUCCESS',adaccounts:[{sub_request_status:'SUCCESS',adaccount:account}]});assert.equal(u.searchParams.get('start_time'),'2026-09-30T21:00:00.000Z');assert.equal(u.searchParams.get('end_time'),'2026-10-01T21:00:00.000Z');assert.equal(u.searchParams.get('breakdown'),null);assert.equal(u.searchParams.get('swipe_up_attribution_window'),'28_DAY');assert.equal(u.searchParams.get('view_attribution_window'),'1_DAY');return json(series([day('2026-10-01',stats(1000000,100,5,1,5000000))]));};
+test('report queries only selected account, inclusive range, explicit attribution and server-side campaign aggregation',async()=>{
+global.fetch=async(url,opts)=>{const u=new URL(url);if(u.hostname==='test.supabase.co')return json([row]);assert.equal(opts.headers.Authorization,'Bearer access-private');if(!u.pathname.endsWith('/stats'))return json({request_status:'SUCCESS',adaccounts:[{sub_request_status:'SUCCESS',adaccount:account}]});assert.equal(u.searchParams.get('start_time'),'2026-09-30T21:00:00.000Z');assert.equal(u.searchParams.get('end_time'),'2026-10-01T21:00:00.000Z');assert.equal(u.searchParams.get('breakdown'),'campaign');assert.equal(u.searchParams.get('swipe_up_attribution_window'),'28_DAY');assert.equal(u.searchParams.get('view_attribution_window'),'1_DAY');return json(campaigns([{id:'22222222-2222-4222-8222-222222222222',granularity:'DAY',timeseries:[day('2026-10-01',stats(1000000,100,5,1,5000000))]}]));};
 const result=await reporting.report('2026-10-01','2026-10-01');assert.equal(result.totals.roas,5);assert.ok(!JSON.stringify(result).includes('private'));
 });
 test('reporting routes require admin; invalid dates fail before external IO',async()=>{
 global.fetch=()=>{throw Error('No external IO');};let r=response();await connect({method:'GET',query:{action:'report'},headers:{authorization:'wrong'}},r);assert.equal(r.statusCode,401);
 r=response();await connect({method:'GET',query:{action:'report',from:'invalid',to:'invalid'},headers:{authorization:'Bearer admin-private'}},r);assert.equal(r.statusCode,400);
+});
+
+function campaigns(items){return {request_status:'SUCCESS',timeseries_stats:[{sub_request_status:'SUCCESS',timeseries_stat:{id,type:'AD_ACCOUNT',breakdown_stats:{campaign:items}}}]};}
+test('documented nested campaign DAY response sums all campaigns without exposing them or double-counting account spend',()=>{
+const item=(id,amount)=>({id,type:'CAMPAIGN',granularity:'DAY',timeseries:[day('2026-10-01',stats(amount,100,5,1,5000000))]});
+const first=item('22222222-2222-4222-8222-222222222222',1000000),second=item('33333333-3333-4333-8333-333333333333',2000000);
+const payload=campaigns([first,second]);payload.timeseries_stats[0].timeseries_stat.timeseries=[day('2026-10-01',stats(3000000,0,0,0,0))];
+const result=reporting.parse(payload,account,'2026-10-01','2026-10-01');assert.equal(result.totals.spend,3);assert.equal(result.totals.impressions,200);assert.equal(result.totals.purchases,2);assert.equal(result.totals.roas,10/3);assert.ok(!JSON.stringify(result).includes(first.id));
+assert.throws(()=>reporting.parse(campaigns([first,first]),account,'2026-10-01','2026-10-01'));
+});
+
+test('campaign reporting follows safe pagination and rejects incomplete or duplicate pages',async()=>{
+let pages=0;
+global.fetch=async url=>{const u=new URL(url);if(u.hostname==='test.supabase.co')return json([row]);if(!u.pathname.endsWith('/stats'))return json({request_status:'SUCCESS',adaccounts:[{sub_request_status:'SUCCESS',adaccount:account}]});
+const campaign={id:pages++===0?'22222222-2222-4222-8222-222222222222':'33333333-3333-4333-8333-333333333333',granularity:'DAY',timeseries:[day('2026-10-01',stats(1000000,100,5,1,5000000))]};
+const result=campaigns([campaign]);if(pages===1)result.paging={next_link:'https://adsapi.snapchat.com/v1/adaccounts/'+id+'/stats?page=2'};return json(result);};
+const result=await reporting.report('2026-10-01','2026-10-01');assert.equal(pages,2);assert.equal(result.totals.spend,2);assert.equal(result.totals.purchases,2);
 });

@@ -58,3 +58,5 @@ Official API references:
 - https://developers.snap.com/marketing-api/Ads-API/ad-accounts
 - https://developers.snap.com/marketing-api/Ads-API/measurement
 The setup endpoint reports missing variable names only to an authenticated admin.
+
+Reporting requests use `breakdown=campaign`: account-level stats alone support spend only. Nested campaign DAY metrics are summed server-side; campaign IDs and details never reach the dashboard. Safe provider pagination is consumed before returning totals.
