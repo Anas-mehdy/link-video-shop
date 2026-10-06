@@ -1,4 +1,8 @@
 {
+  "functions": {
+    "api/snapchat-callback.js": { "maxDuration": 60 },
+    "api/snapchat-connect.js": { "maxDuration": 60 }
+  },
   "rewrites": [
     {
       "source": "/dashboard",

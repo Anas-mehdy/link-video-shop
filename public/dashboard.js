@@ -79,6 +79,25 @@
       `<section class="panel"><form id="records-search" class="form-row"><div class="form-field"><label for="search-term">البحث</label><input id="search-term" name="search" maxlength="100" value="${esc(state.search)}" placeholder="${placeholder}"></div><button class="primary" type="submit">بحث</button><button class="secondary" type="button" id="clear-search">مسح البحث</button></form></section><section class="panel">${table}<div class="records-pagination"><button class="secondary" id="records-prev" ${result.page===1 ? 'disabled' : ''}>السابق</button><span>الصفحة ${fmt(result.page)} · ${fmt(result.records.length)} سجل</span><button class="secondary" id="records-next" ${result.has_more ? '' : 'disabled'}>التالي</button></div></section>`;
   }
   function bindContent() {
+    $('snapchat-start')?.addEventListener('click',async e=>{
+      const b=e.currentTarget;b.disabled=true;
+      try {
+        const res=await fetch('/api/snapchat-connect?action=start',{method:'POST',headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+        const data=await res.json();
+        if(!res.ok||!data.ok)throw new Error(data.error||'تعذر بدء التفويض');
+        const url=new URL(data.url);
+        if(url.origin!=='https://accounts.snapchat.com'||url.pathname!=='/login/oauth2/authorize')throw new Error('رابط التفويض غير صالح');
+        location.assign(url.href);
+      }catch(e){toast(e.message);b.disabled=false;}
+    });
+    $('snapchat-refresh')?.addEventListener('click',async e=>{
+      const b=e.currentTarget;b.disabled=true;
+      try {
+        const res=await fetch('/api/snapchat-connect?action=refresh',{method:'POST',headers:{Authorization:`Bearer ${token}`},cache:'no-store'});
+        const data=await res.json();if(!res.ok||!data.ok)throw new Error(data.error||'تعذر تجديد التفويض');
+        await navigate('integrations');toast('تم تجديد تفويض سناب');
+      }catch(e){toast(e.message);b.disabled=false;}
+    });
     if (page==='ads') window.LinkAds.bind({navigate,toast});
     if (recordState[page]) {
       const resource=page,state=recordState[resource];
@@ -122,7 +141,20 @@
       else if (recordState[page]) { const state=recordState[page]; html=recordsView(page,await api(`${page}&${new URLSearchParams({page:state.page,search:state.search})}`)); }
       else if (page==='automations') { const {rules}=await api('rules'); html=rulesView(rules); }
       else if (page==='events') { const {events}=await api('events'); html=heading(title,'كل حدث يصل إلى اللوحة، مع حالته ووقت استقباله.')+`<section class="panel">${eventTable(events)}</section>`; }
-      else if (page==='integrations') { overview=await api('overview'); html=heading(title,'حالة اتصال المتجر والقنوات التي سنجمعها في مساحة واحدة.')+'<div class="notice">قنوات Meta وTikTok وSnapchat وWhatsApp مجهّزة كمساحات للتكاملات القادمة. الربط الفعلي لكل منصة يُنفّذ في مرحلة مستقلة.</div>'+`<section class="panel">${connectionRows(overview.data.connections)}</section><section class="panel"><h3>ربط سلة</h3><p class="muted">بعد تفعيل التطبيق، نستقبل تفويض المتجر ونحفظ بياناته المشفرة. ظهور الحالة «متصل» يعني وصول التفويض، ولا يعني اكتمال مزامنة الطلبات والعملاء.</p></section>`; }
+      else if (page==='integrations') {
+        overview=await api('overview');
+        let snapConfig=null;
+        try { const r=await fetch('/api/snapchat-connect',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});if(r.ok)snapConfig=await r.json(); } catch {}
+        const snap=overview.data.connections?.find(c=>c.provider==='snapchat');
+        const result=new URLSearchParams(location.search);
+        const message=result.get('connection')==='snapchat'?({success:snap?.status==='connected'?'تم حفظ تفويض سناب بنجاح. الخطوة التالية تحديد الحساب الإعلاني وربط إحصائياته.':'تحقق من حالة الاتصال؛ تعذر تأكيد التفويض المحفوظ.',cancelled:'تم إلغاء الموافقة من سناب. يمكنك إعادة المحاولة.',failed:'لم يكتمل تفويض سناب. ابدأ الربط مجدداً من هذا المتصفح، وتحقق من إعدادات Vercel.'}[result.get('result')]||''):'';
+        html=heading(title,'حالة اتصال المتجر والقنوات التي سنجمعها في مساحة واحدة.')+
+          (message?`<div class="notice ${result.get('result')==='success'?'':'warn'}">${message}</div>`:'')+
+          `<section class="panel">${connectionRows(overview.data.connections)}</section><section class="panel"><h3>ربط إعلانات سناب شات</h3><p class="muted">وافق من حساب سناب الذي لديه صلاحية الوصول إلى إعلانات لنك. نحفظ التفويض مشفراً، ثم نحدد الحساب الإعلاني ونربط إحصائياته في الخطوة التالية.</p>`+
+          (!snapConfig?.ready?`<div class="notice warn">${snapConfig?.missing?.length?'أكمل متغيرات Vercel: '+snapConfig.missing.map(esc).join('، '):'تحقق من إعدادات الربط؛ رابط الرجوع أو مفتاح التشفير غير صالح، أو الخدمة غير متاحة.'}</div>`:'')+
+          `<div class="form-row"><button class="primary" id="snapchat-start" ${snapConfig?.ready?'':'disabled'}>${snap?.status==='connected'?'إعادة تفويض سناب شات':'ربط سناب شات'}</button>${snap?.status==='connected'?`<button class="secondary" id="snapchat-refresh" ${snapConfig?.ready?'':'disabled'}>تجديد التفويض</button>`:''}</div><p class="muted">تفويض المنصة لا يعني أن إحصائيات الإعلانات بدأت بالمزامنة.</p></section><section class="panel"><h3>ربط سلة</h3><p class="muted">بعد تفعيل التطبيق، نستقبل تفويض المتجر ونحفظ بياناته المشفرة. ظهور الحالة «متصل» يعني وصول التفويض، ولا يعني اكتمال مزامنة الطلبات والعملاء.</p></section>`;
+        if(message)history.replaceState(null,'',`${location.pathname}#integrations`);
+      }
       else if (page==='videos' || page==='protection') { const url=page==='videos'?'/video-shop-admin':'/protection-admin'; html=heading(title,'أدوات المتجر الحالية داخل مساحة لنك.',`<a class="back-link" href="${url}" target="_blank" rel="noopener">فتح في صفحة مستقلة ↗</a>`)+`<iframe class="embed" title="${title}" src="${url}"></iframe>`; }
       else if (page==='settings') { html=heading(title,'إعدادات مساحة العمل وتجهيز المرحلة التالية.')+`<section class="panel"><div class="settings-list"><div><span>المتجر</span><b>Link Store</b></div><div><span>معرّف المتجر</span><code>1829345766</code></div><div><span>المنطقة الزمنية للعرض</span><b>السعودية</b></div><div><span>المصادقة الحالية</span><b>رمز إدارة الفيديو شوب</b></div><div><span>تشغيل الأتمتة</span><span class="badge">اختبار فقط</span></div></div></section><section class="panel"><h3>الطلبات والعملاء والسلات</h3><p class="muted">تمت مراجعة أعمدة الجداول وإعداد عرض سجلاتها. الخطوة القادمة تفعيل تطبيق سلة وربط الأحداث والمزامنة بالجداول.</p></section>`; }
       else { html=heading(title,'مساحة جاهزة لاستقبال بيانات المتجر.')+`<section class="panel">${empty('الربط في المرحلة التالية','الجدول موجود في قاعدة البيانات. سنربطه هنا بعد مراجعة أعمدته وتجهيز مزامنة سلة، لتظهر بيانات دقيقة وقابلة للاستخدام.',page)}</section>`; }
