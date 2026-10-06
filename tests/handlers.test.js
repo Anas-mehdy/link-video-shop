@@ -55,7 +55,7 @@ test('worker and admin credentials are isolated',async()=>{
 });
 test('overview uses exact HEAD counts and excludes connection secrets',async()=>{
   global.fetch=async(url,opts)=>{
-    if(url.includes('/products?')||url.includes('/video_shop_videos?')){assert.equal(opts.method,'HEAD');return new Response(null,{status:200,headers:{'content-range':'*/464'}});}
+    if(opts.method==='HEAD'){assert.ok(url.includes('merchant_id=eq.1829345766'));return new Response(null,{status:200,headers:{'content-range':'*/464'}});}
     if(url.includes('/crm_connections?')){assert.ok(!url.includes('credentials'));return new Response('[]',{status:200});}
     if(url.includes('/crm_event_inbox?'))return new Response('{}',{status:503});
     return new Response('[]',{status:200});
@@ -71,3 +71,38 @@ test('rule updates are scoped, validated and cannot switch to live mode',async()
   assert.equal((await call(admin,'PATCH','Bearer admin-secret',{...body,delay_minutes:-1},{resource:'rules'})).statusCode,400);
 });
 test('redaction strips secrets nested inside arrays',()=>assert.deepEqual(redact({list:[{refresh_token:'secret',id:1}]}),{list:[{id:1}]}));
+test('record lists are admin-only, merchant-scoped, paginated and exclude raw payloads',async()=>{
+  let calls=0;
+  global.fetch=async(url,opts)=>{
+    calls++;assert.notEqual(opts.method,'POST');
+    const query=new URL(url).searchParams;
+    assert.equal(query.get('merchant_id'),'eq.1829345766');
+    assert.equal(query.get('offset'),'25');assert.equal(query.get('limit'),'26');
+    assert.ok(!query.get('select').includes('source_payload'));assert.ok(!query.get('select').includes('*'));
+    assert.ok(query.get('order').endsWith('id.desc'));
+    assert.ok(query.get('or').includes('ilike."%عميل%"'));
+    return new Response(JSON.stringify(Array.from({length:26},(_,i)=>({id:String(i)}))),{status:200});
+  };
+  assert.equal((await call(admin,'GET','Bearer wrong',null,{resource:'customers'})).statusCode,401);assert.equal(calls,0);
+  for(const resource of ['orders','customers','carts']) {
+    const res=await call(admin,'GET','Bearer admin-secret',null,{resource,page:'2',search:'عميل',merchant_id:'99'});
+    assert.equal(res.statusCode,200);assert.equal(res.body.records.length,25);assert.equal(res.body.has_more,true);assert.equal(res.body.page,2);
+  }
+});
+test('record search rejects filter injection before querying and quotes email searches',async()=>{
+  let calls=0;
+  global.fetch=async(url)=>{calls++;const query=new URL(url).searchParams;assert.ok(query.get('or').includes('email.ilike."%a.b@example.com%"'));return new Response('[]',{status:200});};
+  for(const query of [{page:'0'},{page:'-1'},{page:'1001'},{search:'x),merchant_id.eq.99'},{search:'%'}]) {
+    assert.equal((await call(admin,'GET','Bearer admin-secret',null,{resource:'customers',...query})).statusCode,400);
+  }
+  assert.equal(calls,0);
+  const res=await call(admin,'GET','Bearer admin-secret',null,{resource:'customers',search:'a.b@example.com'});
+  assert.equal(res.statusCode,200);assert.equal(res.body.has_more,false);assert.deepEqual(res.body.records,[]);
+});
+test('record queries only select columns present in the supplied merchant schema',()=>{
+  const schema=require('../docs/existing-schema.json'),{resources}=require('../lib/crm-records');
+  for(const config of Object.values(resources)) {
+    const columns=new Set(schema.filter(r=>r.table_name===config.table).map(r=>r.column_name));
+    for(const name of [...config.select.split(','),...config.search])assert.ok(columns.has(name),`${config.table}.${name}`);
+  }
+});

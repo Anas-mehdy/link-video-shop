@@ -5,6 +5,7 @@ The new `/dashboard` shares the existing Video Shop backend and admin token. Vid
 ## What works in this version
 
 - Arabic RTL responsive dashboard, catalog/video counts and existing management tools.
+- Read-only orders, customers and abandoned-cart lists with search and 25-row pagination, plus exact record counts in the overview. Queries use the merchant's supplied schema and always scope by server-configured merchant ID. They never select raw source payloads. Customer spending is not displayed because the current schema has no currency column for that total.
 - Authenticated connection metadata, recent event list, automation rule creation/settings and simulation log.
 - `/api/salla-webhook`: Token verification, strict merchant allowlist, 512 KiB payload cap, stable deduplication, secret redaction and durable inbox storage before acknowledgment.
 - `app.store.authorize` stores credentials encrypted with AES-256-GCM and the documented absolute `data.expires` Unix timestamp. `app.uninstalled` clears credentials. Older delayed lifecycle events cannot override a newer connection state.
@@ -17,7 +18,7 @@ Rules have **only dry_run mode** at the database level. `scheduled_for` records 
 ## Setup in the existing Link Store CRM database
 
 1. Run `crm-foundation.sql` in the **Link Store CRM** Supabase SQL Editor. It is transactional and repeatable; it does not alter or seed the existing store, product, customer, order or Video Shop tables. It adds only `crm_connections`, `crm_event_inbox`, `crm_automation_rules`, `crm_automation_runs`, two RPCs and disabled starter rules.
-2. Run `docs/inspect-existing-schema.sql` and share the read-only results before we map orders, customers and carts. Those sections explicitly show setup pending in the dashboard, rather than querying unverified columns or reporting fake revenue.
+2. Existing orders, customers and cart columns were verified from the supplied SQL export on 2026-10-06; see `docs/existing-schema.json`. The dashboard now reads those existing tables without a migration. Empty tables show empty states; the app does not seed sample records or imply that Salla sync is complete. The export describes columns only, not foreign keys, uniqueness, indexes or RLS policies; those still need inspection before implementing writes and relationships.
 3. Configure server variables from `.env.example`. Existing Supabase variables and `VIDEO_SHOP_ADMIN_TOKEN` are reused. Generate **separate** random webhook/worker secrets and an encryption key. Generate each locally with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. Never commit `.env` or copy secrets into frontend code. The encryption key must be backed up along with the database.
 4. Open `/dashboard` and sign in with the current admin token. Counts are live, not screenshot numbers. Unavailable queries show an explicit warning and a dash.
 
@@ -57,7 +58,7 @@ It processes at most 20 pending events atomically with `FOR UPDATE SKIP LOCKED`.
 
 ## Next implementation order
 
-1. Inspect the current schema, choose mappings, and establish individual Supabase Auth staff accounts + store membership authorization (the existing shared token is a temporary foundation).
+1. Inspect existing constraints/policies and establish individual Supabase Auth staff accounts + store membership authorization (the existing shared token is a temporary foundation).
 2. Enable the actual app, verify authorization delivery, implement refresh-token locking and credentials decryption only in server code, then reconcile the initial catalog/orders/customers/carts within the 10,000/month API budget.
 3. Implement event-to-entity upserts and sales metrics with explicit date, cancellation, refund and currency semantics.
 4. Add WhatsApp provider, approved templates, consent/opt-out, human handover, cancellation of obsolete reminders, durable due-job claims/retries and outbound idempotency. Only then allow live rules.
