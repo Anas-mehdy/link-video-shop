@@ -66,3 +66,7 @@ The existing `/video-shop-admin` page now links to `/protection-admin`. Both pag
 The loader fetches `/api/protection-feed?id=<current product>` without credentials. The feed checks the global switch, per-product mode, current catalog row and availability, and returns only storefront-public recommendation data. Products with model/color choices link to their product pages for selection; they are not added blindly. Do not enable the global default for the full catalog until model rules and product options are reviewed.
 
 If `/api/protection-admin` reports that setup is missing, run the SQL in the correct Supabase project. The public feed stays off when the table is missing or the database fails.
+
+## CRM dashboard foundation
+
+The unified Arabic dashboard is available at `/dashboard`. Setup, VPS deployment, Salla ingress and the dry-run n8n worker contract are documented in [docs/crm-foundation.md](docs/crm-foundation.md). Run `crm-foundation.sql` in the existing Link Store CRM project, and use `docs/inspect-existing-schema.sql` to prepare the next entity mapping stage. Existing Video Shop and protection routes remain available.

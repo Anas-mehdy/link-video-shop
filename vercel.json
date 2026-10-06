@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/dashboard",
+      "destination": "/dashboard.html"
+    },
+    {
       "source": "/video-shop-admin",
       "destination": "/admin.html"
     },
