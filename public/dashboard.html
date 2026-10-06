@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark"><title>لنك | لوحة إدارة المتجر</title>
-  <link rel="stylesheet" href="/dashboard.css"><script src="/dashboard-auth.js" defer></script><script src="/dashboard-ads.js" defer></script><script src="/dashboard-whatsapp.js" defer></script><script src="/dashboard.js" defer></script>
+  <link rel="stylesheet" href="/dashboard.css?v=20261006-mobile"><script src="/dashboard-auth.js" defer></script><script src="/dashboard-ads.js" defer></script><script src="/dashboard-whatsapp.js" defer></script><script src="/dashboard.js?v=20261006-mobile" defer></script>
 </head>
 <body>
   <section id="login" class="login-shell">
@@ -11,14 +11,16 @@
     <form id="login-form" class="login-card"><span class="eyebrow">LINK STORE · CONTROL ROOM</span><h2>أهلًا بك في لنك</h2><p class="muted">سجّل دخولك إلى لوحة إدارة المتجر</p><div id="account-login" hidden><label for="login-email">البريد الإلكتروني</label><input id="login-email" type="email" autocomplete="username" placeholder="name@example.com"><label for="login-password">كلمة المرور</label><input id="login-password" type="password" autocomplete="current-password"></div><div id="legacy-login"><label for="admin-token">رمز الإدارة الحالي</label><input id="admin-token" type="password" autocomplete="current-password" required placeholder="أدخل رمز إدارة الفيديو شوب"></div><button class="primary" type="submit">الدخول إلى اللوحة <span>←</span></button><p id="login-error" class="error" role="alert"></p><small id="login-note" class="muted">جارٍ التحقق من إعدادات الدخول…</small></form>
   </section>
   <div id="app" class="app" hidden>
-    <aside class="sidebar" id="sidebar">
+    <button id="menu-backdrop" class="menu-backdrop" aria-label="إغلاق القائمة" tabindex="-1" hidden></button>
+    <aside class="sidebar" id="sidebar" aria-label="التنقل في لوحة لنك">
+      <div class="mobile-menu-heading"><b>قائمة لنك</b><button id="sidebar-close" class="icon-button" aria-label="إغلاق القائمة">×</button></div>
       <a class="brand" href="/dashboard"><span class="brand-mark small">L<span>↗</span></span><div><b>لنك</b><small>لوحة إدارة المتجر</small></div></a>
       <div class="store-chip"><span class="store-avatar">ل</span><div><b>Link Store</b><small dir="ltr">linkstore-sa.com</small></div><span class="store-dot"></span></div>
       <span class="nav-caption">إدارة المتجر</span><nav id="nav" aria-label="القائمة الرئيسية"></nav>
       <div class="sidebar-bottom"><div class="foundation-note"><span class="tiny-dot"></span>نبني الأساس، خطوة بخطوة<small>النسخة الأولى · استقبال وربط واختبار</small></div><button id="logout" class="logout">تسجيل الخروج <span>↗</span></button></div>
     </aside>
     <div class="workspace">
-      <header class="topbar"><div class="breadcrumb"><button id="menu-toggle" class="icon-button" aria-label="فتح القائمة" aria-expanded="false">☰</button><span>مساحة العمل</span><span>/</span><b id="breadcrumb-title">نظرة عامة</b></div><div class="top-actions"><span class="date" id="today"></span><button id="refresh" class="icon-button" aria-label="تحديث البيانات">↻</button><span class="avatar" id="user-avatar" aria-label="الحساب">L</span></div></header>
+      <header class="topbar"><div class="breadcrumb"><button id="menu-toggle" class="icon-button" aria-label="فتح القائمة" aria-controls="sidebar" aria-expanded="false">☰</button><span>مساحة العمل</span><span>/</span><b id="breadcrumb-title">نظرة عامة</b></div><div class="top-actions"><span class="date" id="today"></span><button id="refresh" class="icon-button" aria-label="تحديث البيانات">↻</button><span class="avatar" id="user-avatar" aria-label="الحساب">L</span></div></header>
       <main id="content" tabindex="-1"></main>
       <footer>لنك · مساحة إدارة المتجر <span>بياناتك تبدأ هنا</span></footer>
     </div>

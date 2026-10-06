@@ -18,3 +18,8 @@ label,.item b,.choice,.top a,.status,.tag{font-size:16px}
 .thumb{background:var(--admin-raised)}
 button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid #b995ff;outline-offset:3px}
 @media(max-width:620px){.top{flex-wrap:wrap}.top .links{flex-wrap:wrap}.top a{font-size:14px}.layout{min-width:0}}
+
+/* The embedded administration tools also fit a phone-sized viewport. */
+.wrap,.layout,.panel,.card,.grid>*,.video>*,.product>*,.field-grid>*{min-width:0}
+.name,.meta,.sub,.status,.pill,.choice span{overflow-wrap:anywhere}.product>div{min-width:0}
+@media(max-width:760px){.top{flex-wrap:wrap}.top .row{width:100%}.top .row a,.top .row button{min-height:44px}.video .actions{display:flex;gap:8px;flex-wrap:wrap}.video .actions button{min-height:44px}.card{padding:16px}.wrap{padding:20px 12px}.login{margin:32px auto}.panel .actions{flex-wrap:wrap}.layout{max-width:100%}.choices .choice span{min-width:0}h1{font-size:24px}}
