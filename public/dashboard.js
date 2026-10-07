@@ -86,7 +86,7 @@
       const start=stages.findIndex(([resource])=>resource===stageInput.value),startPage=Number(pageInput.value);
       if(start<0||!Number.isInteger(startPage)||startPage<1||startPage>10000){toast('رقم صفحة الاستئناف غير صالح');return;}
       button.disabled=true;stageInput.disabled=true;pageInput.disabled=true;
-      let total=0;
+      let total=0,skipped=0;
       const checkpoint=(resource,number)=>{
         sessionStorage.setItem('lvs_salla_sync_30_v1',JSON.stringify({resource,page:number}));
         stageInput.value=resource;pageInput.value=number;
@@ -117,12 +117,12 @@
         }
         if(start<4){
           checkpoint('events',1);target.textContent='جارٍ معالجة الأحداث السابقة…';
-          let result;do {result=await request({action:'events'});}while(result.has_more&&target.isConnected);
+          let result;do {result=await request({action:'events'});skipped+=result.skipped||0;}while(result.has_more&&target.isConnected);
         }
         if(!target.isConnected)throw new Error('توقفت المزامنة؛ مكان الاستئناف محفوظ.');
         checkpoint('finish',1);target.textContent='جارٍ تحديث إحصائيات العملاء…';
         const stats=await request({action:'finish'});
-        target.textContent=`اكتملت المزامنة: ${fmt(stats.customers)} عميل · ${fmt(stats.orders)} طلب · ${fmt(stats.carts)} سلة. يمكنك فتح الأقسام لعرض البيانات.`;
+        target.textContent=`اكتملت المزامنة: ${fmt(stats.customers)} عميل · ${fmt(stats.orders)} طلب · ${fmt(stats.carts)} سلة. يمكنك فتح الأقسام لعرض البيانات.${skipped?` تنبيه: عُزل ${fmt(skipped)} حدث بسبب معرّف غير دقيق؛ بقي محفوظًا للمراجعة ولم يُضف إلى السجلات.`:''}`;
         sessionStorage.removeItem('lvs_salla_sync_30_v1');stageInput.value='customers';pageInput.value=1;
         toast('اكتملت مزامنة بيانات سلة');
       }catch(error){target.textContent=`${error.message} · مكان الاستئناف: ${stageInput.options[stageInput.selectedIndex].text}، الصفحة ${fmt(pageInput.value)}.`;toast(error.message);}finally{button.disabled=false;stageInput.disabled=false;pageInput.disabled=false;}

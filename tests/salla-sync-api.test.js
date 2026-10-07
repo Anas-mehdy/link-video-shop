@@ -55,3 +55,32 @@ test('missing schema preflight never spends a Salla request',async()=>{
   let calls=0;global.fetch=async url=>{calls++;assert.ok(url.startsWith('https://test.supabase.co/'));return new Response('{}',{status:404});};
   await assert.rejects(sync.page({resource:'customers',page:1}),error=>error.sallaSafe&&error.message.includes('لم يُرسل طلب'));assert.equal(calls,1);
 });
+
+
+test('unsafe stored event is quarantined without provider IO and later valid events still save',async()=>{
+  const writes=[],patches=[];
+  global.fetch=async(url,options)=>{
+    if(url.includes('/crm_event_inbox?')&&options.method!=='PATCH'){
+      const query=new URL(url).searchParams;assert.equal(query.get('payload->>_crm_projection_error'),'is.null');
+      return response([
+        {id:'bad',event_name:'order.updated',occurred_at:new Date().toISOString(),payload:{data:{id:3076122624318093323}}},
+        {id:'good',event_name:'abandoned.cart.update',occurred_at:new Date().toISOString(),payload:{data:{id:'3076122624318093323',created_at:new Date().toISOString()}}}
+      ]);
+    }
+    if(options.method==='PATCH'){patches.push(JSON.parse(options.body));assert.ok(url.includes('merchant_id=eq.1829345766'));return new Response(null,{status:204});}
+    if(url.includes('/rpc/crm_apply_salla_records')){writes.push(JSON.parse(options.body));return response(1);}
+    throw Error('No provider or other requests allowed');
+  };
+  const result=await sync.processEvents();assert.equal(result.processed,2);assert.equal(result.skipped,1);
+  assert.equal(writes.length,1);assert.equal(writes[0].p_event_id,'good');
+  assert.equal(patches[0].payload._crm_projection_error,'unsafe_identifier');
+  assert.equal(patches[0].payload.data.id,3076122624318093323);assert.ok(!Object.hasOwn(patches[0],'records_synced_at'));
+});
+
+test('database projection failures remain pending and are never quarantined',async()=>{
+  global.fetch=async(url,options)=>{
+    if(url.includes('/crm_event_inbox?'))return response([{id:'event',event_name:'customer.created',occurred_at:new Date().toISOString(),payload:{data:{id:1}}}]);
+    assert.notEqual(options.method,'PATCH');return new Response('{}',{status:500});
+  };
+  await assert.rejects(sync.processEvents());
+});

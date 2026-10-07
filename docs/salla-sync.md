@@ -61,3 +61,6 @@ No Salla writes or WhatsApp messages are sent.
 Verification: mapping/API fixture tests and SQL execution against the supplied
 merchant schema in PGlite. Production Supabase migration and live Salla fetches
 must be verified by the merchant, whose project is not available via connector.
+
+### Unsafe identifiers in stored webhook events
+Events with identifiers already rounded by a JSON parser cannot be repaired by converting the number to a string. Replay retains their payload, annotates `_crm_projection_error: unsafe_identifier`, leaves `records_synced_at` null and excludes them from subsequent projection batches. Other events continue. Completion reports the skipped count for that run; webhook acknowledgement reports `records_pending: true` for a quarantined event. No provider request is made when the order identifier itself is unsafe. Database/provider failures are never quarantined. To repair an event, obtain the exact original identifier, correct the retained payload and remove the annotation before replay. No schema change is required.

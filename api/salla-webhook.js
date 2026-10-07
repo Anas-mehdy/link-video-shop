@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
     const sync=require('../lib/salla-sync'),projection={};
     if(sync.supports(event.p_event_name)){
       projection.records_pending=false;
-      try { await sync.processEvents(result.event_id); }
+      try { const replay=await sync.processEvents(result.event_id); projection.records_pending=replay.skipped>0; }
       catch { projection.records_pending=true; }
     }
     return json(res, 200, { ok: true, duplicate: result.duplicate, event_id: result.event_id, ...projection });
