@@ -6,7 +6,7 @@
   const esc = value => String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const today = () => new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
   const shift = (day, count) => {const d=new Date(`${day}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+count);return d.toISOString().slice(0,10);};
-  const readable = day => new Date(`${day}T12:00:00Z`).toLocaleDateString('ar-SA-u-ca-gregory',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Riyadh'});
+  const readable = day => new Date(`${day}T12:00:00Z`).toLocaleDateString('ar-SA-u-ca-gregory-nu-latn',{day:'numeric',month:'short',year:'numeric',timeZone:'Asia/Riyadh'});
   function period(preset) {
     const end=today();
     if(preset==='today')return {from:end,to:end};
@@ -30,7 +30,7 @@
   ];
   const reports=new Map();
   const keys=['spend','impressions','clicks','ctr','cpc','cpm','purchases','purchase_value','roas'];
-  const format=value=>value==null?'—':Number(value).toLocaleString('ar-SA',{maximumFractionDigits:2});
+  const format=value=>value==null?'—':Number(value).toLocaleString('ar-SA-u-nu-latn',{maximumFractionDigits:2});
   const reportKey=()=>`${state.from}|${state.to}`;
   function current(){return reports.get(reportKey());}
   async function load(token){
@@ -72,7 +72,7 @@
         <div class="form-field"><label for="ads-provider">المنصة</label><select id="ads-provider" name="provider"><option value="all">كل المنصات</option>${Object.entries(providers).map(([id,[name]])=>`<option value="${id}" ${state.provider===id?'selected':''}>${name}</option>`).join('')}</select></div>
         <button class="primary" type="submit">تطبيق الفلاتر</button>
       </form><p id="ads-filter-error" class="error" role="alert" hidden></p></section>
-      <div class="ads-report-caption"><div><b>${label}</b><span>${range} · ${days.toLocaleString('ar-SA')} ${days===1?'يوم':'أيام'}</span></div><small>آخر تحديث: ${live?new Date(report.updated_at).toLocaleString('ar-SA',{timeZone:'Asia/Riyadh'}):'لم تصل بيانات بعد'}</small></div>
+      <div class="ads-report-caption"><div><b>${label}</b><span>${range} · ${days.toLocaleString('ar-SA-u-nu-latn')} ${days===1?'يوم':'أيام'}</span></div><small>آخر تحديث: ${live?new Date(report.updated_at).toLocaleString('ar-SA-u-nu-latn',{timeZone:'Asia/Riyadh'}):'لم تصل بيانات بعد'}</small></div>
       <div class="notice ads-setup-notice"><div><b>${live?'تقرير الحساب: '+esc(report.account.name):'تجهيز مصدر الإحصائيات'}</b><p>${live?`العملة: ${esc(currency)} · توقيت الحساب: ${esc(report.account.timezone)}. ${state.provider==='all'?'الإجماليات الحالية تخص سناب فقط؛ المنصات الأخرى لم تُربط.':''} ${report.complete?'':'بعض الأيام غير متاحة؛ علامة — تعني بيانات ناقصة.'}`:esc(snapshot?.error|| (status==='select_account'?'اختر حساب سناب الإعلاني من صفحة التكاملات أولاً.':(['meta','tiktok'].includes(state.provider)?'هذه المنصة لم تُربط بعد؛ ستظهر إحصائياتها بعد إتمام الربط.':'اختر المنصة المربوطة لعرض إحصائياتها.')))}</p></div><button class="secondary" id="ads-integrations">حالة التكاملات ↗</button></div>
       <section class="ads-metrics" aria-label="مؤشرات أداء الإعلانات">${metrics.map(([name,description,unit],i)=>`<article class="metric"><div class="metric-top"><span>${name}</span>${unit?`<small class="ads-unit">${unit==='ر.س'?esc(currency):unit}</small>`:''}</div><strong>${live?format(report.totals[keys[i]]):'—'}</strong><small>${description}</small></article>`).join('')}</section>
       <section class="panel"><div class="panel-header ads-chart-header"><div><h3>الأداء اليومي</h3><p class="muted">${range}</p></div><div class="ads-chart-tabs" role="group" aria-label="المؤشر المعروض"><button type="button" data-ads-chart="spend" aria-pressed="${state.chart==='spend'}">الإنفاق</button><button type="button" data-ads-chart="purchases" aria-pressed="${state.chart==='purchases'}">المشتريات</button><button type="button" data-ads-chart="roas" aria-pressed="${state.chart==='roas'}">ROAS</button></div></div>

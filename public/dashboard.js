@@ -18,8 +18,8 @@
   const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['customers','العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.overview}</svg>`;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fmt = value => value == null ? '—' : Number(value).toLocaleString('ar-SA');
-  const date = value => value ? new Date(value).toLocaleString('ar-SA', { dateStyle:'short', timeStyle:'short', timeZone:'Asia/Riyadh' }) : 'لم يصل بعد';
+  const fmt = value => value == null ? '—' : Number(value).toLocaleString('ar-SA-u-nu-latn');
+  const date = value => value ? new Date(value).toLocaleString('ar-SA-u-nu-latn', { dateStyle:'short', timeStyle:'short', timeZone:'Asia/Riyadh' }) : 'لم يصل بعد';
   let token = sessionStorage.getItem('lvs_admin') || '', page = 'overview', overview = null, requestId = 0;
   const recordState = Object.fromEntries(['orders','customers','carts'].map(key => [key,{page:1,search:''}]));
   const money = (value, currency) => `${fmt(value)} ${esc(currency || '—')}`;
@@ -276,7 +276,7 @@
   });
   setSidebar(false);
   window.addEventListener('hashchange',()=>{const next=location.hash.slice(1);if(token&&next!==page)navigate(next);});
-  $('today').textContent=new Date().toLocaleDateString('ar-SA',{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Riyadh'});
+  $('today').textContent=new Date().toLocaleDateString('ar-SA-u-nu-latn',{weekday:'long',day:'numeric',month:'long',timeZone:'Asia/Riyadh'});
   window.LinkAuth.init().then(async mode=>{
     $('account-login').hidden=mode!=='supabase';$('legacy-login').hidden=mode==='supabase';$('admin-token').required=mode==='legacy';$('login-email').required=mode==='supabase';$('login-password').required=mode==='supabase';
     $('login-note').textContent=mode==='supabase'?'الدخول متاح للحسابات المصرح لها بإدارة لنك فقط.':'الدخول الحالي يعمل حتى إكمال إعداد حسابات Supabase.';
