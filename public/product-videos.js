@@ -292,6 +292,10 @@
   const make = (tag,text,cls) => {const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
   const labels = ['لامع شفاف','لامع خصوصي','مطفي خصوصي','مطفي عادي'];
   const css = `
+  #link-carbon-protection .lc-price-box{text-align:left;flex:none}
+  #link-carbon-protection .lc-old-price{display:block;font-size:12px;color:#8b7d92;white-space:nowrap}
+  #link-carbon-protection .lc-saving{display:inline-block;background:#edf8f1;color:#24653b;font-size:12px;font-weight:700;border-radius:6px;padding:3px 8px;margin-top:5px}
+
   #link-carbon-protection{direction:rtl;color:#281d32;font-family:inherit;border:1px solid #e5dce9;border-radius:18px;background:#fff;margin:20px 0;overflow:hidden;scroll-margin-top:90px}
   #link-carbon-protection *,#link-carbon-cart *{box-sizing:border-box}
   #link-carbon-protection .lc-head{padding:18px 18px 13px;background:linear-gradient(120deg,#faf6fc,#f2fbff)}
@@ -359,10 +363,10 @@
     const modes=[['case','الكفر فقط','الكفر السماوي'],['screen','الكفر + حماية الشاشة','الكفر + استيكر الشاشة'],['full','الكفر + حماية الشاشة والكاميرا','الكفر + استيكر + عدسات + مسطح كاميرا عادي']];
     const cards=modes.map(([key,title,description])=>{
       const label=make('label','','lc-package'),radio=make('input');radio.type='radio';radio.name='link-carbon-package';radio.value=key;radio.setAttribute('aria-label',title);
-      const copy=make('div','','lc-copy'),line=make('div','','lc-line'),price=make('strong'),desc=make('p',description),pictures=make('div','','lc-pictures');
-      line.append(make('b',title),price);copy.append(line,desc,pictures);label.append(radio,copy);packages.append(label);
+      const copy=make('div','','lc-copy'),line=make('div','','lc-line'),price=make('strong'),oldPrice=make('del','','lc-old-price'),badge=make('span','','lc-saving'),priceBox=make('div','','lc-price-box'),desc=make('p',description),pictures=make('div','','lc-pictures');
+      priceBox.append(oldPrice,price);line.append(make('b',title),priceBox);copy.append(line,desc,badge,pictures);label.append(radio,copy);packages.append(label);
       radio.addEventListener('change',()=>{state.mode=key;state.picks=key==='case'?[false,false,false]:key==='screen'?[true,false,false]:[true,true,true];state.quantities=[1,1,1];status.textContent='';update();});
-      return {key,radio,price,pictures};
+      return {key,radio,price,oldPrice,badge,pictures};
     });
     const options=make('div','','lc-options');
     const screenField=make('div','','lc-field'),screenLabel=make('label','نوع حماية الشاشة'),screenSelect=make('select');screenSelect.id='lc-screen';screenLabel.htmlFor=screenSelect.id;screenField.append(screenLabel,screenSelect);
@@ -377,12 +381,17 @@
       qty.addEventListener('change',()=>{const max=selectedProducts()[i].max;state.quantities[i]=Math.min(max,Math.max(1,Math.floor(Number(qty.value)||1)));state.mode='custom';update();});
       return {check,price,qty};
     });
-    const note=make('p','الأسعار مجموع أسعار القطع، قبل الشحن وخصومات السلة.'),status=make('p','','lc-status');status.id='lc-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+    const note=make('p','خصم 20 ر.س على استيكر واحد مع الكفر. السعر قبل الشحن وخصومات السلة الأخرى.'),status=make('p','','lc-status');status.id='lc-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
     const bar=make('div');bar.id='link-carbon-cart';const total=make('div','','lc-total'),totalPrice=make('strong'),count=make('small'),add=make('button','أضف للسلة');add.type='button';add.setAttribute('aria-describedby','lc-status');total.append(make('small','الإجمالي'),totalPrice,count);bar.append(total,add);
     const cartLink=make('a','عرض السلة');cartLink.href='/cart';cartLink.style.cssText='display:inline-block;margin-top:8px;color:#51007a;text-decoration:underline;font-size:13px';cartLink.hidden=true;
     body.append(packages,options,details,note,status,cartLink);root.append(head,body);
     function selectedProducts(){return [screens[state.screen],lens,plate];}
-    function amount(){return product.price+selectedProducts().reduce((sum,p,i)=>sum+(state.picks[i]?p.price*state.quantities[i]:0),0);}
+    // Verified live Salla buy-one-case/get-one-screen offer: 15.504%, rounded to 20 SAR.
+    // Full-package 47 SAR offer is not active; do not advertise 399 yet.
+    const offerScreens=[982757716,62439963,1627040171];
+    function saving(picks=state.picks){return picks[0]&&product.price===149&&screens[state.screen].price===129&&offerScreens.includes(screens[state.screen].id)?20:0;}
+    function subtotal(){return product.price+selectedProducts().reduce((sum,p,i)=>sum+(state.picks[i]?p.price*state.quantities[i]:0),0);}
+    function amount(){return subtotal()-saving();}
     function image(p){const img=make('img');img.src=p.image;img.alt=p===product?'الكفر السماوي':p.name;img.loading='lazy';return img;}
     function update(){
       const locked=state.busy||state.complete||state.uncertain||!!state.remaining;
@@ -390,17 +399,19 @@
       cards.forEach(c=>{
         c.radio.checked=state.mode===c.key;c.radio.disabled=locked||!product.available||(c.key!=='case'&&!ps[0].available)||(c.key==='full'&&(!lens.available||!plate.available));
         const items=c.key==='case'?[product]:c.key==='screen'?[product,ps[0]]:[product,...ps];
-        c.price.textContent=money(items.reduce((sum,p)=>sum+p.price,0));c.pictures.replaceChildren(...items.map(image));
+        const original=items.reduce((sum,p)=>sum+p.price,0),discount=saving(c.key==='case'?[false,false,false]:[true,false,false]);
+        c.price.textContent=money(original-discount);c.oldPrice.textContent=discount?money(original):'';c.oldPrice.hidden=!discount;
+        c.badge.textContent=discount?'وفّر '+money(discount):'';c.badge.hidden=!discount;c.pictures.replaceChildren(...items.map(image));
       });
       custom.forEach((c,i)=>{c.check.checked=state.picks[i];c.check.disabled=locked||!ps[i].available;c.qty.disabled=locked||!state.picks[i]||!ps[i].available;c.qty.max=String(ps[i].max);c.qty.value=String(state.quantities[i]);c.price.textContent=ps[i].available?'+ '+money(ps[i].price):'نفد حاليًا';});
       screenField.hidden=!state.picks[0];colorField.hidden=!state.picks[1];
       screenSelect.disabled=colorSelect.disabled=locked;
-      totalPrice.textContent=money(amount());count.textContent=(1+state.picks.reduce((sum,p,i)=>sum+(p?state.quantities[i]:0),0))+' قطع مختارة';
+      totalPrice.textContent=money(amount());const pieceCount=1+state.picks.reduce((sum,p,i)=>sum+(p?state.quantities[i]:0),0);count.textContent=saving()?'وفّرت '+money(saving()):pieceCount===1?'قطعة واحدة':pieceCount+' قطع مختارة';
       const invalid=!product.available||ps.some((p,i)=>state.picks[i]&&!p.available);
       add.disabled=state.busy||(!state.complete&&!state.uncertain&&(!ready||invalid));
       add.textContent=state.busy?'تتم الإضافة...':state.complete||state.uncertain?'عرض السلة':state.remaining?'أكمل إضافة القطع المتبقية':!product.available?'نفد الكفر حاليًا':'أضف للسلة';
       form.toggleAttribute('data-link-carbon-extras',state.picks.some(Boolean));
-      root.dataset.price=String(amount());root.dataset.mode=state.mode;
+      root.dataset.price=String(amount());root.dataset.saving=String(saving());root.dataset.mode=state.mode;
       cartLink.hidden=!state.complete&&!state.uncertain&&!state.remaining;
     }
     function fillOptions(){
