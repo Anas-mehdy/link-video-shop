@@ -18,6 +18,17 @@ module.exports = async function handler(req, res) {
       }catch(e){if(e.statusCode===401&&action==='session')auth.clearSession(res);return json(res,[400,401,403,429,503].includes(e.statusCode)?e.statusCode:503,{ok:false,error:e.statusCode?e.message:'تعذر تسجيل الدخول'});}
     }
     await requireAdmin(req);
+    if (resource === 'salla-sync' && req.method === 'POST') {
+      try {
+        const sync=require('../lib/salla-sync'),body=bodyObject(req);
+        const data=body.action==='events'?await sync.processEvents():body.action==='finish'?await sync.stats():await sync.page(body);
+        return json(res,200,{ok:true,...data});
+      } catch(e) {
+        if(e.sallaSafe)return json(res,503,{ok:false,error:e.message});
+        if(e.statusCode===400)return json(res,400,{ok:false,error:e.message});
+        return json(res,503,{ok:false,error:'تعذرت المزامنة؛ تأكد من تشغيل crm-salla-sync.sql ثم أعد المحاولة'});
+      }
+    }
     if (resource === 'whatsapp' && req.method === 'GET') return json(res,200,{ok:true,...await require('../lib/whatsapp-workspace').load()});
     if (resource === 'whatsapp' && req.method === 'PUT') return json(res,200,{ok:true,...await require('../lib/whatsapp-workspace').save(bodyObject(req))});
     if (req.method === 'GET' && resource === 'overview') {

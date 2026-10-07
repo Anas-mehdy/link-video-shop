@@ -7,6 +7,13 @@ module.exports = async function handler(req, res) {
     const event = normalizeEvent(bodyObject(req));
     // Acknowledge only after inbox + connection state commit atomically.
     const result = await sb('rpc/crm_ingest_event', { method: 'POST', body: JSON.stringify(event) });
-    return json(res, 200, { ok: true, duplicate: result.duplicate, event_id: result.event_id });
+    // The durable inbox is committed first. A failed projection remains replayable.
+    const sync=require('../lib/salla-sync'),projection={};
+    if(sync.supports(event.p_event_name)){
+      projection.records_pending=false;
+      try { await sync.processEvents(result.event_id); }
+      catch { projection.records_pending=true; }
+    }
+    return json(res, 200, { ok: true, duplicate: result.duplicate, event_id: result.event_id, ...projection });
   } catch (e) { return errorResponse(res, e); }
 };

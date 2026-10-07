@@ -80,6 +80,26 @@
       `<section class="panel"><form id="records-search" class="form-row"><div class="form-field"><label for="search-term">البحث</label><input id="search-term" name="search" maxlength="100" value="${esc(state.search)}" placeholder="${placeholder}"></div><button class="primary" type="submit">بحث</button><button class="secondary" type="button" id="clear-search">مسح البحث</button></form></section><section class="panel">${table}<div class="records-pagination"><button class="secondary" id="records-prev" ${result.page===1 ? 'disabled' : ''}>السابق</button><span>الصفحة ${fmt(result.page)} · ${fmt(result.records.length)} سجل</span><button class="secondary" id="records-next" ${result.has_more ? '' : 'disabled'}>التالي</button></div></section>`;
   }
   function bindContent() {
+    $('salla-sync-start')?.addEventListener('click',async e=>{
+      const button=e.currentTarget,target=$('salla-sync-progress');button.disabled=true;
+      let total=0;
+      try {
+        for(const [resource,label] of [['customers','العملاء'],['orders','الطلبات'],['carts','السلات المتروكة']]){
+          let number=1;
+          while(number){
+            if(!target.isConnected)throw new Error('توقفت المزامنة عند مغادرة الصفحة. يمكنك تشغيلها مجددًا دون تكرار السجلات.');
+            target.textContent=`جارٍ مزامنة ${label} · الصفحة ${fmt(number)} · ${fmt(total)} سجل حتى الآن`;
+            const result=await api('salla-sync',{method:'POST',body:JSON.stringify({resource,page:number})});
+            total+=result.read;number=result.next_page;
+          }
+        }
+        target.textContent='جارٍ تحديث إحصائيات العملاء ومعالجة الأحداث السابقة…';
+        let result;do {result=await api('salla-sync',{method:'POST',body:JSON.stringify({action:'events'})});}while(result.has_more&&target.isConnected);
+        const stats=await api('salla-sync',{method:'POST',body:JSON.stringify({action:'finish'})});
+        target.textContent=`اكتملت المزامنة: ${fmt(stats.customers)} عميل · ${fmt(stats.orders)} طلب · ${fmt(stats.carts)} سلة. يمكنك فتح الأقسام لعرض البيانات.`;
+        toast('اكتملت مزامنة بيانات سلة');
+      }catch(error){target.textContent=error.message;toast(error.message);}finally{button.disabled=false;}
+    });
     $('snapchat-accounts')?.addEventListener('click',async e=>{
       const b=e.currentTarget;b.disabled=true;
       const target=$('snapchat-account-picker');
@@ -175,6 +195,7 @@
           `<section class="panel">${connectionRows(overview.data.connections)}</section><section class="panel"><h3>ربط إعلانات سناب شات</h3><p class="muted">وافق من حساب سناب الذي لديه صلاحية الوصول إلى إعلانات لنك. نحفظ التفويض مشفراً، ثم تختار الحساب الإعلاني لعرض إحصائياته في صفحة الإعلانات.</p>`+
           (!snapConfig?.ready?`<div class="notice warn">${snapConfig?.missing?.length?'أكمل متغيرات Vercel: '+snapConfig.missing.map(esc).join('، '):'تحقق من إعدادات الربط؛ رابط الرجوع أو مفتاح التشفير غير صالح، أو الخدمة غير متاحة.'}</div>`:'')+
           `<div class="form-row"><button class="primary" id="snapchat-start" ${snapConfig?.ready?'':'disabled'}>${snap?.status==='connected'?'إعادة تفويض سناب شات':'ربط سناب شات'}</button>${snap?.status==='connected'?`<button class="secondary" id="snapchat-refresh" ${snapConfig?.ready?'':'disabled'}>تجديد التفويض</button>`:''}</div><p class="muted">اختر الحساب الذي تريد عرض إحصائياته.</p><button class="secondary" id="snapchat-accounts" ${snap?.status==='connected'?'':'disabled'}>اختيار الحساب الإعلاني</button><div id="snapchat-account-picker"></div></section><section class="panel"><h3>ربط واتساب</h3><p class="muted">جهّز الرقم ومسودات متابعة العملاء من مساحة واتساب.</p><button class="secondary" data-page="whatsapp">فتح قسم واتساب ←</button></section><section class="panel"><h3>ربط سلة</h3><p class="muted">بعد تفعيل التطبيق، نستقبل تفويض المتجر ونحفظ بياناته المشفرة. ظهور الحالة «متصل» يعني وصول التفويض، ولا يعني اكتمال مزامنة الطلبات والعملاء.</p></section>`;
+        html+=`<section class="panel"><h3>مزامنة بيانات سلة</h3><p class="muted">اجلب العملاء والطلبات والسلات السابقة إلى اللوحة. اترك هذه الصفحة مفتوحة حتى تنتهي المزامنة. إعادة التشغيل تحدّث السجلات دون تكرارها، ولا ترسل رسائل للعملاء.</p><button class="primary" id="salla-sync-start" ${overview.data.connections?.some(c=>c.provider==='salla'&&c.status==='connected')?'':'disabled'}>مزامنة بيانات المتجر</button><p class="muted" id="salla-sync-progress" role="status" aria-live="polite">جاهز لبدء المزامنة.</p></section>`;
         if(message)history.replaceState(null,'',`${location.pathname}#integrations`);
       }
       else if (page==='videos' || page==='protection') { const url=page==='videos'?'/video-shop-admin':'/protection-admin'; html=heading(title,'أدوات المتجر الحالية داخل مساحة لنك.',`<a class="back-link" href="${url}" target="_blank" rel="noopener">فتح في صفحة مستقلة ↗</a>`)+`<iframe class="embed" title="${title}" src="${url}"></iframe>`; }

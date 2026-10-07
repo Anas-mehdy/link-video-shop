@@ -1,0 +1,470 @@
+[
+  {
+    "table_name": "abandoned_carts",
+    "columns": [
+      {
+        "type": "uuid",
+        "column": "id",
+        "default": "gen_random_uuid()",
+        "nullable": "NO"
+      },
+      {
+        "type": "bigint",
+        "column": "merchant_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "column": "external_cart_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "uuid",
+        "column": "customer_id",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "customer_name",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "phone",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "normalized_phone",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "email",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "currency",
+        "default": "'SAR'::text",
+        "nullable": "NO"
+      },
+      {
+        "type": "numeric",
+        "column": "subtotal",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "type": "numeric",
+        "column": "total_amount",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "type": "integer",
+        "column": "items_count",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "column": "checkout_url",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "status",
+        "default": "'active'::text",
+        "nullable": "NO"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "abandoned_at",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "first_contact_at",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "last_contact_at",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "recovered_at",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "uuid",
+        "column": "recovered_order_id",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "uuid",
+        "column": "last_event_id",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "jsonb",
+        "column": "source_payload",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "created_at",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "updated_at",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "constraints": [
+      "FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL",
+      "CHECK ((items_count >= 0))",
+      "FOREIGN KEY (last_event_id) REFERENCES webhook_events(id) ON DELETE SET NULL",
+      "UNIQUE (merchant_id, external_cart_id)",
+      "FOREIGN KEY (merchant_id) REFERENCES stores(merchant_id)",
+      "PRIMARY KEY (id)",
+      "FOREIGN KEY (recovered_order_id) REFERENCES orders(id) ON DELETE SET NULL",
+      "CHECK (((source_payload IS NULL) OR (jsonb_typeof(source_payload) = 'object'::text)))",
+      "CHECK ((status = ANY (ARRAY['active'::text, 'contacted'::text, 'recovered'::text, 'expired'::text, 'cancelled'::text])))"
+    ]
+  },
+  {
+    "table_name": "customers",
+    "columns": [
+      {
+        "type": "uuid",
+        "column": "id",
+        "default": "gen_random_uuid()",
+        "nullable": "NO"
+      },
+      {
+        "type": "bigint",
+        "column": "merchant_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "column": "external_customer_id",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "name",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "first_name",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "last_name",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "phone",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "normalized_phone",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "email",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "country_code",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "city",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "integer",
+        "column": "orders_count",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "type": "numeric",
+        "column": "total_spent",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "first_order_at",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "last_order_at",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "jsonb",
+        "column": "source_payload",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "created_at",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "updated_at",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "constraints": [
+      "UNIQUE (merchant_id, external_customer_id)",
+      "FOREIGN KEY (merchant_id) REFERENCES stores(merchant_id)",
+      "CHECK ((orders_count >= 0))",
+      "PRIMARY KEY (id)",
+      "CHECK (((source_payload IS NULL) OR (jsonb_typeof(source_payload) = 'object'::text)))",
+      "CHECK ((total_spent >= (0)::numeric))"
+    ]
+  },
+  {
+    "table_name": "orders",
+    "columns": [
+      {
+        "type": "uuid",
+        "column": "id",
+        "default": "gen_random_uuid()",
+        "nullable": "NO"
+      },
+      {
+        "type": "bigint",
+        "column": "merchant_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "column": "external_order_id",
+        "default": null,
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "column": "order_reference",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "uuid",
+        "column": "customer_id",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "status",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "status_slug",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "payment_status",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "payment_method",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "shipping_status",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "shipping_company",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "currency",
+        "default": "'SAR'::text",
+        "nullable": "NO"
+      },
+      {
+        "type": "numeric",
+        "column": "subtotal",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "type": "numeric",
+        "column": "discount_amount",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "type": "numeric",
+        "column": "shipping_amount",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "type": "numeric",
+        "column": "tax_amount",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "type": "numeric",
+        "column": "total_amount",
+        "default": "0",
+        "nullable": "NO"
+      },
+      {
+        "type": "text",
+        "column": "source",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "utm_source",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "utm_medium",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "utm_campaign",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "utm_content",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "utm_term",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "text",
+        "column": "coupon_code",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "ordered_at",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "source_updated_at",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "uuid",
+        "column": "last_event_id",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "jsonb",
+        "column": "source_payload",
+        "default": null,
+        "nullable": "YES"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "created_at",
+        "default": "now()",
+        "nullable": "NO"
+      },
+      {
+        "type": "timestamp with time zone",
+        "column": "updated_at",
+        "default": "now()",
+        "nullable": "NO"
+      }
+    ],
+    "constraints": [
+      "FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL",
+      "FOREIGN KEY (last_event_id) REFERENCES webhook_events(id) ON DELETE SET NULL",
+      "UNIQUE (merchant_id, external_order_id)",
+      "FOREIGN KEY (merchant_id) REFERENCES stores(merchant_id)",
+      "PRIMARY KEY (id)",
+      "CHECK (((source_payload IS NULL) OR (jsonb_typeof(source_payload) = 'object'::text)))"
+    ]
+  }
+]
