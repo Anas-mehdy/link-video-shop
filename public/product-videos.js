@@ -381,15 +381,20 @@
       qty.addEventListener('change',()=>{const max=selectedProducts()[i].max;state.quantities[i]=Math.min(max,Math.max(1,Math.floor(Number(qty.value)||1)));state.mode='custom';update();});
       return {check,price,qty};
     });
-    const note=make('p','خصم 20 ر.س على استيكر واحد مع الكفر. السعر قبل الشحن وخصومات السلة الأخرى.'),status=make('p','','lc-status');status.id='lc-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+    const note=make('p','وفّر 20 ر.س مع حماية الشاشة، أو 47 ر.س مع الحماية الكاملة. السعر قبل الشحن.'),status=make('p','','lc-status');status.id='lc-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
     const bar=make('div');bar.id='link-carbon-cart';const total=make('div','','lc-total'),totalPrice=make('strong'),count=make('small'),add=make('button','أضف للسلة');add.type='button';add.setAttribute('aria-describedby','lc-status');total.append(make('small','الإجمالي'),totalPrice,count);bar.append(total,add);
     const cartLink=make('a','عرض السلة');cartLink.href='/cart';cartLink.style.cssText='display:inline-block;margin-top:8px;color:#51007a;text-decoration:underline;font-size:13px';cartLink.hidden=true;
     body.append(packages,options,details,note,status,cartLink);root.append(head,body);
     function selectedProducts(){return [screens[state.screen],lens,plate];}
     // Verified live Salla buy-one-case/get-one-screen offer: 15.504%, rounded to 20 SAR.
-    // Full-package 47 SAR offer is not active; do not advertise 399 yet.
+    // Verified full-package offer: one screen, one lens and one normal plate = 47 SAR saving.
     const offerScreens=[982757716,62439963,1627040171];
-    function saving(picks=state.picks){return picks[0]&&product.price===149&&screens[state.screen].price===129&&offerScreens.includes(screens[state.screen].id)?20:0;}
+    function saving(picks=state.picks,quantities=state.quantities){
+      if(product.price!==149||screens[state.screen].price!==129||!offerScreens.includes(screens[state.screen].id))return 0;
+      if(picks.every(Boolean)&&quantities.every(q=>q===1)&&lens.price===79&&plate.price===89)return 47;
+      const pieces=picks.reduce((sum,p,i)=>sum+(p?quantities[i]:0),0);
+      return picks[0]&&pieces<3?20:0;
+    }
     function subtotal(){return product.price+selectedProducts().reduce((sum,p,i)=>sum+(state.picks[i]?p.price*state.quantities[i]:0),0);}
     function amount(){return subtotal()-saving();}
     function image(p){const img=make('img');img.src=p.image;img.alt=p===product?'الكفر السماوي':p.name;img.loading='lazy';return img;}
@@ -399,13 +404,14 @@
       cards.forEach(c=>{
         c.radio.checked=state.mode===c.key;c.radio.disabled=locked||!product.available||(c.key!=='case'&&!ps[0].available)||(c.key==='full'&&(!lens.available||!plate.available));
         const items=c.key==='case'?[product]:c.key==='screen'?[product,ps[0]]:[product,...ps];
-        const original=items.reduce((sum,p)=>sum+p.price,0),discount=saving(c.key==='case'?[false,false,false]:[true,false,false]);
+        const original=items.reduce((sum,p)=>sum+p.price,0),discount=saving(c.key==='case'?[false,false,false]:c.key==='screen'?[true,false,false]:[true,true,true],[1,1,1]);
         c.price.textContent=money(original-discount);c.oldPrice.textContent=discount?money(original):'';c.oldPrice.hidden=!discount;
-        c.badge.textContent=discount?'وفّر '+money(discount):'';c.badge.hidden=!discount;c.pictures.replaceChildren(...items.map(image));
+        c.badge.textContent=discount?(c.key==='full'?'أفضل قيمة · ':'')+'وفّر '+money(discount):'';c.badge.hidden=!discount;c.pictures.replaceChildren(...items.map(image));
       });
       custom.forEach((c,i)=>{c.check.checked=state.picks[i];c.check.disabled=locked||!ps[i].available;c.qty.disabled=locked||!state.picks[i]||!ps[i].available;c.qty.max=String(ps[i].max);c.qty.value=String(state.quantities[i]);c.price.textContent=ps[i].available?'+ '+money(ps[i].price):'نفد حاليًا';});
       screenField.hidden=!state.picks[0];colorField.hidden=!state.picks[1];
       screenSelect.disabled=colorSelect.disabled=locked;
+      note.textContent=state.mode==='custom'&&state.quantities.some((q,i)=>state.picks[i]&&q>1)?'الخصم النهائي للكميات المخصصة يُحتسب في السلة. السعر قبل الشحن.':'وفّر 20 ر.س مع حماية الشاشة، أو 47 ر.س مع الحماية الكاملة. السعر قبل الشحن.';
       totalPrice.textContent=money(amount());const pieceCount=1+state.picks.reduce((sum,p,i)=>sum+(p?state.quantities[i]:0),0);count.textContent=saving()?'وفّرت '+money(saving()):pieceCount===1?'قطعة واحدة':pieceCount+' قطع مختارة';
       const invalid=!product.available||ps.some((p,i)=>state.picks[i]&&!p.available);
       add.disabled=state.busy||(!state.complete&&!state.uncertain&&(!ready||invalid));
