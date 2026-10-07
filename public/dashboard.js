@@ -127,6 +127,29 @@
         toast('اكتملت مزامنة بيانات سلة');
       }catch(error){target.textContent=`${error.message} · مكان الاستئناف: ${stageInput.options[stageInput.selectedIndex].text}، الصفحة ${fmt(pageInput.value)}.`;toast(error.message);}finally{button.disabled=false;stageInput.disabled=false;pageInput.disabled=false;}
     });
+
+    $('tiktok-start')?.addEventListener('click',async e=>{
+      const button=e.currentTarget;button.disabled=true;
+      try{
+        const data=await api('tiktok&action=start',{method:'POST'}),url=new URL(data.url);
+        if(url.origin!=='https://business-api.tiktok.com'||url.pathname!=='/portal/auth')throw Error('رابط التفويض غير صالح');
+        location.assign(url.toString());
+      }catch(error){toast(error.message);button.disabled=false;}
+    });
+    $('tiktok-accounts')?.addEventListener('click',async e=>{
+      const button=e.currentTarget,target=$('tiktok-account-picker');button.disabled=true;
+      try{
+        const data=await api('tiktok&action=accounts');
+        if(!data.accounts?.length){target.innerHTML='<p class="muted">لا توجد حسابات إعلانية مفوّضة. أعد التفويض واختر حساب لنك.</p>';return;}
+        target.innerHTML=`<form id="tiktok-account-form" class="form-row" style="margin-top:16px"><div class="form-field"><label for="tiktok-account-id">الحساب الإعلاني</label><select id="tiktok-account-id" name="account" required><option value="">اختر حساب لنك</option>${data.accounts.map(a=>`<option value="${esc(a.id)}" ${data.selected?.id===a.id?'selected':''}>${esc(a.name)} · ${esc(a.id)}</option>`).join('')}</select></div><button class="primary" type="submit">حفظ الحساب</button></form>`;
+        $('tiktok-account-form').addEventListener('submit',async event=>{
+          event.preventDefault();const form=event.currentTarget,save=form.querySelector('button');save.disabled=true;
+          try{const data=await api('tiktok&action=select',{method:'POST',body:JSON.stringify({account_id:form.elements.account.value})});toast('تم حفظ حساب تيك توك: '+data.selected.name);}
+          catch(error){toast(error.message);}finally{save.disabled=false;}
+        });
+      }catch(error){target.textContent=error.message;}finally{button.disabled=false;}
+    });
+
     $('snapchat-accounts')?.addEventListener('click',async e=>{
       const b=e.currentTarget;b.disabled=true;
       const target=$('snapchat-account-picker');
@@ -214,19 +237,23 @@
         overview=await api('overview');
         let snapConfig=null;
         try { const r=await window.LinkAuth.fetch('/api/snapchat-connect',{headers:{Authorization:`Bearer ${token}`},cache:'no-store'});if(r.ok)snapConfig=await r.json(); } catch {}
+        let tiktokConfig=null;try{tiktokConfig=await api('tiktok');}catch{}
+        const tiktok=overview.data.connections?.find(c=>c.provider==='tiktok');
         const snap=overview.data.connections?.find(c=>c.provider==='snapchat');
         const result=new URLSearchParams(location.search);
         const message=result.get('connection')==='snapchat'?({success:snap?.status==='connected'?'تم حفظ تفويض سناب بنجاح. اختر الحساب الإعلاني أدناه لعرض إحصائياته.':'تحقق من حالة الاتصال؛ تعذر تأكيد التفويض المحفوظ.',cancelled:'تم إلغاء الموافقة من سناب. يمكنك إعادة المحاولة.',failed:'لم يكتمل تفويض سناب. ابدأ الربط مجدداً من هذا المتصفح، وتحقق من إعدادات Vercel.'}[result.get('result')]||''):'';
+        const tiktokMessage=result.get('connection')==='tiktok'?({success:tiktok?.status==='connected'?'تم حفظ تفويض تيك توك بنجاح. اختر الحساب الإعلاني أدناه.':'تعذر تأكيد التفويض المحفوظ.',cancelled:'تم إلغاء تفويض تيك توك.',failed:'لم يكتمل تفويض تيك توك؛ ابدأ الربط مجددًا من هذا المتصفح وتحقق من مفاتيح التطبيق ورابط الرجوع.'}[result.get('result')]||''):'';
         html=heading(title,'حالة اتصال المتجر والقنوات التي سنجمعها في مساحة واحدة.')+
+          (tiktokMessage?`<div class="notice ${result.get('result')==='success'?'':'warn'}">${tiktokMessage}</div>`:'')+
           (message?`<div class="notice ${result.get('result')==='success'?'':'warn'}">${message}</div>`:'')+
           `<section class="panel">${connectionRows(overview.data.connections)}</section><section class="panel"><h3>ربط إعلانات سناب شات</h3><p class="muted">وافق من حساب سناب الذي لديه صلاحية الوصول إلى إعلانات لنك. نحفظ التفويض مشفراً، ثم تختار الحساب الإعلاني لعرض إحصائياته في صفحة الإعلانات.</p>`+
           (!snapConfig?.ready?`<div class="notice warn">${snapConfig?.missing?.length?'أكمل متغيرات Vercel: '+snapConfig.missing.map(esc).join('، '):'تحقق من إعدادات الربط؛ رابط الرجوع أو مفتاح التشفير غير صالح، أو الخدمة غير متاحة.'}</div>`:'')+
-          `<div class="form-row"><button class="primary" id="snapchat-start" ${snapConfig?.ready?'':'disabled'}>${snap?.status==='connected'?'إعادة تفويض سناب شات':'ربط سناب شات'}</button>${snap?.status==='connected'?`<button class="secondary" id="snapchat-refresh" ${snapConfig?.ready?'':'disabled'}>تجديد التفويض</button>`:''}</div><p class="muted">اختر الحساب الذي تريد عرض إحصائياته.</p><button class="secondary" id="snapchat-accounts" ${snap?.status==='connected'?'':'disabled'}>اختيار الحساب الإعلاني</button><div id="snapchat-account-picker"></div></section><section class="panel"><h3>ربط واتساب</h3><p class="muted">جهّز الرقم ومسودات متابعة العملاء من مساحة واتساب.</p><button class="secondary" data-page="whatsapp">فتح قسم واتساب ←</button></section><section class="panel"><h3>ربط سلة</h3><p class="muted">بعد تفعيل التطبيق، نستقبل تفويض المتجر ونحفظ بياناته المشفرة. ظهور الحالة «متصل» يعني وصول التفويض، ولا يعني اكتمال مزامنة الطلبات والعملاء.</p></section>`;
+          `<div class="form-row"><button class="primary" id="snapchat-start" ${snapConfig?.ready?'':'disabled'}>${snap?.status==='connected'?'إعادة تفويض سناب شات':'ربط سناب شات'}</button>${snap?.status==='connected'?`<button class="secondary" id="snapchat-refresh" ${snapConfig?.ready?'':'disabled'}>تجديد التفويض</button>`:''}</div><p class="muted">اختر الحساب الذي تريد عرض إحصائياته.</p><button class="secondary" id="snapchat-accounts" ${snap?.status==='connected'?'':'disabled'}>اختيار الحساب الإعلاني</button><div id="snapchat-account-picker"></div></section><section class="panel"><h3>ربط إعلانات تيك توك</h3><p class="muted">فوّض حساب لنك الإعلاني، ثم اختره من القائمة. يُحفظ التفويض مشفّرًا. ربط عرض الإحصائيات هو الخطوة التالية بعد التفويض.</p>${!tiktokConfig?.ready?`<div class="notice warn">${tiktokConfig?.missing?.length?'أكمل متغيرات Vercel: '+tiktokConfig.missing.map(esc).join('، '):'تحقق من إعدادات ربط تيك توك ومفتاح التشفير.'}</div>`:''}<div class="form-row"><button class="primary" id="tiktok-start" ${tiktokConfig?.ready?'':'disabled'}>${tiktok?.status==='connected'?'إعادة تفويض تيك توك':'ربط تيك توك'}</button><button class="secondary" id="tiktok-accounts" ${tiktok?.status==='connected'?'':'disabled'}>اختيار الحساب الإعلاني</button></div><div id="tiktok-account-picker"></div></section><section class="panel"><h3>ربط واتساب</h3><p class="muted">جهّز الرقم ومسودات متابعة العملاء من مساحة واتساب.</p><button class="secondary" data-page="whatsapp">فتح قسم واتساب ←</button></section><section class="panel"><h3>ربط سلة</h3><p class="muted">بعد تفعيل التطبيق، نستقبل تفويض المتجر ونحفظ بياناته المشفرة. ظهور الحالة «متصل» يعني وصول التفويض، ولا يعني اكتمال مزامنة الطلبات والعملاء.</p></section>`;
         let checkpoint=null;try{checkpoint=JSON.parse(sessionStorage.getItem('lvs_salla_sync_30_v1'));}catch{}
         const stages=[['customers','العملاء'],['orders','الطلبات'],['carts','السلات المتروكة'],['events','الأحداث السابقة'],['finish','الإحصائيات']];
         if(!stages.some(([resource])=>resource===checkpoint?.resource)||!Number.isInteger(checkpoint?.page)||checkpoint.page<1||checkpoint.page>10000)checkpoint=null;
         html+=`<section class="panel"><h3>مزامنة آخر 30 يومًا</h3><p class="muted">نجلب طلبات آخر 30 يومًا والعملاء الجدد في الفترة نفسها، ونضيف العملاء المرتبطين بهذه الطلبات. لا نجلب أرشيف السنوات السابقة. اترك الصفحة مفتوحة حتى تنتهي؛ مكان الاستئناف يُحفظ في هذا التبويب.</p><div class="form-row"><div class="form-field"><label for="salla-sync-resource">المتابعة من</label><select id="salla-sync-resource">${stages.map(([resource,label])=>`<option value="${resource}" ${checkpoint?.resource===resource?'selected':''}>${label}</option>`).join('')}</select></div><div class="form-field short"><label for="salla-sync-page">الصفحة</label><input id="salla-sync-page" type="number" min="1" max="10000" value="${checkpoint?.page||1}"></div><button class="primary" id="salla-sync-start" ${overview.data.connections?.some(c=>c.provider==='salla'&&c.status==='connected')?'':'disabled'}>بدء / متابعة المزامنة</button></div><p class="muted">السلات: نحدّث سلات آخر 30 يومًا من الأحداث المستلمة. جلب أرشيف السلات متوقف؛ فلترة تاريخ قائمة السلات غير موثقة في سلة.</p><p class="muted" id="salla-sync-progress" role="status" aria-live="polite">${checkpoint?'مكان التوقف محفوظ؛ اضغط متابعة لإكمال المزامنة.':'آخر 30 يومًا فقط. ابدأ من العملاء والصفحة 1.'}</p></section>`;
-        if(message)history.replaceState(null,'',`${location.pathname}#integrations`);
+        if(message||tiktokMessage)history.replaceState(null,'',`${location.pathname}#integrations`);
       }
       else if (page==='videos' || page==='protection') { const url=page==='videos'?'/video-shop-admin':'/protection-admin'; html=heading(title,'أدوات المتجر الحالية داخل مساحة لنك.',`<a class="back-link" href="${url}" target="_blank" rel="noopener">فتح في صفحة مستقلة ↗</a>`)+`<iframe class="embed" title="${title}" src="${url}"></iframe>`; }
       else if (page==='settings') { html=heading(title,'إعدادات مساحة العمل وتجهيز المرحلة التالية.')+`<section class="panel"><div class="settings-list"><div><span>المتجر</span><b>Link Store</b></div><div><span>معرّف المتجر</span><code>1829345766</code></div><div><span>المنطقة الزمنية للعرض</span><b>السعودية</b></div><div><span>المصادقة الحالية</span><b>${window.LinkAuth.mode==='supabase'?'Supabase Auth · حسابات مصرح لها':'رمز إدارة الفيديو شوب'}</b></div><div><span>تشغيل الأتمتة</span><span class="badge">اختبار فقط</span></div></div></section><section class="panel"><h3>الطلبات والعملاء والسلات</h3><p class="muted">تمت مراجعة أعمدة الجداول وإعداد عرض سجلاتها. الخطوة القادمة تفعيل تطبيق سلة وربط الأحداث والمزامنة بالجداول.</p></section>`; }

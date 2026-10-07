@@ -18,6 +18,7 @@ module.exports = async function handler(req, res) {
       }catch(e){if(e.statusCode===401&&action==='session')auth.clearSession(res);return json(res,[400,401,403,429,503].includes(e.statusCode)?e.statusCode:503,{ok:false,error:e.statusCode?e.message:'تعذر تسجيل الدخول'});}
     }
     await requireAdmin(req);
+    if(resource==='tiktok')return require('../lib/tiktok').admin(req,res);
     if (resource === 'salla-sync' && req.method === 'POST') {
       try {
         const sync=require('../lib/salla-sync'),body=bodyObject(req);
