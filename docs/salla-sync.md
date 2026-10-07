@@ -5,10 +5,25 @@ The migration uses the schema supplied on 2026-10-07. It adds source timestamps
 and a separate projection timestamp on the durable inbox. It does not repoint
 the existing `last_event_id` foreign keys to the new inbox.
 
-The authenticated dashboard Integrations page has a **مزامنة بيانات المتجر**
-button. It fetches customers, orders, then carts in sequential pages of 30,
-using the encrypted server-side Salla access token. Keep the page open. A failed
-or interrupted run can be restarted from page 1 without duplicate records.
+The authenticated dashboard Integrations page has a **مزامنة آخر 30 يومًا**
+button. It fetches recent customers and orders in sequential pages of 30,
+using the encrypted server-side Salla access token and documented date filters.
+The window is 30 Saudi calendar days including today. Embedded customers of
+recent orders are included even if their account was created earlier. Historical
+cart API crawling is disabled because no date filter is documented. Recent carts
+are populated from received webhooks only; this is not a complete historical
+cart backfill. The dashboard lists/counts and customer spend use the same recent
+window. Previously imported customers stay stored but are hidden unless a new
+scoped import or a recent order links them to the window. Re-run the updated SQL
+to add crm_scope_at and update the private RPCs before this release is used.
+Keep the page open. A failed
+or interrupted run can resume from the failed resource/page saved in tab session
+storage. Resource and page controls also allow manual recovery. Only an explicit
+selection of customers/page 1 starts a full reimport. Provider status and retry
+timing are displayed without exposing raw provider responses. Transient connection/server errors
+are retried at most twice. HTTP 429 stops immediately; long provider Retry-After values require a later manual
+resume instead of hammering the endpoint. Closing the tab clears the checkpoint. A new checkpoint namespace discards
+checkpoints from the old all-history import.
 Provider next URLs are never fetched: only fixed Salla endpoints and numeric
 page increments are accepted. For very large histories use date windows in a
 future import job; Salla recommends completing orders pagination within 15 min.

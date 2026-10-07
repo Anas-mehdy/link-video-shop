@@ -28,7 +28,7 @@
     let data;
     try { data = await res.json(); } catch { throw new Error('تعذر قراءة استجابة الخادم'); }
     if (res.status === 401) { token = ''; sessionStorage.removeItem('lvs_admin'); $('app').hidden = true; $('login').hidden = false; throw new Error('رمز الإدارة غير صحيح أو انتهت الجلسة'); }
-    if (!res.ok || !data.ok) throw new Error(data.error || 'تعذر تحميل البيانات');
+    if (!res.ok || !data.ok) throw Object.assign(new Error(data.error || 'تعذر تحميل البيانات'),{retryable:data.retryable,retry_after:data.retry_after,provider_status:data.provider_status});
     return data;
   }
   function toast(message) { $('toast').textContent = message; $('toast').hidden = false; clearTimeout(toast.timer); toast.timer = setTimeout(() => { $('toast').hidden = true; }, 5000); }
@@ -53,7 +53,7 @@
   function home(result) {
     const d = result.data, salla = d.connections?.find(c => c.provider === 'salla');
     const connected = salla?.status === 'connected' && (!salla.token_expires_at || new Date(salla.token_expires_at) > new Date());
-    const metrics = [['الطلبات',d.orders,'الطلبات المسجلة في قاعدة البيانات','orders'],['العملاء',d.customers,'العملاء المسجلون في قاعدة البيانات','customers'],['السلات المتروكة',d.carts,'كل السلات المسجلة، بجميع حالاتها','carts'],['المنتجات',d.products,'من كتالوج المتجر الحالي','carts'],['الفيديوهات',d.videos,'فيديوهات المتجر المسجلة','videos'],['قواعد الأتمتة',d.rules?.length,'تُشغّل في وضع الاختبار فقط','automations'],['سلة',null,connected ? 'وصل تفويض المتجر' : 'بانتظار تفعيل التطبيق','integrations']];
+    const metrics = [['الطلبات',d.orders,'طلبات آخر 30 يومًا','orders'],['العملاء',d.customers,'عملاء فترة آخر 30 يومًا','customers'],['السلات المتروكة',d.carts,'سلات آخر 30 يومًا، بجميع حالاتها','carts'],['المنتجات',d.products,'من كتالوج المتجر الحالي','carts'],['الفيديوهات',d.videos,'فيديوهات المتجر المسجلة','videos'],['قواعد الأتمتة',d.rules?.length,'تُشغّل في وضع الاختبار فقط','automations'],['سلة',null,connected ? 'وصل تفويض المتجر' : 'بانتظار تفعيل التطبيق','integrations']];
     return heading('نظرة عامة','مرحبًا بك في مساحة لنك. هنا تبدأ متابعة متجرك.', '<button class="secondary" data-page="integrations">إدارة التكاملات ↗</button>') +
       `<section class="welcome"><div><span class="eyebrow" style="color:#d7bde5">مساحة لنك الجديدة</span><h2>كل التفاصيل، أقرب إليك.</h2><p>أساس واحد يجمع إدارة الفيديوهات، أحداث المتجر، وقواعد المتابعة. نجهّز البيت لاستقبال بيانات سلة، ثم نوسّعه مع نمو متجرك.</p></div><button class="secondary" data-page="automations">استكشف الأتمتة ←</button></section>` +
       (result.unavailable.length ? `<div class="notice warn">بعض البيانات غير متاحة حاليًا. ${result.unavailable.some(k => ['connections','events','rules'].includes(k)) ? 'تأكد من إعداد قاعدة بيانات اللوحة الجديدة.' : 'تحقق من اتصال قاعدة البيانات.'} الأرقام غير المتاحة تظهر بعلامة —.</div>` : '') +
@@ -81,24 +81,51 @@
   }
   function bindContent() {
     $('salla-sync-start')?.addEventListener('click',async e=>{
-      const button=e.currentTarget,target=$('salla-sync-progress');button.disabled=true;
+      const button=e.currentTarget,target=$('salla-sync-progress'),stageInput=$('salla-sync-resource'),pageInput=$('salla-sync-page');
+      const stages=[['customers','العملاء'],['orders','الطلبات'],['carts','السلات المتروكة'],['events','الأحداث السابقة'],['finish','الإحصائيات']];
+      const start=stages.findIndex(([resource])=>resource===stageInput.value),startPage=Number(pageInput.value);
+      if(start<0||!Number.isInteger(startPage)||startPage<1||startPage>10000){toast('رقم صفحة الاستئناف غير صالح');return;}
+      button.disabled=true;stageInput.disabled=true;pageInput.disabled=true;
       let total=0;
-      try {
-        for(const [resource,label] of [['customers','العملاء'],['orders','الطلبات'],['carts','السلات المتروكة']]){
-          let number=1;
-          while(number){
-            if(!target.isConnected)throw new Error('توقفت المزامنة عند مغادرة الصفحة. يمكنك تشغيلها مجددًا دون تكرار السجلات.');
-            target.textContent=`جارٍ مزامنة ${label} · الصفحة ${fmt(number)} · ${fmt(total)} سجل حتى الآن`;
-            const result=await api('salla-sync',{method:'POST',body:JSON.stringify({resource,page:number})});
-            total+=result.read;number=result.next_page;
+      const checkpoint=(resource,number)=>{
+        sessionStorage.setItem('lvs_salla_sync_30_v1',JSON.stringify({resource,page:number}));
+        stageInput.value=resource;pageInput.value=number;
+      };
+      const request=async body=>{
+        for(let attempt=0;;attempt++){
+          try{return await api('salla-sync',{method:'POST',body:JSON.stringify(body)});}
+          catch(error){
+            if(error.provider_status===429||!error.retryable||attempt>=2||(error.retry_after||0)>60||!target.isConnected)throw error;
+            const seconds=Math.max(3,error.retry_after||3)*(attempt+1);
+            target.textContent=`${error.message} · إعادة المحاولة بعد ${fmt(seconds)} ثانية.`;
+            await new Promise(resolve=>setTimeout(resolve,seconds*1000));
+            if(!target.isConnected)throw new Error('توقفت المزامنة؛ مكان الاستئناف محفوظ.');
           }
         }
-        target.textContent='جارٍ تحديث إحصائيات العملاء ومعالجة الأحداث السابقة…';
-        let result;do {result=await api('salla-sync',{method:'POST',body:JSON.stringify({action:'events'})});}while(result.has_more&&target.isConnected);
-        const stats=await api('salla-sync',{method:'POST',body:JSON.stringify({action:'finish'})});
+      };
+      try {
+        for(let index=start;index<3;index++){
+          const [resource,label]=stages[index];let number=index===start?startPage:1;
+          while(number){
+            checkpoint(resource,number);
+            if(!target.isConnected)throw new Error('توقفت المزامنة عند مغادرة الصفحة. مكان الاستئناف محفوظ.');
+            target.textContent=`جارٍ مزامنة ${label} · الصفحة ${fmt(number)} · ${fmt(total)} سجل حتى الآن`;
+            const result=await request({resource,page:number});
+            total+=result.read;number=result.next_page;
+            checkpoint(number?resource:stages[index+1][0],number||1);
+          }
+        }
+        if(start<4){
+          checkpoint('events',1);target.textContent='جارٍ معالجة الأحداث السابقة…';
+          let result;do {result=await request({action:'events'});}while(result.has_more&&target.isConnected);
+        }
+        if(!target.isConnected)throw new Error('توقفت المزامنة؛ مكان الاستئناف محفوظ.');
+        checkpoint('finish',1);target.textContent='جارٍ تحديث إحصائيات العملاء…';
+        const stats=await request({action:'finish'});
         target.textContent=`اكتملت المزامنة: ${fmt(stats.customers)} عميل · ${fmt(stats.orders)} طلب · ${fmt(stats.carts)} سلة. يمكنك فتح الأقسام لعرض البيانات.`;
+        sessionStorage.removeItem('lvs_salla_sync_30_v1');stageInput.value='customers';pageInput.value=1;
         toast('اكتملت مزامنة بيانات سلة');
-      }catch(error){target.textContent=error.message;toast(error.message);}finally{button.disabled=false;}
+      }catch(error){target.textContent=`${error.message} · مكان الاستئناف: ${stageInput.options[stageInput.selectedIndex].text}، الصفحة ${fmt(pageInput.value)}.`;toast(error.message);}finally{button.disabled=false;stageInput.disabled=false;pageInput.disabled=false;}
     });
     $('snapchat-accounts')?.addEventListener('click',async e=>{
       const b=e.currentTarget;b.disabled=true;
@@ -195,7 +222,10 @@
           `<section class="panel">${connectionRows(overview.data.connections)}</section><section class="panel"><h3>ربط إعلانات سناب شات</h3><p class="muted">وافق من حساب سناب الذي لديه صلاحية الوصول إلى إعلانات لنك. نحفظ التفويض مشفراً، ثم تختار الحساب الإعلاني لعرض إحصائياته في صفحة الإعلانات.</p>`+
           (!snapConfig?.ready?`<div class="notice warn">${snapConfig?.missing?.length?'أكمل متغيرات Vercel: '+snapConfig.missing.map(esc).join('، '):'تحقق من إعدادات الربط؛ رابط الرجوع أو مفتاح التشفير غير صالح، أو الخدمة غير متاحة.'}</div>`:'')+
           `<div class="form-row"><button class="primary" id="snapchat-start" ${snapConfig?.ready?'':'disabled'}>${snap?.status==='connected'?'إعادة تفويض سناب شات':'ربط سناب شات'}</button>${snap?.status==='connected'?`<button class="secondary" id="snapchat-refresh" ${snapConfig?.ready?'':'disabled'}>تجديد التفويض</button>`:''}</div><p class="muted">اختر الحساب الذي تريد عرض إحصائياته.</p><button class="secondary" id="snapchat-accounts" ${snap?.status==='connected'?'':'disabled'}>اختيار الحساب الإعلاني</button><div id="snapchat-account-picker"></div></section><section class="panel"><h3>ربط واتساب</h3><p class="muted">جهّز الرقم ومسودات متابعة العملاء من مساحة واتساب.</p><button class="secondary" data-page="whatsapp">فتح قسم واتساب ←</button></section><section class="panel"><h3>ربط سلة</h3><p class="muted">بعد تفعيل التطبيق، نستقبل تفويض المتجر ونحفظ بياناته المشفرة. ظهور الحالة «متصل» يعني وصول التفويض، ولا يعني اكتمال مزامنة الطلبات والعملاء.</p></section>`;
-        html+=`<section class="panel"><h3>مزامنة بيانات سلة</h3><p class="muted">اجلب العملاء والطلبات والسلات السابقة إلى اللوحة. اترك هذه الصفحة مفتوحة حتى تنتهي المزامنة. إعادة التشغيل تحدّث السجلات دون تكرارها، ولا ترسل رسائل للعملاء.</p><button class="primary" id="salla-sync-start" ${overview.data.connections?.some(c=>c.provider==='salla'&&c.status==='connected')?'':'disabled'}>مزامنة بيانات المتجر</button><p class="muted" id="salla-sync-progress" role="status" aria-live="polite">جاهز لبدء المزامنة.</p></section>`;
+        let checkpoint=null;try{checkpoint=JSON.parse(sessionStorage.getItem('lvs_salla_sync_30_v1'));}catch{}
+        const stages=[['customers','العملاء'],['orders','الطلبات'],['carts','السلات المتروكة'],['events','الأحداث السابقة'],['finish','الإحصائيات']];
+        if(!stages.some(([resource])=>resource===checkpoint?.resource)||!Number.isInteger(checkpoint?.page)||checkpoint.page<1||checkpoint.page>10000)checkpoint=null;
+        html+=`<section class="panel"><h3>مزامنة آخر 30 يومًا</h3><p class="muted">نجلب طلبات آخر 30 يومًا والعملاء الجدد في الفترة نفسها، ونضيف العملاء المرتبطين بهذه الطلبات. لا نجلب أرشيف السنوات السابقة. اترك الصفحة مفتوحة حتى تنتهي؛ مكان الاستئناف يُحفظ في هذا التبويب.</p><div class="form-row"><div class="form-field"><label for="salla-sync-resource">المتابعة من</label><select id="salla-sync-resource">${stages.map(([resource,label])=>`<option value="${resource}" ${checkpoint?.resource===resource?'selected':''}>${label}</option>`).join('')}</select></div><div class="form-field short"><label for="salla-sync-page">الصفحة</label><input id="salla-sync-page" type="number" min="1" max="10000" value="${checkpoint?.page||1}"></div><button class="primary" id="salla-sync-start" ${overview.data.connections?.some(c=>c.provider==='salla'&&c.status==='connected')?'':'disabled'}>بدء / متابعة المزامنة</button></div><p class="muted">السلات: نحدّث سلات آخر 30 يومًا من الأحداث المستلمة. جلب أرشيف السلات متوقف؛ فلترة تاريخ قائمة السلات غير موثقة في سلة.</p><p class="muted" id="salla-sync-progress" role="status" aria-live="polite">${checkpoint?'مكان التوقف محفوظ؛ اضغط متابعة لإكمال المزامنة.':'آخر 30 يومًا فقط. ابدأ من العملاء والصفحة 1.'}</p></section>`;
         if(message)history.replaceState(null,'',`${location.pathname}#integrations`);
       }
       else if (page==='videos' || page==='protection') { const url=page==='videos'?'/video-shop-admin':'/protection-admin'; html=heading(title,'أدوات المتجر الحالية داخل مساحة لنك.',`<a class="back-link" href="${url}" target="_blank" rel="noopener">فتح في صفحة مستقلة ↗</a>`)+`<iframe class="embed" title="${title}" src="${url}"></iframe>`; }

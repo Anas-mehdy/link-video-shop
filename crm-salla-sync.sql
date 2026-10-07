@@ -1,6 +1,7 @@
 -- Additive migration for the reviewed Link Store schema. Run once before sync.
 begin;
 alter table public.customers add column if not exists crm_source_at timestamptz;
+alter table public.customers add column if not exists crm_scope_at timestamptz;
 alter table public.orders add column if not exists crm_source_at timestamptz;
 alter table public.abandoned_carts add column if not exists crm_source_at timestamptz;
 alter table public.crm_event_inbox add column if not exists records_synced_at timestamptz;
@@ -38,6 +39,7 @@ begin
     when 'customers' then v_allowed := array['external_customer_id','name','first_name','last_name','phone','normalized_phone','email','country_code','city','source_payload','crm_source_at'];
     when 'orders' then v_allowed := array['external_order_id','order_reference','status','status_slug','payment_status','payment_method','shipping_status','shipping_company','currency','subtotal','discount_amount','shipping_amount','tax_amount','total_amount','source','utm_source','utm_medium','utm_campaign','utm_content','utm_term','coupon_code','ordered_at','source_updated_at','source_payload','crm_source_at'] || array['customer_id'];
   end case;
+  if v_table='customers' then v_allowed:=v_allowed||array['crm_scope_at']; end if;
   for v_row in select value from jsonb_array_elements(p_records)
   loop
     if jsonb_typeof(v_row) <> 'object' or coalesce(v_row->>v_key,'') !~ '^[0-9]{1,40}$' or v_row->>'crm_source_at' is null then raise exception 'Invalid record'; end if;
@@ -65,12 +67,13 @@ begin
     v_count := v_count + v_affected;
   end loop;
   if v_table='orders' then
-    update public.customers c set orders_count=s.n,total_spent=s.total,first_order_at=s.first_at,last_order_at=s.last_at
+    update public.customers c set orders_count=s.n,total_spent=s.total,first_order_at=s.first_at,last_order_at=s.last_at,crm_scope_at=greatest(c.crm_scope_at,s.last_at)
     from (
       select c2.id,count(o.id)::integer n,
         coalesce(sum(case when coalesce(o.status_slug,'') not in ('cancelled','canceled','refunded') then greatest(o.total_amount,0) else 0 end),0) total,
         min(o.ordered_at) first_at,max(o.ordered_at) last_at
       from public.customers c2 left join public.orders o on o.customer_id=c2.id and o.merchant_id=c2.merchant_id
+        and o.ordered_at>=(((now() at time zone 'Asia/Riyadh')::date-29)::timestamp at time zone 'Asia/Riyadh')
       where c2.merchant_id=v_merchant and c2.id=any(v_customer_ids) group by c2.id
     ) s where c.id=s.id and c.merchant_id=v_merchant;
   end if;
@@ -83,18 +86,19 @@ $$;
 create or replace function public.crm_salla_sync_stats()
 returns jsonb language plpgsql security invoker set search_path = '' as $$
 begin
-  update public.customers c set orders_count=s.n, total_spent=s.total,
+  update public.customers c set orders_count=s.n, total_spent=s.total,crm_scope_at=greatest(c.crm_scope_at,s.last_at),
     first_order_at=s.first_at,last_order_at=s.last_at
   from (
     select c2.id, count(o.id)::integer n,
       coalesce(sum(case when coalesce(o.status_slug,'') not in ('cancelled','canceled','refunded') then greatest(o.total_amount,0) else 0 end),0) total,
       min(o.ordered_at) first_at, max(o.ordered_at) last_at
     from public.customers c2 left join public.orders o on o.customer_id=c2.id and o.merchant_id=c2.merchant_id
+      and o.ordered_at>=(((now() at time zone 'Asia/Riyadh')::date-29)::timestamp at time zone 'Asia/Riyadh')
     where c2.merchant_id=1829345766 group by c2.id
   ) s where c.id=s.id and c.merchant_id=1829345766;
-  return jsonb_build_object('customers',(select count(*) from public.customers where merchant_id=1829345766),
-    'orders',(select count(*) from public.orders where merchant_id=1829345766),
-    'carts',(select count(*) from public.abandoned_carts where merchant_id=1829345766));
+  return jsonb_build_object('customers',(select count(*) from public.customers where merchant_id=1829345766 and crm_scope_at>=(((now() at time zone 'Asia/Riyadh')::date-29)::timestamp at time zone 'Asia/Riyadh')),
+    'orders',(select count(*) from public.orders where merchant_id=1829345766 and ordered_at>=(((now() at time zone 'Asia/Riyadh')::date-29)::timestamp at time zone 'Asia/Riyadh')),
+    'carts',(select count(*) from public.abandoned_carts where merchant_id=1829345766 and abandoned_at>=(((now() at time zone 'Asia/Riyadh')::date-29)::timestamp at time zone 'Asia/Riyadh')));
 end;
 $$;
 revoke all on function public.crm_apply_salla_records(text,jsonb,uuid) from public,anon,authenticated;

@@ -30,7 +30,7 @@ test('Salla SQL against merchant schema: atomic upserts, stale events, local fie
     const time='2026-10-07T10:00:00Z';
     await apply('customers',[{external_customer_id:'1',name:'First',crm_source_at:time}]);
     const customer=(await db.query('select * from customers')).rows[0];
-    await apply('orders',[{external_order_id:'100',_customer_external_id:'1',total_amount:150,status_slug:'in_progress',crm_source_at:time}]);
+    await apply('orders',[{external_order_id:'100',_customer_external_id:'1',total_amount:150,ordered_at:new Date().toISOString(),status_slug:'in_progress',crm_source_at:time}]);
     assert.equal((await db.query('select customer_id from orders')).rows[0].customer_id,customer.id);
     await apply('customers',[{external_customer_id:'1',name:'New',crm_source_at:'2026-10-07T11:00:00Z'}]);
     await apply('customers',[{external_customer_id:'1',name:'Old',crm_source_at:time}]);
