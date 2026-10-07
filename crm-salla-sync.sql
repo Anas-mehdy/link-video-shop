@@ -105,4 +105,12 @@ revoke all on function public.crm_apply_salla_records(text,jsonb,uuid) from publ
 revoke all on function public.crm_salla_sync_stats() from public,anon,authenticated;
 grant execute on function public.crm_apply_salla_records(text,jsonb,uuid) to service_role;
 grant execute on function public.crm_salla_sync_stats() to service_role;
+-- Read-only preflight: stop before spending Salla API requests on an old schema.
+create or replace function public.crm_salla_sync_ready()
+returns boolean language sql security invoker set search_path='' as $$
+  select exists(select 1 from information_schema.columns where table_schema='public' and table_name='customers' and column_name='crm_scope_at')
+    and position('crm_scope_at' in pg_get_functiondef('public.crm_apply_salla_records(text,jsonb,uuid)'::regprocedure))>0;
+$$;
+revoke all on function public.crm_salla_sync_ready() from public,anon,authenticated;
+grant execute on function public.crm_salla_sync_ready() to service_role;
 commit;

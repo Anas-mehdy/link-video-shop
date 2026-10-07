@@ -26,9 +26,10 @@ test('Salla SQL against merchant schema: atomic upserts, stale events, local fie
     }
     await db.exec(fs.readFileSync(__dirname+'/../crm-foundation.sql','utf8'));
     const sql=fs.readFileSync(__dirname+'/../crm-salla-sync.sql','utf8');await db.exec(sql);await db.exec(sql);
+    assert.equal((await db.query('select crm_salla_sync_ready() ready')).rows[0].ready,true);
     async function apply(resource,rows,event=null){return (await db.query('select crm_apply_salla_records($1,$2,$3) n',[resource,JSON.stringify(rows),event])).rows[0].n;}
     const time='2026-10-07T10:00:00Z';
-    await apply('customers',[{external_customer_id:'1',name:'First',crm_source_at:time}]);
+    await apply('customers',[{external_customer_id:'1',name:'First',crm_source_at:time,crm_scope_at:time}]);
     const customer=(await db.query('select * from customers')).rows[0];
     await apply('orders',[{external_order_id:'100',_customer_external_id:'1',total_amount:150,ordered_at:new Date().toISOString(),status_slug:'in_progress',crm_source_at:time}]);
     assert.equal((await db.query('select customer_id from orders')).rows[0].customer_id,customer.id);

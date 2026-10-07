@@ -16,6 +16,8 @@ cart backfill. The dashboard lists/counts and customer spend use the same recent
 window. Previously imported customers stay stored but are hidden unless a new
 scoped import or a recent order links them to the window. Re-run the updated SQL
 to add crm_scope_at and update the private RPCs before this release is used.
+The read-only crm_salla_sync_ready RPC validates this before any paginated Salla
+fetch. Missing or outdated SQL fails without spending a Salla API request.
 Keep the page open. A failed
 or interrupted run can resume from the failed resource/page saved in tab session
 storage. Resource and page controls also allow manual recovery. Only an explicit

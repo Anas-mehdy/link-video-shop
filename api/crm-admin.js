@@ -25,7 +25,7 @@ module.exports = async function handler(req, res) {
         return json(res,200,{ok:true,...data});
       } catch(e) {
         if(e.sallaSafe)return json(res,503,{ok:false,error:e.message,provider_status:e.provider_status||null,retryable:!!e.retryable,retry_after:e.retry_after||null});
-        if(e.statusCode===400)return json(res,400,{ok:false,error:e.message});
+        if(e.statusCode===400&&['طلب مزامنة غير صالح','Invalid JSON','Invalid JSON object'].includes(e.message))return json(res,400,{ok:false,error:e.message});
         return json(res,503,{ok:false,error:'تعذرت المزامنة؛ تأكد من تشغيل crm-salla-sync.sql ثم أعد المحاولة'});
       }
     }

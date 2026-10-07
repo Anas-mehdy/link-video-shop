@@ -6,6 +6,7 @@ const response=value=>new Response(JSON.stringify(value),{status:200});
 test('bulk API uses private stored token, fixed pagination, linked records and safe output',async()=>{
   const writes=[];
   global.fetch=async(url,options)=>{
+    if(url.includes('/rpc/crm_salla_sync_ready'))return response(true);
     if(url.includes('/crm_connections?'))return response([{status:'connected',credentials_encrypted:encrypted,token_expires_at:'2030-01-01T00:00:00Z'}]);
     if(url.startsWith('https://api.salla.dev/')){
       assert.equal(options.headers.Authorization,'Bearer private-access');const query=new URL(url);assert.equal(query.pathname,'/admin/v2/orders');assert.equal(query.searchParams.get('from_date'),sync.windowDates().from);assert.equal(query.searchParams.get('to_date'),sync.windowDates().to);
@@ -19,9 +20,9 @@ test('bulk API uses private stored token, fixed pagination, linked records and s
   assert.ok(!JSON.stringify(result).includes('private-access'));assert.ok(!JSON.stringify(writes).includes('private-refresh'));
 });
 test('expired tokens and invalid resources stop before provider IO',async()=>{
-  let calls=0;global.fetch=async url=>{calls++;assert.ok(url.startsWith('https://test.supabase.co/'));return response([{status:'connected',credentials_encrypted:encrypted,token_expires_at:'2020-01-01T00:00:00Z'}]);};
+  let calls=0;global.fetch=async url=>{calls++;assert.ok(url.startsWith('https://test.supabase.co/'));if(url.includes('/rpc/crm_salla_sync_ready'))return response(true);return response([{status:'connected',credentials_encrypted:encrypted,token_expires_at:'2020-01-01T00:00:00Z'}]);};
   await assert.rejects(sync.page({resource:'https://evil.test',page:1}),e=>e.statusCode===400);assert.equal(calls,0);
-  await assert.rejects(sync.page({resource:'orders',page:1}),e=>e.sallaSafe);assert.equal(calls,1);
+  await assert.rejects(sync.page({resource:'orders',page:1}),e=>e.sallaSafe);assert.equal(calls,2);
 });
 test('persisted event processing ignores dry-run state and marks the projection only after save',async()=>{
   const calls=[];global.fetch=async(url,options)=>{
@@ -33,18 +34,24 @@ test('persisted event processing ignores dry-run state and marks the projection 
   assert.equal((await sync.processEvents()).processed,1);assert.equal(calls.length,2);
 });
 test('provider failures expose only HTTP status and retry timing, never raw provider payloads',async()=>{
-  global.fetch=async url=>url.includes('/crm_connections?')?response([{status:'connected',credentials_encrypted:encrypted,token_expires_at:'2030-01-01T00:00:00Z'}]):new Response('private provider payload',{status:429,headers:{'Retry-After':'600'}});
+  global.fetch=async url=>url.includes('/rpc/crm_salla_sync_ready')?response(true):url.includes('/crm_connections?')?response([{status:'connected',credentials_encrypted:encrypted,token_expires_at:'2030-01-01T00:00:00Z'}]):new Response('private provider payload',{status:429,headers:{'Retry-After':'600'}});
   await assert.rejects(sync.page({resource:'customers',page:282}),error=>error.provider_status===429&&error.retry_after===600&&error.retryable&&!error.message.includes('private provider payload'));
-  global.fetch=async url=>url.includes('/crm_connections?')?response([{status:'connected',credentials_encrypted:encrypted,token_expires_at:'2030-01-01T00:00:00Z'}]):new Response('private',{status:502});
+  global.fetch=async url=>url.includes('/rpc/crm_salla_sync_ready')?response(true):url.includes('/crm_connections?')?response([{status:'connected',credentials_encrypted:encrypted,token_expires_at:'2030-01-01T00:00:00Z'}]):new Response('private',{status:502});
   await assert.rejects(sync.page({resource:'customers',page:282}),error=>error.provider_status===502&&error.message.includes('HTTP 502'));
 });
 test('recent-only policy never crawls the cart archive and filters customers at Salla',async()=>{
   let calls=0;global.fetch=()=>{calls++;throw Error('unexpected IO');};
   const carts=await sync.page({resource:'carts',page:1});assert.equal(carts.next_page,null);assert.equal(calls,0);
   global.fetch=async(url,options)=>{
+    if(url.includes('/rpc/crm_salla_sync_ready'))return response(true);
     if(url.includes('/crm_connections?'))return response([{status:'connected',credentials_encrypted:encrypted,token_expires_at:'2030-01-01T00:00:00Z'}]);
     if(url.startsWith('https://api.salla.dev/')){const query=new URL(url).searchParams;assert.equal(query.get('date_from'),sync.windowDates().from);assert.equal(query.get('date_to'),sync.windowDates().to);return response({data:[],pagination:{totalPages:1}});}
     return response(0);
   };
   assert.equal((await sync.page({resource:'customers',page:1})).read,0);
+});
+
+test('missing schema preflight never spends a Salla request',async()=>{
+  let calls=0;global.fetch=async url=>{calls++;assert.ok(url.startsWith('https://test.supabase.co/'));return new Response('{}',{status:404});};
+  await assert.rejects(sync.page({resource:'customers',page:1}),error=>error.sallaSafe&&error.message.includes('لم يُرسل طلب'));assert.equal(calls,1);
 });
