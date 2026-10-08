@@ -76,9 +76,7 @@ begin
  update public.crm_cart_deliveries set scheduled_for=activity_at+make_interval(mins=>s.delay_minutes)
  where merchant_id=p_merchant_id and status='pending';
  update public.crm_cart_deliveries q set status=case when b.reason is not null then 'cancelled' else q.status end,
- reason=coalesce(b.reason,case when not s.enabled then 'paused' when not exists(
-  select 1 from public.crm_whatsapp_consents x where x.merchant_id=p_merchant_id and x.phone=regexp_replace(coalesce(nullif(c.normalized_phone,''),c.phone,''),'[^0-9]','','g')
- ) then 'no_consent' when regexp_replace(coalesce(nullif(c.normalized_phone,''),c.phone,''),'[^0-9]','','g') !~ '^[1-9][0-9]{7,14}$' then 'missing_phone'
+ reason=coalesce(b.reason,case when not s.enabled then 'paused' when regexp_replace(coalesce(nullif(c.normalized_phone,''),c.phone,''),'[^0-9]','','g') !~ '^[1-9][0-9]{7,14}$' then 'missing_phone'
  when coalesce(c.checkout_url,'') !~ '^https://mtjr[.]at/[A-Za-z0-9_-]+$' then 'unsupported_url'
  when s.quiet_hours and (extract(hour from now() at time zone 'Asia/Riyadh')<9 or extract(hour from now() at time zone 'Asia/Riyadh')>=21) then 'quiet_hours' else 'delay' end),updated_at=now()
  from public.abandoned_carts c cross join lateral (select case

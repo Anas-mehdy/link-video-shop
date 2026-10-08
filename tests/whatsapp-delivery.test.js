@@ -27,7 +27,7 @@ test('Automatic worker requires worker authentication even when server sending i
   r=res();await worker({method:'POST',headers:{authorization:'Bearer worker-test-only'},query:{action:'whatsapp-delivery'}},r);assert.equal(r.statusCode,200);assert.equal(r.body.reason,'server_disabled');
  }finally{if(original===undefined)delete process.env.CRM_WORKER_TOKEN;else process.env.CRM_WORKER_TOKEN=original;if(gate===undefined)delete process.env.WHATSAPP_AUTOMATION_ENABLED;else process.env.WHATSAPP_AUTOMATION_ENABLED=gate;}
 });
-test('Production queue: recent updates, reset delay, consent, purchases, optouts, one-per-cart/phone, pause and uncertain claims',async()=>{
+test('Production queue: recent updates, reset delay, no consent gate, purchases, optouts, one-per-cart/phone, pause and uncertain claims',async()=>{
  const db=new PGlite();try{
   await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create table stores(merchant_id bigint primary key);insert into stores values(1829345766);create table webhook_events(id uuid primary key);');
   const schema=JSON.parse(fs.readFileSync(__dirname+'/fixtures/crm-schema.json','utf8'));
@@ -55,7 +55,8 @@ test('Production queue: recent updates, reset delay, consent, purchases, optouts
   await db.query("update abandoned_carts set crm_source_at=public.delivery_now()-interval '5 minutes' where id=$1",[updated]);assert.equal((await claim()).idle,'no_due');
   const scheduled=(await db.query('select scheduled_for from crm_cart_deliveries where cart_id=$1',[updated])).rows[0].scheduled_for.toISOString();assert.equal(scheduled,'2026-10-08T12:55:00.000Z');
   await reconcile();assert.equal((await db.query('select scheduled_for from crm_cart_deliveries where cart_id=$1',[updated])).rows[0].scheduled_for.toISOString(),scheduled);
-  const unconsented=await cart('no-consent','966500000004');await reconcile();assert.equal((await reason(unconsented)).reason,'no_consent');
+  const unconsented=await cart('no-consent','966500000004');await reconcile();assert.equal((await reason(unconsented)).reason,'delay');
+  const withoutConsent=await claim();assert.equal(withoutConsent.phone,'966500000004');await db.query("select crm_finish_cart_delivery($1,$2,'accepted','124')",[withoutConsent.id,withoutConsent.attempt_token]);
   const opted=await cart('opted','966500000005');await consent('966500000005');await db.exec("insert into crm_whatsapp_optouts values(1829345766,'966500000005',public.delivery_now());");await reconcile();assert.equal((await reason(opted)).reason,'optout');
   const purchased=await cart('purchased','966500000006');await consent('966500000006');await db.query("update abandoned_carts set status='recovered' where id=$1",[purchased]);await reconcile();assert.equal((await reason(purchased)).reason,'purchased_or_inactive');
   const customer=(await db.query("insert into customers(merchant_id,external_customer_id,name) values(1829345766,'1','Test') returning id")).rows[0].id;
@@ -68,7 +69,7 @@ test('Production queue: recent updates, reset delay, consent, purchases, optouts
   const night=await cart('night','966500000009');await consent('966500000009');assert.equal((await claim()).idle,'quiet_hours');
   await db.exec('update crm_cart_delivery_settings set quiet_hours=false;');assert.equal((await claim()).phone,'966500000009');
   await db.exec('update crm_cart_delivery_settings set enabled=false;');assert.equal((await claim()).idle,'paused');
-  await db.exec("update test_clock set t='2026-10-10T12:00:00Z';");await reconcile();assert.equal((await reason(unconsented)).reason,'expired');
+  await db.exec("update test_clock set t='2026-10-10T12:00:00Z';");await reconcile();assert.equal((await reason(unconsented)).status,'accepted');
   assert.equal((await db.query("select has_table_privilege('anon','crm_cart_deliveries','SELECT') allowed")).rows[0].allowed,false);
   assert.equal((await db.query("select has_function_privilege('authenticated','crm_claim_cart_delivery(bigint)','EXECUTE') allowed")).rows[0].allowed,false);
   await assert.rejects(db.query('select crm_claim_cart_delivery(123)'));
