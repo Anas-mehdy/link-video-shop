@@ -24,18 +24,20 @@ test('WhatsApp test SQL blocks optouts, purchases, stale carts, wrong phones and
   const schema=JSON.parse(fs.readFileSync(__dirname+'/fixtures/crm-schema.json','utf8'));
   for(const table of schema.reverse())await db.exec(`create table ${table.table_name}(${table.columns.map(c=>`${c.column} ${c.type}${c.nullable==='NO'?' not null':''}${c.default?' default '+c.default:''}`).concat(table.constraints.filter(c=>!c.startsWith('FOREIGN KEY'))).join(',')});`);
   await db.exec(fs.readFileSync(__dirname+'/../crm-cart-followup.sql','utf8'));
+  await db.exec('alter table abandoned_carts add column if not exists crm_source_at timestamptz;');
   const sql=fs.readFileSync(__dirname+'/../crm-whatsapp-test-send.sql','utf8');await db.exec(sql);await db.exec(sql);
   const cart=async(external,age='1 hour',number=phone,url='https://mtjr.at/test')=>(await db.query("insert into abandoned_carts(merchant_id,external_cart_id,abandoned_at,status,phone,checkout_url) values(1829345766,$1,now()-$2::interval,'active',$3,$4) returning id",[external,age,'+'+number,url])).rows[0].id;
   const call=async(id)=>(await db.query('select crm_claim_whatsapp_test(1829345766,$1,$2) result',[id,phone])).rows[0].result;
   const fresh=await cart('fresh');assert.equal((await call(fresh)).phone,phone);assert.equal((await call(fresh)).blocked,'already_attempted');
   assert.equal((await call(await cart('other','1 hour','966500000002'))).blocked,'phone_mismatch');
   assert.equal((await call(await cart('old','25 hours'))).blocked,'cart_not_recent');
+  const reused=await cart('reused','21 days');await db.query("update abandoned_carts set crm_source_at=now()-interval '5 minutes' where id=$1",[reused]);assert.equal((await call(reused)).phone,phone);
   assert.equal((await call(await cart('badurl','1 hour',phone,'https://evil.test/cart'))).blocked,'unsupported_url');
   const purchased=await cart('purchased');await db.query("update abandoned_carts set status='recovered' where id=$1",[purchased]);assert.equal((await call(purchased)).blocked,'purchased_or_inactive');
   const cust=(await db.query("insert into customers(merchant_id,external_customer_id,name) values(1829345766,'customer','Test') returning id")).rows[0].id;
   const ordered=await cart('ordered');await db.query('update abandoned_carts set customer_id=$1 where id=$2',[cust,ordered]);await db.query("insert into orders(merchant_id,external_order_id,customer_id,ordered_at,status_slug) values(1829345766,'order',$1,now(),'in_progress')",[cust]);assert.equal((await call(ordered)).blocked,'purchased_or_inactive');
   await db.query('insert into crm_whatsapp_optouts(merchant_id,phone) values(1829345766,$1)',[phone]);assert.equal((await call(await cart('opted'))).blocked,'optout');
-  assert.equal((await db.query('select count(*)::int n from crm_whatsapp_test_sends')).rows[0].n,1);
+  assert.equal((await db.query('select count(*)::int n from crm_whatsapp_test_sends')).rows[0].n,2);
   assert.equal((await db.query("select has_table_privilege('authenticated','crm_whatsapp_test_sends','SELECT') allowed")).rows[0].allowed,false);
   assert.equal((await db.query("select has_function_privilege('anon','crm_claim_whatsapp_test(bigint,uuid,text)','EXECUTE') allowed")).rows[0].allowed,false);
  }finally{await db.close();}

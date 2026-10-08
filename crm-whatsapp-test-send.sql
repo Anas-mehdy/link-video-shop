@@ -26,7 +26,9 @@ begin
  if c.recovered_at is not null or coalesce(c.status,'') not in ('active','contacted') or exists(
   select 1 from public.orders o where o.merchant_id=p_merchant_id and o.customer_id=c.customer_id and o.ordered_at>=c.abandoned_at and coalesce(o.status_slug,'') not in ('canceled','cancelled','refunded')
  ) then return jsonb_build_object('blocked','purchased_or_inactive'); end if;
- if c.abandoned_at is null or c.abandoned_at<now()-interval '24 hours' or c.abandoned_at>now() then return jsonb_build_object('blocked','cart_not_recent'); end if;
+ -- Salla can reuse a cart created weeks ago; a recent source update qualifies
+ -- for this explicit own-number test without changing its creation date.
+ if greatest(c.abandoned_at,c.crm_source_at) is null or greatest(c.abandoned_at,c.crm_source_at)<now()-interval '24 hours' or greatest(c.abandoned_at,c.crm_source_at)>now() then return jsonb_build_object('blocked','cart_not_recent'); end if;
  if c.checkout_url is null or c.checkout_url !~ '^https://mtjr[.]at/[A-Za-z0-9_-]+$' then return jsonb_build_object('blocked','unsupported_url'); end if;
  insert into public.crm_whatsapp_test_sends(merchant_id,cart_id) values(p_merchant_id,p_cart_id) on conflict do nothing returning id into send_id;
  if send_id is null then return jsonb_build_object('blocked','already_attempted'); end if;

@@ -11,7 +11,7 @@ Create a real cart with your own test number, leave it incomplete and wait until
 ```sql
 select id, external_cart_id, customer_name, phone, abandoned_at, status
 from public.abandoned_carts
-where merchant_id=1829345766 and abandoned_at>=now()-interval '24 hours'
+where merchant_id=1829345766 and greatest(abandoned_at,crm_source_at)>=now()-interval '24 hours'
 order by abandoned_at desc limit 20;
 ```
 
@@ -21,7 +21,7 @@ In a separate manual n8n workflow add an HTTP Request: POST `https://link-video-
 {"cart_id":"YOUR_DATABASE_CART_UUID","confirm_test":true}
 ```
 
-Only the server-configured test phone is accepted; do not use a customer's cart or overwrite its phone. The endpoint checks persisted optout, latest local order/cart projection, age under 24h, active state and supported mtjr.at checkout URL. No Salla API request is made. It reserves a single attempt per cart atomically, then calls Etisalna synchronously. `accepted` means provider API success, not recipient delivery. Provider failures/timeouts produce `unknown`, with no automatic retry. Never delete attempt rows to force a retry before verifying the provider conversation; it can duplicate a message. A fresh test cart has its own attempt.
+Only the server-configured test phone is accepted; do not use a customer's cart or overwrite its phone. The endpoint checks persisted optout, latest local order/cart projection, creation or latest source update within 24h, active state and supported mtjr.at checkout URL. No Salla API request is made. It reserves a single attempt per cart atomically, then calls Etisalna synchronously. `accepted` means provider API success, not recipient delivery. Provider failures/timeouts produce `unknown`, with no automatic retry. Never delete attempt rows to force a retry before verifying the provider conversation; it can duplicate a message. A fresh test cart has its own attempt.
 
 The test bypasses reminder delay/quiet hours because it is an explicit manual send to your own number. Incoming optouts/purchases that commit before claim are checked. An external send cannot share a database transaction: a later optout or purchase can race with the already started provider request. General automatic sending needs a production queue and delivery tracking before enabling it.
 
