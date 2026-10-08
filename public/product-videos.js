@@ -925,3 +925,210 @@
   function start(){if(mount())return;const observer=new MutationObserver(()=>{if(mount())observer.disconnect();});observer.observe(document.body,{childList:true,subtree:true});setTimeout(()=>observer.disconnect(),15000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
+
+/* Link carbon protection — iPhone 18 Pro Max three-piece bundle, no screen protector. */
+(function () {
+  'use strict';
+  if (!/\/p(1329297598|1794025144)\/?$/.test(location.pathname) || window.__linkCarbonProtection) return;
+  window.__linkCarbonProtection = true;
+  const id = Number(location.pathname.match(/\/p(\d+)\/?$/)[1]);
+  const cases = [{"id":1329297598,"name":"كفر كاربون فايبر مغناطيسي – iPhone 18 Pro Max – سماوي","price":149,"image":"https://cdn.files.salla.network/products/1829345766/4ad6f3ba-645d-43fa-add5-92af60c8d18c-original.webp","available":true,"max":1,"options":[]},{"id":1794025144,"name":"كفر كاربون فايبر مغناطيسي – iPhone 18 Pro Max – بورغندي","price":149,"image":"https://cdn.files.salla.network/products/1829345766/bcdb9dbd-d47c-45f5-927a-695ef83c6212-original.webp","available":true,"max":1,"options":[]}];
+  const product = cases.find(p=>p.id===id), [lens,plate] = [{"id":965494067,"name":"عدسات Link لحماية الكاميرا – iPhone 18 Pro Max","price":79,"image":"https://cdn.salla.sa/Zpqzp/707587ee-e229-4806-9938-be1c2ccbeacd-500x500-bqbPb4kl3XmPzM0nVhwJqBiKJuzrxsScEaBEV0gP.png","available":true,"max":99,"options":[{"id":977910830,"name":"اختر اللون","values":[{"id":370389022,"name":"بورغندي","available":true},{"id":551860326,"name":"أسود","available":true},{"id":2067344490,"name":"سماوي","available":true},{"id":1892256117,"name":"فضي","available":true}]}]},{"id":1936666261,"name":"مسطح الكاميرا - ايفون 18 برو ماكس","price":59,"image":"https://cdn.salla.sa/Zpqzp/7698f080-da70-4a00-a772-e8024dda7994-500x500-dlghNXfyP0zoshJYRQgKypThzVKb4JNVhifA2i7W.png","available":true,"max":99,"options":[]}];
+  const catalog = [product,lens,plate];
+  const defaultColor = lens.options[0].values.find(v=>v.name===(product.name.includes('بورغندي')?'بورغندي':'سماوي')).id;
+  const money = n => new Intl.NumberFormat('ar-SA-u-nu-latn',{maximumFractionDigits:2}).format(n)+' ر.س';
+  const make = (tag,text,cls) => {const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
+  const css = `
+  #link-carbon-protection .lc-price-box{text-align:left;flex:none}
+  #link-carbon-protection .lc-old-price{display:block;font-size:12px;color:#8b7d92;white-space:nowrap}
+  #link-carbon-protection .lc-saving{display:inline-block;background:#edf8f1;color:#24653b;font-size:12px;font-weight:700;border-radius:6px;padding:3px 8px;margin-top:5px}
+
+  #link-carbon-protection{direction:rtl;color:#281d32;font-family:inherit;border:1px solid #e5dce9;border-radius:18px;background:#fff;margin:20px 0;overflow:hidden;scroll-margin-top:90px}
+  #link-carbon-protection *,#link-carbon-cart *{box-sizing:border-box}
+  #link-carbon-protection .lc-head{padding:18px 18px 13px;background:linear-gradient(120deg,#faf6fc,#f2fbff)}
+  #link-carbon-protection h2{font-size:20px;font-weight:800;margin:0 0 5px;color:#51007a}
+  #link-carbon-protection p{font-size:13px;line-height:1.7;margin:4px 0;color:#746780}
+  #link-carbon-protection .lc-body{padding:14px 16px}
+  #link-carbon-protection button,#link-carbon-protection select,#link-carbon-protection input,#link-carbon-protection summary,#link-carbon-cart button{font:inherit}
+  #link-carbon-protection .lc-package{display:flex;gap:11px;align-items:flex-start;border:1px solid #e6dee9;border-radius:12px;padding:13px;margin-bottom:9px;cursor:pointer;background:white}
+  #link-carbon-protection .lc-package:has(input:checked){border-color:#6b1f91;box-shadow:inset 0 0 0 1px #6b1f91;background:#fcf8ff}
+  #link-carbon-protection .lc-package:has(input:disabled){opacity:.55;cursor:default}
+  #link-carbon-protection input[type=radio],#link-carbon-protection input[type=checkbox]{appearance:none;width:21px;height:21px;flex:none;border:1.5px solid #b6a4c0;border-radius:4px;margin:2px 0 0;background:white;display:grid;place-content:center;cursor:pointer}
+  #link-carbon-protection input:checked{background:#51007a;border-color:#51007a}
+  #link-carbon-protection input:checked::after{content:'✓';color:white;font-size:15px;font-weight:800}
+  #link-carbon-protection .lc-copy{flex:1;min-width:0}
+  #link-carbon-protection .lc-line{display:flex;justify-content:space-between;gap:9px;align-items:center}
+  #link-carbon-protection b{font-size:14px;line-height:1.6;font-weight:750}
+  #link-carbon-protection strong{color:#51007a;font-size:14px;white-space:nowrap}
+  #link-carbon-protection .lc-pictures{display:flex;align-items:center;gap:5px;margin-top:9px}
+  #link-carbon-protection .lc-pictures img{width:38px;height:38px;object-fit:contain;border:1px solid #ede7f0;border-radius:7px;background:white}
+  #link-carbon-protection .lc-options{padding:4px 0 10px;display:grid;gap:12px}
+  #link-carbon-protection .lc-field label{display:block;font-size:13px;font-weight:700;margin:0 0 6px}
+  #link-carbon-protection select{display:block;width:100%;padding:10px 12px;border:1px solid #d7c8df;border-radius:9px;background:white;color:#281d32;font-size:14px;min-height:44px}
+  #link-carbon-protection details{border-top:1px solid #ece5ef;padding-top:11px;margin-top:7px}
+  #link-carbon-protection summary{color:#51007a;font-size:14px;font-weight:700;cursor:pointer;padding:5px 0;min-height:36px}
+  #link-carbon-protection .lc-custom-row{display:flex;align-items:center;gap:9px;padding:12px 0;border-bottom:1px solid #eee8f1;font-size:13px}
+  #link-carbon-protection .lc-custom-row label{flex:1;cursor:pointer}
+  #link-carbon-protection .lc-custom-row input[type=number]{width:56px;height:38px;border:1px solid #d8c9df;border-radius:7px;text-align:center;color:#51007a;background:white;font-size:14px}
+  #link-carbon-protection .lc-status{margin-top:10px;color:#51007a;overflow-wrap:anywhere}
+  #link-carbon-protection [hidden]{display:none!important}
+  #link-carbon-protection :focus-visible,#link-carbon-cart :focus-visible{outline:3px solid #21b0f1;outline-offset:3px}
+  #link-carbon-cart{direction:rtl;font-family:inherit;display:flex;align-items:center;gap:14px;padding:13px 0;background:white;color:#281d32}
+  #link-carbon-cart .lc-total{flex:1;min-width:105px}
+  #link-carbon-cart small{display:block;font-size:11px;color:#81708d}
+  #link-carbon-cart strong{display:block;font-size:20px;color:#51007a;white-space:nowrap;line-height:1.4}
+  #link-carbon-cart button{flex:1;min-height:48px;border:0;border-radius:11px;background:#51007a;color:white;font-size:15px;font-weight:750;padding:12px;cursor:pointer}
+  #link-carbon-cart button:disabled{opacity:.55;cursor:default}
+  [data-link-carbon-native]{display:none!important}
+  #product-${id} form[data-link-carbon-extras] salla-installment{display:none!important}
+  @media(max-width:767px){
+    body.link-carbon-active{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))!important}
+    #link-carbon-cart{position:fixed;inset:auto 0 0;z-index:60;margin:0;padding:11px 16px calc(11px + env(safe-area-inset-bottom,0px));border-top:1px solid #e5dce9;box-shadow:0 -5px 22px #35134312;gap:13px}
+    #link-carbon-cart .lc-total{flex:0 0 112px}
+    #link-carbon-protection .lc-head{padding:16px}
+    #link-carbon-protection .lc-body{padding:12px}
+    #link-carbon-protection .lc-package{padding:12px 10px;gap:9px}
+    #link-carbon-protection .lc-line{align-items:flex-start}
+    #link-carbon-protection .lc-line b{font-size:13px}
+  }
+  @media(max-width:359px){#link-carbon-cart{padding-inline:11px}#link-carbon-cart .lc-total{flex-basis:95px}#link-carbon-cart strong{font-size:18px}#link-carbon-protection .lc-line{flex-wrap:wrap}}
+  `;
+  function mount() {
+    if(document.getElementById('link-carbon-protection'))return true;
+    const form=document.querySelector(`#product-${id} .main-content .product-form`);
+    const native=form?.querySelector(`salla-add-product-button[product-id="${id}"]`);
+    const cart=window.salla?.cart;
+    if(!form||!native||!cart?.addItem)return false;
+    const priceContainer=document.querySelector(`#product-${id} .main-content .price`);
+    const nativeBar=native.closest('.sticky-product-bar')||native;
+    const root=make('section');root.id='link-carbon-protection';root.setAttribute('aria-label','اختَر حماية جوالك');
+    const style=make('style');style.id='link-carbon-style';style.textContent=css;
+    const head=make('div','','lc-head');head.append(make('h2','اختَر حماية جوالك'),make('p','خيارات مناسبة لآيفون 18 برو ماكس · اختر الكفر وحده أو كمّل حماية الكاميرا'));
+    const body=make('div','','lc-body'), packages=make('div');packages.setAttribute('role','radiogroup');packages.setAttribute('aria-label','خيارات الحماية');
+    const state={mode:'case',color:defaultColor,picks:[false,false],quantities:[1,1],busy:false,complete:false,uncertain:false,remaining:null};
+    let ready=false,liveChecked=false;
+    const modes=[['case','الكفر فقط',product.name.includes('بورغندي')?'الكفر البورغندي':'الكفر السماوي'],['full','بكج حماية الكاميرا — 3 قطع','الكفر + عدسات + مسطح كاميرا عادي']];
+    const cards=modes.map(([key,title,description])=>{
+      const label=make('label','','lc-package'),radio=make('input');radio.type='radio';radio.name='link-carbon-package';radio.value=key;radio.setAttribute('aria-label',title);
+      const copy=make('div','','lc-copy'),line=make('div','','lc-line'),price=make('strong'),oldPrice=make('del','','lc-old-price'),badge=make('span','','lc-saving'),priceBox=make('div','','lc-price-box'),desc=make('p',description),pictures=make('div','','lc-pictures');
+      priceBox.append(oldPrice,price);line.append(make('b',title),priceBox);copy.append(line,desc,badge,pictures);label.append(radio,copy);packages.append(label);
+      radio.addEventListener('change',()=>{state.mode=key;state.picks=key==='case'?[false,false]:[true,true];state.quantities=[1,1];status.textContent='';update();});
+      return {key,radio,price,oldPrice,badge,pictures,desc,description};
+    });
+    const options=make('div','','lc-options');
+    const colorField=make('div','','lc-field'),colorLabel=make('label','لون عدسات الكاميرا'),colorSelect=make('select');colorSelect.id='lc-color';colorLabel.htmlFor=colorSelect.id;colorField.append(colorLabel,colorSelect);
+    options.append(colorField);
+    const details=make('details'),summary=make('summary','خصّص الحماية — اختَر قطعًا محددة');details.append(summary,make('p','يمكنك اختيار أي قطعة أو إلغاء اختيارها وتعديل كميتها.'));
+    const custom=['عدسات الكاميرا','مسطح كاميرا عادي'].map((name,i)=>{
+      const row=make('div','','lc-custom-row'),check=make('input'),label=make('label',name),price=make('strong'),qty=make('input');
+      check.type='checkbox';check.id='lc-custom-'+i;label.htmlFor=check.id;qty.type='number';qty.min='1';qty.step='1';qty.value='1';qty.setAttribute('aria-label','كمية '+name);
+      row.append(check,label,price,qty);details.append(row);
+      check.addEventListener('change',()=>{state.picks[i]=check.checked;state.mode='custom';status.textContent='';update();});
+      qty.addEventListener('change',()=>{const max=selectedProducts()[i].max;state.quantities[i]=Math.min(max,Math.max(1,Math.floor(Number(qty.value)||1)));state.mode='custom';update();});
+      return {check,price,qty};
+    });
+    const note=make('p',offerNote()),status=make('p','','lc-status');status.id='lc-status';status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+    const bar=make('div');bar.id='link-carbon-cart';const total=make('div','','lc-total'),totalPrice=make('strong'),count=make('small'),add=make('button','أضف للسلة');add.type='button';add.setAttribute('aria-describedby','lc-status');total.append(make('small','الإجمالي'),totalPrice,count);bar.append(total,add);
+    const cartLink=make('a','عرض السلة');cartLink.href='/cart';cartLink.style.cssText='display:inline-block;margin-top:8px;color:#51007a;text-decoration:underline;font-size:13px';cartLink.hidden=true;
+    body.append(packages,options,details,note,status,cartLink);root.append(head,body);
+    function selectedProducts(){return [lens,plate];}
+    // Salla offer: buy one carbon case and receive 20.29% off two camera protection pieces.
+    function offerNote(){return 'وفّر 28 ر.س مع بكج الكفر والعدسات ومسطح الكاميرا. السعر قبل الشحن.';}
+    function saving(picks=state.picks,quantities=state.quantities){
+      return product.price===149&&lens.price===79&&plate.price===59&&picks.every(Boolean)&&quantities.every(q=>q===1)?28:0;
+    }
+    function subtotal(){return product.price+selectedProducts().reduce((sum,p,i)=>sum+(state.picks[i]?p.price*state.quantities[i]:0),0);}
+    function amount(){return subtotal()-saving();}
+    function image(p){const img=make('img');img.src=p.image;img.alt=p.name;img.loading='lazy';return img;}
+    function update(){
+      const locked=state.busy||state.complete||state.uncertain||!!state.remaining;
+      const ps=selectedProducts();
+      cards.forEach(c=>{
+        c.radio.checked=state.mode===c.key;c.radio.disabled=locked||!product.available||(c.key==='full'&&(!lens.available||!plate.available));
+        const items=c.key==='case'?[product]:[product,...ps];
+        const original=items.reduce((sum,p)=>sum+p.price,0),discount=saving(c.key==='case'?[false,false]:[true,true],[1,1]);
+        c.desc.textContent=c.description+(c.key==='full'&&(!lens.available||!plate.available)?' · إحدى قطع الحماية نفدت حاليًا':'');
+        c.price.textContent=money(original-discount);c.oldPrice.textContent=discount?money(original):'';c.oldPrice.hidden=!discount;
+        c.badge.textContent=discount?(c.key==='full'?'أفضل قيمة · ':'')+'وفّر '+money(discount):'';c.badge.hidden=!discount;c.pictures.replaceChildren(...items.map(image));
+      });
+      custom.forEach((c,i)=>{c.check.checked=state.picks[i];c.check.disabled=locked||!ps[i].available;c.qty.disabled=locked||!state.picks[i]||!ps[i].available;c.qty.max=String(ps[i].max);c.qty.value=String(state.quantities[i]);c.price.textContent=ps[i].available?'+ '+money(ps[i].price):'نفد حاليًا';});
+      colorField.hidden=!state.picks[0];
+      colorSelect.disabled=locked;
+      note.textContent=state.mode==='custom'&&state.quantities.some((q,i)=>state.picks[i]&&q>1)?'الخصم النهائي للكميات المخصصة يُحتسب في السلة. السعر قبل الشحن.':offerNote();
+      totalPrice.textContent=money(amount());const pieceCount=1+state.picks.reduce((sum,p,i)=>sum+(p?state.quantities[i]:0),0);count.textContent=saving()?'وفّرت '+money(saving()):pieceCount===1?'قطعة واحدة':pieceCount+' قطع مختارة';
+      const invalid=!product.available||ps.some((p,i)=>state.picks[i]&&!p.available);
+      add.disabled=state.busy||(!state.complete&&!state.uncertain&&(!ready||invalid));
+      add.textContent=state.busy?'تتم الإضافة...':state.complete||state.uncertain?'عرض السلة':state.remaining?'أكمل إضافة القطع المتبقية':!product.available?'نفد الكفر حاليًا':'أضف للسلة';
+      form.toggleAttribute('data-link-carbon-extras',state.picks.some(Boolean));
+      root.dataset.price=String(amount());root.dataset.saving=String(saving());root.dataset.mode=state.mode;
+      cartLink.hidden=!state.complete&&!state.uncertain&&!state.remaining;
+    }
+    function fillOptions(){
+      colorSelect.replaceChildren(...(lens.options[0]?.values||[]).map(v=>{const o=make('option',(v.name==='كحلى'?'كحلي':v.name==='اورانج'?'برتقالي':v.name)+(v.available?'':' · نفد حاليًا'));o.value=String(v.id);o.disabled=!v.available;return o;}));colorSelect.value=String(state.color);
+    }
+    colorSelect.addEventListener('change',()=>{state.color=Number(colorSelect.value);status.textContent='';update();});
+    function validOptions(){return !state.picks[0]||lens.options[0]?.values.some(v=>v.id===state.color&&v.available);}
+    async function refresh(products){
+      if(!window.salla.product?.getDetails)return false;
+      const results=await Promise.allSettled(products.map(async p=>{let timer;try{return await Promise.race([window.salla.product.getDetails(p.id,['options']),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('timeout')),8000);})]);}finally{clearTimeout(timer);}}));
+      let checked=true;
+      results.forEach((r,i)=>{
+        if(r.status!=='fulfilled'){checked=false;return;}
+        const response=r.value,d=response?.data?.product||response?.data||response?.product||response;
+        if(String(d?.id)!==String(products[i].id)){checked=false;return;}
+        const p=products[i],raw=d.price?.amount??d.price?.price??d.price,price=Number(raw);
+        if(Number.isFinite(price)&&price>0)p.price=price;else checked=false;
+        p.available=d.is_available!==false&&!['out','hidden','out_of_stock','unavailable'].includes(d.status);
+        // Match known color IDs only; extra required options cannot be silently omitted.
+        if(p===lens&&Array.isArray(d.options)&&d.options.length){
+          const option=d.options.find(o=>Number(o.id)===lens.options[0].id);
+          if(!option||d.options.some(o=>o.required&&Number(o.id)!==lens.options[0].id)){p.available=false;return;}
+          if(Array.isArray(option.values))lens.options[0].values.forEach(v=>{const live=option.values.find(o=>Number(o.id)===v.id);v.available=!!live&&live.is_out_of_stock!==true&&live.is_available!==false;});
+        }
+      });
+      root.dataset.catalogStatus=checked?'verified':'unverified';fillOptions();update();return checked;
+    }
+    function payloads(){
+      return [{id,name:product.name,quantity:1,options:{}},...selectedProducts().flatMap((p,i)=>state.picks[i]?[{id:p.id,name:p.name,quantity:state.quantities[i],options:p===lens?{[lens.options[0].id]:state.color}:{}}]:[])];
+    }
+    add.addEventListener('click',async()=>{
+      if(state.busy)return;
+      if(state.complete||state.uncertain){location.assign('/cart');return;}
+      if(!validOptions()){status.textContent='اختر لونًا متوفرًا للعدسات.';colorSelect.focus();return;}
+      state.busy=true;update();status.textContent='نتحقق من السعر والتوفر...';
+      const before=amount();
+      liveChecked=await refresh([product,...selectedProducts().filter((p,i)=>state.picks[i])]);
+      if(!liveChecked){state.busy=false;status.textContent='تعذر التحقق من السعر والتوفر؛ حاول بعد قليل.';update();return;}
+      if(before!==amount()||!product.available||selectedProducts().some((p,i)=>state.picks[i]&&!p.available)||!validOptions()){
+        state.busy=false;status.textContent='تغير السعر أو التوفر. راجع اختياراتك ثم اضغط الإضافة مجددًا.';update();return;
+      }
+      const queue=state.remaining||payloads();state.remaining=null;let added=0;
+      for(let i=0;i<queue.length;i++){
+        status.textContent='تتم إضافة '+(i+1)+' من '+queue.length+'...';
+        try{
+          const result=await cart.addItem({id:queue[i].id,quantity:queue[i].quantity,options:queue[i].options});
+          if(result?.success===false||Number(result?.status)>=400)throw Object.assign(Error('rejected'),{status:result.status||422});
+          added++;
+        }catch(error){
+          const code=Number(error?.response?.status||error?.status||error?.data?.status);
+          if(code>=400&&code<500){state.remaining=queue.slice(i);status.textContent=(added?'أضيفت '+added+' قطعة. ':'')+'لم تكتمل إضافة «'+queue[i].name+'». يمكنك إكمال القطع المتبقية دون تكرار ما أُضيف.';}
+          else{state.uncertain=true;status.textContent='لم نتأكد من اكتمال الإضافة. افتح السلة للتحقق قبل إعادة الطلب.';}
+          state.busy=false;update();return;
+        }
+      }
+      state.complete=true;state.busy=false;status.textContent='تمت إضافة اختياراتك للسلة ✓';update();
+    });
+    const preventNative=event=>{event.preventDefault();event.stopImmediatePropagation();if(!state.busy)add.click();};
+    form.addEventListener('submit',preventNative,true);
+    document.head.append(style);(priceContainer||form).after(root);root.append(bar);nativeBar.setAttribute('data-link-carbon-native','');
+    const media=matchMedia('(max-width:767px)');
+    function moveBar(){document.body.classList.toggle('link-carbon-active',media.matches);(media.matches?document.body:body).append(bar);}
+    media.addEventListener('change',moveBar);moveBar();fillOptions();update();
+    refresh(catalog).then(checked=>{liveChecked=checked;ready=true;status.textContent=checked?'':'الأسعار المعروضة للقطع؛ نتحقق منها عند الإضافة.';update();});
+    function clean(){root.remove();bar.remove();style.remove();nativeBar.removeAttribute('data-link-carbon-native');form.removeAttribute('data-link-carbon-extras');document.body.classList.remove('link-carbon-active');form.removeEventListener('submit',preventNative,true);media.removeEventListener('change',moveBar);}
+    const observer=new MutationObserver(()=>{if(!/\/p(1329297598|1794025144)\/?$/.test(location.pathname)||!root.isConnected){observer.disconnect();clean();}});observer.observe(document.body,{childList:true,subtree:true});
+    return true;
+  }
+  function start(){if(mount())return;const observer=new MutationObserver(()=>{if(mount())observer.disconnect();});observer.observe(document.body,{childList:true,subtree:true});setTimeout(()=>observer.disconnect(),15000);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
