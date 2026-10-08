@@ -62,6 +62,7 @@
   }
   function rulesView(rules) {
     return heading('الأتمتة','قواعد متابعة المتجر، من الحدث إلى الإجراء.', '<button class="secondary" id="process-events">اختبار الأحداث المعلقة</button>') +
+      window.LinkCartFollowup.shell() +
       '<div class="notice">وضع الاختبار: تفعيل القاعدة يسجّل نتيجة محاكاة فقط. لا تُرسل رسائل ولا تُنفّذ تغييرات على المتجر. مدة الانتظار تظهر كتوقيت مقترح في سجل الاختبار.</div>' +
       `<div class="rule-grid">${rules.map(r => `<form class="rule-card" data-rule="${esc(r.id)}"><div class="rule-top"><div><h3>${esc(r.name)}</h3><code dir="ltr">${esc(r.event_name)}</code></div><span class="badge">اختبار فقط</span></div><p class="muted">عند وصول الحدث، نختبر القاعدة ونسجّل النتيجة.</p><div class="rule-edit"><label class="switch"><input name="enabled" type="checkbox" ${r.enabled ? 'checked' : ''}> تفعيل الاختبار</label><label>بعد <input name="delay" aria-label="مدة الانتظار بالدقائق" type="number" min="0" max="10080" value="${r.delay_minutes}" required> دقيقة</label><button class="primary" type="submit">حفظ</button></div></form>`).join('') || `<section class="panel">${empty('لا توجد قواعد','أضف أول قاعدة من النموذج أدناه.','automations')}</section>`}</div>` +
       '<section class="panel" style="margin-top:22px"><h3>إضافة قاعدة</h3><form id="new-rule" class="form-row"><div class="form-field"><label for="rule-name">اسم القاعدة</label><input id="rule-name" name="name" maxlength="100" required placeholder="مثال: متابعة العميل الجديد"></div><div class="form-field"><label for="rule-event">الحدث</label><select id="rule-event" name="event"><option value="abandoned.cart">سلة متروكة</option><option value="order.created">طلب جديد</option><option value="order.status.updated">تغيير حالة طلب</option><option value="customer.created">عميل جديد</option></select></div><div class="form-field short"><label for="rule-delay">الانتظار بالدقائق</label><input id="rule-delay" name="delay" type="number" min="0" max="10080" value="60" required></div><button class="primary" type="submit">إضافة القاعدة</button></form></section><section class="panel"><div class="panel-header"><h3>نتائج الاختبار</h3><button class="text-button" id="load-runs">عرض النتائج ←</button></div><div id="runs">اضغط عرض النتائج للاطلاع على سجل المحاكاة.</div></section>';
@@ -190,6 +191,7 @@
     });
     if (page==='ads') window.LinkAds.bind({navigate,toast});
     if (page==='whatsapp') window.LinkWhatsApp.bind({navigate,toast,api});
+    if (page==='automations') window.LinkCartFollowup.bind({api,toast});
     if (recordState[page]) {
       const resource=page,state=recordState[resource];
       $('records-search')?.addEventListener('submit',e=>{e.preventDefault();state.search=e.target.elements.search.value.trim();state.page=1;navigate(resource);});

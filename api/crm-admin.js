@@ -18,6 +18,13 @@ module.exports = async function handler(req, res) {
       }catch(e){if(e.statusCode===401&&action==='session')auth.clearSession(res);return json(res,[400,401,403,429,503].includes(e.statusCode)?e.statusCode:503,{ok:false,error:e.statusCode?e.message:'تعذر تسجيل الدخول'});}
     }
     await requireAdmin(req);
+    if(resource==='cart-followup'){
+      const followup=require('../lib/cart-followup');
+      if(req.method==='GET')return json(res,200,{ok:true,...await followup.load()});
+      if(req.method==='PUT')return json(res,200,{ok:true,...await followup.save(bodyObject(req))});
+      if(req.method==='POST'){if(req.query?.action==='optout')return json(res,200,{ok:true,...await followup.optout(bodyObject(req))});await followup.refresh();return json(res,200,{ok:true,...await followup.load()});}
+      return json(res,405,{ok:false,error:'Method not allowed'});
+    }
     if(resource==='tiktok')return require('../lib/tiktok').admin(req,res);
     if (resource === 'salla-sync' && req.method === 'POST') {
       try {
