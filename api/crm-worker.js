@@ -2,6 +2,7 @@ const { sb, json, requireWorker, MERCHANT_ID, noCache, errorResponse } = require
 module.exports = async function handler(req, res) {
   noCache(res);
   if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'Method not allowed' }, { Allow: 'POST' });
+  if (req.query?.action === 'whatsapp-events') return require('../lib/etisalna-webhook').handle(req, res);
   try {
     requireWorker(req);
     if(req.query?.action==='cart-followup')return json(res,200,{ok:true,mode:'dry_run',records:await require('../lib/cart-followup').refresh()});
