@@ -198,95 +198,14 @@
 })();
 
 
-/* Link carbon protection pilot v1 — only product 454677929. */
+/* Link carbon protection — iPhone 17 Pro, both colors, normal camera plate 59 SAR. */
 (function () {
   'use strict';
-  if (!/\/p454677929\/?$/.test(location.pathname) || window.__linkCarbonProtection) return;
+  if (!/\/p(454677929|1961292970)\/?$/.test(location.pathname) || window.__linkCarbonProtection) return;
   window.__linkCarbonProtection = true;
-  const id = 454677929;
-  const catalog = [
-  {
-    "id": 454677929,
-    "name": "كفر كاربون فايبر مغناطيسي – iPhone 17 Pro – سماوي",
-    "price": 149,
-    "image": "https://cdn.files.salla.network/products/1829345766/828437cc-de4a-49c5-a7d0-22e9e73293af-original.webp",
-    "available": true,
-    "max": 1,
-    "options": []
-  },
-  {
-    "id": 982757716,
-    "name": "استيكر حماية لنك لامع – iPhone 17 Pro",
-    "price": 129,
-    "image": "https://cdn.salla.sa/Zpqzp/b7a44545-821d-44b7-8f99-437f4a2e6b84-402.77777777778x500-METwtPaSGjrDKxUHBQqQrt9gB2CRTBDSNZzYJfOO.png",
-    "available": true,
-    "max": 99,
-    "options": []
-  },
-  {
-    "id": 62439963,
-    "name": "استيكر حماية لنك لامع خصوصي – iPhone 17 Pro",
-    "price": 129,
-    "image": "https://cdn.salla.sa/Zpqzp/4e39f630-9fe3-43fe-bcd9-fd0ae2ad9013-402.77777777778x500-EaJfGl8pEBJEE5gVHkH6xs8pLRZ2Xrn4fSAcCtgT.png",
-    "available": true,
-    "max": 99,
-    "options": []
-  },
-  {
-    "id": 1627040171,
-    "name": "استيكر حماية لنك مطفي خصوصي – iPhone 17 Pro",
-    "price": 129,
-    "image": "https://cdn.salla.sa/Zpqzp/9f032db6-0fb8-434c-aa67-88a022206d91-402.77777777778x500-xGJHzlxLSoFh9uXMIWzhK1B6isfNkiO2xJbU5zEx.png",
-    "available": true,
-    "max": 99,
-    "options": []
-  },
-  {
-    "id": 641572861,
-    "name": "استيكر حماية لنك مطفي – iPhone 17 Pro",
-    "price": 129,
-    "image": "https://cdn.salla.sa/Zpqzp/81de43d0-8693-46ad-98e0-29d5d4712ed8-402.77777777778x500-2w30yei0FMgMfRO6OYajBJxqgVjMtAlv4CEJqd5z.png",
-    "available": false,
-    "max": 99,
-    "options": []
-  },
-  {
-    "id": 322974234,
-    "name": "عدسات Link لحماية الكاميرا – iPhone 17 Pro",
-    "price": 79,
-    "image": "https://cdn.salla.sa/Zpqzp/e7225a76-37a7-4509-9a33-2a527fa735e0-500x500-JQcd6JnJNErZjMCzmk1WN8vM0y1qxoteZy2ixQW9.png",
-    "available": true,
-    "max": 99,
-    "options": [
-      {
-        "id": 1797702119,
-        "name": "اختر اللون",
-        "values": [
-          {
-            "id": 884470587,
-            "name": "اورانج",
-            "available": true
-          },
-          {
-            "id": 1439697470,
-            "name": "كحلى",
-            "available": true
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 346332705,
-    "name": "مسطح حماية Link آيفون 17 برو",
-    "price": 89,
-    "image": "https://cdn.salla.sa/Zpqzp/026c7718-4af8-463b-8acf-5747b7533cf7-500x500-S1kcAj9twXs49EhjGYcgtYbi6bIVKWkAz1g9olJP.png",
-    "available": true,
-    "max": 99,
-    "options": []
-  }
-]
-;
+  const id = Number(location.pathname.match(/\/p(\d+)\/?$/)[1]);
+  const cases = [{"id":454677929,"name":"كفر كاربون فايبر مغناطيسي – iPhone 17 Pro – سماوي","price":149,"image":"https://cdn.files.salla.network/products/1829345766/828437cc-de4a-49c5-a7d0-22e9e73293af-original.webp","available":true,"max":1,"options":[]},{"id":1961292970,"name":"كفر كاربون فايبر مغناطيسي – iPhone 17 Pro – بورغندي","price":149,"image":"https://cdn.files.salla.network/products/1829345766/b2c3fe8d-13c9-4020-8faa-f40f6166bdbf-original.webp","available":true,"max":1,"options":[]}];
+  const catalog = [cases.find(p=>p.id===id),...[{"id":982757716,"name":"استيكر حماية لنك لامع – iPhone 17 Pro","price":129,"image":"https://cdn.salla.sa/Zpqzp/b7a44545-821d-44b7-8f99-437f4a2e6b84-402.77777777778x500-METwtPaSGjrDKxUHBQqQrt9gB2CRTBDSNZzYJfOO.png","available":true,"max":99,"options":[]},{"id":62439963,"name":"استيكر حماية لنك لامع خصوصي – iPhone 17 Pro","price":129,"image":"https://cdn.salla.sa/Zpqzp/4e39f630-9fe3-43fe-bcd9-fd0ae2ad9013-402.77777777778x500-EaJfGl8pEBJEE5gVHkH6xs8pLRZ2Xrn4fSAcCtgT.png","available":true,"max":99,"options":[]},{"id":1627040171,"name":"استيكر حماية لنك مطفي خصوصي – iPhone 17 Pro","price":129,"image":"https://cdn.salla.sa/Zpqzp/9f032db6-0fb8-434c-aa67-88a022206d91-402.77777777778x500-xGJHzlxLSoFh9uXMIWzhK1B6isfNkiO2xJbU5zEx.png","available":true,"max":99,"options":[]},{"id":641572861,"name":"استيكر حماية لنك مطفي – iPhone 17 Pro","price":129,"image":"https://cdn.salla.sa/Zpqzp/81de43d0-8693-46ad-98e0-29d5d4712ed8-402.77777777778x500-2w30yei0FMgMfRO6OYajBJxqgVjMtAlv4CEJqd5z.png","available":false,"max":99,"options":[]},{"id":322974234,"name":"عدسات Link لحماية الكاميرا – iPhone 17 Pro","price":79,"image":"https://cdn.salla.sa/Zpqzp/e7225a76-37a7-4509-9a33-2a527fa735e0-500x500-JQcd6JnJNErZjMCzmk1WN8vM0y1qxoteZy2ixQW9.png","available":true,"max":99,"options":[{"id":1797702119,"name":"اختر اللون","values":[{"id":884470587,"name":"اورانج","available":true},{"id":1439697470,"name":"كحلى","available":true}]}]},{"id":346332705,"name":"مسطح حماية Link آيفون 17 برو","price":59,"image":"https://cdn.salla.sa/Zpqzp/026c7718-4af8-463b-8acf-5747b7533cf7-500x500-S1kcAj9twXs49EhjGYcgtYbi6bIVKWkAz1g9olJP.png","available":true,"max":99,"options":[]}]];
   const product = catalog[0], screens = catalog.slice(1,5), lens = catalog[5], plate = catalog[6];
   const money = n => new Intl.NumberFormat('ar-SA-u-nu-latn',{maximumFractionDigits:2}).format(n)+' ر.س';
   const make = (tag,text,cls) => {const n=document.createElement(tag);if(text)n.textContent=text;if(cls)n.className=cls;return n;};
@@ -333,7 +252,7 @@
   #link-carbon-cart button{flex:1;min-height:48px;border:0;border-radius:11px;background:#51007a;color:white;font-size:15px;font-weight:750;padding:12px;cursor:pointer}
   #link-carbon-cart button:disabled{opacity:.55;cursor:default}
   [data-link-carbon-native]{display:none!important}
-  #product-454677929 form[data-link-carbon-extras] salla-installment{display:none!important}
+  #product-${id} form[data-link-carbon-extras] salla-installment{display:none!important}
   @media(max-width:767px){
     body.link-carbon-active{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))!important}
     #link-carbon-cart{position:fixed;inset:auto 0 0;z-index:60;margin:0;padding:11px 16px calc(11px + env(safe-area-inset-bottom,0px));border-top:1px solid #e5dce9;box-shadow:0 -5px 22px #35134312;gap:13px}
@@ -348,11 +267,11 @@
   `;
   function mount() {
     if(document.getElementById('link-carbon-protection'))return true;
-    const form=document.querySelector('#product-454677929 .main-content .product-form');
-    const native=form?.querySelector('salla-add-product-button[product-id="454677929"]');
+    const form=document.querySelector(`#product-${id} .main-content .product-form`);
+    const native=form?.querySelector(`salla-add-product-button[product-id="${id}"]`);
     const cart=window.salla?.cart;
     if(!form||!native||!cart?.addItem)return false;
-    const priceContainer=document.querySelector('#product-454677929 .main-content .price');
+    const priceContainer=document.querySelector(`#product-${id} .main-content .price`);
     const nativeBar=native.closest('.sticky-product-bar')||native;
     const root=make('section');root.id='link-carbon-protection';root.setAttribute('aria-label','اختَر حماية جوالك');
     const style=make('style');style.id='link-carbon-style';style.textContent=css;
@@ -360,7 +279,7 @@
     const body=make('div','','lc-body'), packages=make('div');packages.setAttribute('role','radiogroup');packages.setAttribute('aria-label','خيارات الحماية');
     const state={mode:'case',screen:0,color:1439697470,picks:[false,false,false],quantities:[1,1,1],busy:false,complete:false,uncertain:false,remaining:null};
     let ready=false,liveChecked=false;
-    const modes=[['case','الكفر فقط','الكفر السماوي'],['screen','الكفر + حماية الشاشة','الكفر + استيكر الشاشة'],['full','الكفر + حماية الشاشة والكاميرا','الكفر + استيكر + عدسات + مسطح كاميرا عادي']];
+    const modes=[['case','الكفر فقط',id===1961292970?'الكفر البورغندي':'الكفر السماوي'],['screen','الكفر + حماية الشاشة','الكفر + استيكر الشاشة'],['full','الكفر + حماية الشاشة والكاميرا','الكفر + استيكر + عدسات + مسطح كاميرا عادي']];
     const cards=modes.map(([key,title,description])=>{
       const label=make('label','','lc-package'),radio=make('input');radio.type='radio';radio.name='link-carbon-package';radio.value=key;radio.setAttribute('aria-label',title);
       const copy=make('div','','lc-copy'),line=make('div','','lc-line'),price=make('strong'),oldPrice=make('del','','lc-old-price'),badge=make('span','','lc-saving'),priceBox=make('div','','lc-price-box'),desc=make('p',description),pictures=make('div','','lc-pictures');
@@ -391,7 +310,7 @@
     const offerScreens=[982757716,62439963,1627040171];
     function saving(picks=state.picks,quantities=state.quantities){
       if(product.price!==149||screens[state.screen].price!==129||!offerScreens.includes(screens[state.screen].id))return 0;
-      if(picks.every(Boolean)&&quantities.every(q=>q===1)&&lens.price===79&&plate.price===89)return 47;
+      if(picks.every(Boolean)&&quantities.every(q=>q===1)&&lens.price===79&&plate.price===59)return 47;
       const pieces=picks.reduce((sum,p,i)=>sum+(p?quantities[i]:0),0);
       return picks[0]&&pieces<3?20:0;
     }
@@ -486,7 +405,7 @@
     media.addEventListener('change',moveBar);moveBar();fillOptions();update();
     refresh(catalog).then(checked=>{liveChecked=checked;ready=true;status.textContent=checked?'':'الأسعار المعروضة للقطع؛ نتحقق منها عند الإضافة.';update();});
     function clean(){root.remove();bar.remove();style.remove();nativeBar.removeAttribute('data-link-carbon-native');form.removeAttribute('data-link-carbon-extras');document.body.classList.remove('link-carbon-active');form.removeEventListener('submit',preventNative,true);media.removeEventListener('change',moveBar);}
-    const observer=new MutationObserver(()=>{if(!/\/p454677929\/?$/.test(location.pathname)||!root.isConnected){observer.disconnect();clean();}});observer.observe(document.body,{childList:true,subtree:true});
+    const observer=new MutationObserver(()=>{if(!/\/p(454677929|1961292970)\/?$/.test(location.pathname)||!root.isConnected){observer.disconnect();clean();}});observer.observe(document.body,{childList:true,subtree:true});
     return true;
   }
   function start(){if(mount())return;const observer=new MutationObserver(()=>{if(mount())observer.disconnect();});observer.observe(document.body,{childList:true,subtree:true});setTimeout(()=>observer.disconnect(),15000);}
