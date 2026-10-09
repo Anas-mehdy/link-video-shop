@@ -84,3 +84,29 @@ test('database projection failures remain pending and are never quarantined',asy
   };
   await assert.rejects(sync.processEvents());
 });
+
+test('status webhook fetches the nested order, never the large status-history ID',async()=>{
+  const writes=[],provider=[];
+  global.fetch=async(url,options)=>{
+    if(url.includes('/crm_event_inbox?'))return response([{id:'status-event',event_name:'order.status.updated',occurred_at:new Date().toISOString(),payload:{data:{id:3420499105827077600,order:{id:1716276561},status:'تم التوصيل'}}}]);
+    if(url.includes('/crm_connections?'))return response([{status:'connected',credentials_encrypted:encrypted,token_expires_at:'2030-01-01T00:00:00Z'}]);
+    if(url.startsWith('https://api.salla.dev/')){
+      provider.push(url);assert.equal(new URL(url).pathname,'/admin/v2/orders/1716276561');
+      return response({data:{id:1716276561,date:new Date().toISOString(),status:{name:'تم التوصيل',slug:'delivered'}}});
+    }
+    if(url.includes('/rpc/crm_apply_salla_records')){writes.push(JSON.parse(options.body));return response(1);}
+    throw Error('Unexpected request');
+  };
+  const result=await sync.processEvents();assert.equal(result.skipped,0);assert.equal(provider.length,1);
+  assert.equal(writes[0].p_records[0].external_order_id,'1716276561');assert.equal(writes[0].p_event_id,'status-event');
+});
+
+test('status webhook without an order ID never fetches the history entry as an order',async()=>{
+  let providerCalls=0;
+  global.fetch=async(url)=>{
+    if(url.includes('/crm_event_inbox?'))return response([{id:'status-event',event_name:'order.status.updated',occurred_at:new Date().toISOString(),payload:{data:{id:123}}}]);
+    if(url.startsWith('https://api.salla.dev/'))providerCalls++;
+    throw Error('Unexpected request');
+  };
+  await assert.rejects(sync.processEvents(),error=>error.sallaSafe);assert.equal(providerCalls,0);
+});
