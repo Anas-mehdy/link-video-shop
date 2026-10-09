@@ -41,5 +41,9 @@ test('Second-stage SQL: exact tiers, eight-hour delay, cancellations, no replay 
  assert.equal((await db.query("select has_table_privilege('anon','crm_whatsapp_customer_replies','SELECT') r")).rows[0].r,false);
  assert.equal((await db.query("select has_function_privilege('authenticated','crm_claim_cart_second(bigint)','EXECUTE') r")).rows[0].r,false);
  await db.exec('update crm_cart_delivery_settings set enabled=false');assert.equal((await claim()).idle,'paused');
+ await db.exec(fs.readFileSync(__dirname+'/../crm-cart-reminder-two-activate.sql','utf8').replaceAll('now()','public.delivery_now()'));
+ const settings=(await db.query('select * from crm_cart_second_settings')).rows[0];assert.equal(settings.enabled,true);assert.equal(settings.delay_hours,8);assert.equal(settings.quiet_hours,false);assert.equal(settings.template_help,'link_cart_second_help_ar');assert.equal(settings.template_offer,'link_cart_second_offer_ar');assert.equal(settings.coupon_15,'LINK15');
+ const started=settings.started_at.toISOString();await db.exec(fs.readFileSync(__dirname+'/../crm-cart-reminder-two-activate.sql','utf8').replaceAll('now()','public.delivery_now()'));assert.equal((await db.query('select started_at from crm_cart_second_settings')).rows[0].started_at.toISOString(),started);
+
  }finally{await db.close();}
 });
