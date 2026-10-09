@@ -110,3 +110,31 @@ test('status webhook without an order ID never fetches the history entry as an o
   };
   await assert.rejects(sync.processEvents(),error=>error.sallaSafe);assert.equal(providerCalls,0);
 });
+
+test('full status snapshots project locally without a Salla API call',async()=>{
+  const writes=[];
+  global.fetch=async(url,options)=>{
+    assert.ok(url.startsWith('https://test.supabase.co/'),'No provider API requests');
+    if(url.includes('/crm_event_inbox?'))return response([{id:'status-local',event_name:'order.status.updated',occurred_at:new Date().toISOString(),payload:{data:{id:3420499105827077600,order:{id:1716276561,date:new Date().toISOString(),status:{name:'تم التوصيل',slug:'delivered'},customer:{id:123,name:'Test'},total:{amount:90,currency:'SAR'}}}}}]);
+    if(url.includes('/rpc/crm_apply_salla_records')){writes.push(JSON.parse(options.body));return response(1);}
+    throw Error('Unexpected request');
+  };
+  assert.equal((await sync.processEvents(undefined,{localOnly:true})).processed,1);
+  const write=writes.find(w=>w.p_resource==='orders');assert.equal(write.p_event_id,'status-local');
+  assert.equal(write.p_records[0].external_order_id,'1716276561');assert.equal(write.p_records[0].status_slug,'delivered');
+});
+
+test('local-only projection leaves incomplete orders pending and still processes carts',async()=>{
+  const writes=[];
+  global.fetch=async(url,options)=>{
+    assert.ok(url.startsWith('https://test.supabase.co/'),'No provider API requests');
+    if(url.includes('/crm_event_inbox?'))return response([
+      {id:'partial',event_name:'order.status.updated',occurred_at:new Date().toISOString(),payload:{data:{order:{id:123}}}},
+      {id:'cart-local',event_name:'abandoned.cart.update',occurred_at:new Date().toISOString(),payload:{data:{id:'456',created_at:new Date().toISOString()}}}
+    ]);
+    if(url.includes('/rpc/crm_apply_salla_records')){writes.push(JSON.parse(options.body));return response(1);}
+    throw Error('Unexpected request');
+  };
+  const result=await sync.processEvents(undefined,{localOnly:true});assert.equal(result.skipped,1);
+  assert.equal(writes.length,1);assert.equal(writes[0].p_event_id,'cart-local');
+});
