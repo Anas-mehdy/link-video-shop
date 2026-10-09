@@ -14,6 +14,8 @@ test('WhatsApp signature authenticates exact bytes and timestamp before acceptin
  assert.equal(normalize(envelope(),secret,now).p_phone,'966500000001');
  for(const content of ['STOP',' unsubscribe ','الغاء الاشتراك'])assert.equal(normalize(envelope({content}),secret,now).p_phone,'966500000001');
  for(const changes of [{content:'اختبار الربط'},{content:'لا أريد إلغاء الاشتراك'},{private:true},{message_type:'outgoing'}])assert.equal(normalize(envelope(changes),secret,now).p_phone,null);
+ assert.equal(normalize(envelope({content:'مساعدة'}),secret,now).p_reply_phone,'966500000001');
+ for(const changes of [{private:true},{message_type:'outgoing'}])assert.equal(normalize(envelope(changes),secret,now).p_reply_phone,null);
  assert.throws(()=>normalize(envelope(),'',now),{statusCode:503});
  assert.throws(()=>normalize(envelope(),secret,now+301000),{statusCode:401});
  assert.throws(()=>normalize(envelope(),secret+'wrong',now),{statusCode:401});
@@ -50,7 +52,7 @@ test('WhatsApp SQL atomically persists optout, cancels pending carts and dedupli
 test('WhatsApp worker route verifies signature before storage and does not require general worker token',async()=>{
  const crm=require('../lib/crm'),original=crm.sb,oldSecret=process.env.ETISALNA_WEBHOOK_SECRET;
  let calls=0;
- crm.sb=async(path,options)=>{calls++;assert.equal(path,'rpc/crm_receive_whatsapp_event');assert.equal(JSON.parse(options.body).p_phone,'966500000001');return {duplicate:false,opted_out:true,cancelled:1};};
+ crm.sb=async(path,options)=>{calls++;assert.equal(path,'rpc/crm_receive_whatsapp_event_v2');assert.equal(JSON.parse(options.body).p_reply_phone,'966500000001');assert.equal(JSON.parse(options.body).p_phone,'966500000001');return {duplicate:false,opted_out:true,cancelled:1};};
  delete require.cache[require.resolve('../lib/etisalna-webhook')];
  const worker=require('../api/crm-worker');
  const response=()=>({setHeader(){},end(body){this.body=JSON.parse(body);}});
@@ -62,3 +64,4 @@ test('WhatsApp worker route verifies signature before storage and does not requi
   env.headers['x-chatwoot-signature']='sha256='+'0'.repeat(64);res=response();await worker({method:'POST',headers:{},query:{action:'whatsapp-events'},body:env},res);assert.equal(res.statusCode,401);assert.equal(calls,1);
  }finally{crm.sb=original;if(oldSecret===undefined)delete process.env.ETISALNA_WEBHOOK_SECRET;else process.env.ETISALNA_WEBHOOK_SECRET=oldSecret;delete require.cache[require.resolve('../lib/etisalna-webhook')];}
 });
+

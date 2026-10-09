@@ -6,6 +6,7 @@ module.exports = async function handler(req, res) {
   try {
     requireWorker(req);
     if(req.query?.action==='whatsapp-delivery'){
+      if(!require('../lib/whatsapp-delivery').readiness().ready)return json(res,200,{ok:true,...await require('../lib/whatsapp-delivery').tick()});
       // Repair at most one local batch first; this path never fetches Salla.
       await require('../lib/salla-sync').processEvents(undefined,{localOnly:true});
       return json(res,200,{ok:true,...await require('../lib/whatsapp-delivery').tick()});
@@ -17,3 +18,4 @@ module.exports = async function handler(req, res) {
     return json(res, 200, { ok: true, mode: 'dry_run', processed });
   } catch (e) { return errorResponse(res, e); }
 };
+
