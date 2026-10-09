@@ -1,6 +1,50 @@
 {
   "version": 1,
   "bundles": {
+    "93354413": {
+      "model": "S24 Ultra",
+      "price": 139,
+      "screens": [
+        {
+          "id": 1532361636,
+          "name": "لامع شفاف",
+          "price": 79,
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-galaxy-s24-ultra/p1532361636"
+        },
+        {
+          "id": 1419612280,
+          "name": "لامع خصوصية",
+          "price": 112,
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-خصوصي-galaxy-s24-ultra/p1419612280"
+        }
+      ],
+      "accessories": []
+    },
+    "1225376403": {
+      "model": "S25 Ultra",
+      "price": 139,
+      "screens": [
+        {
+          "id": 507932650,
+          "name": "لامع شفاف",
+          "price": 112,
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-galaxy-s25-ultra/p507932650"
+        },
+        {
+          "id": 1176062352,
+          "name": "لامع خصوصية",
+          "price": 112,
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-خصوصي-galaxy-s25-ultra/p1176062352"
+        },
+        {
+          "id": 1058696469,
+          "name": "مطفي خصوصية",
+          "price": 45,
+          "url": "https://linkstore-sa.com/استيكر-link-مطفي-خصوصي-galaxy-s25-ultra/p1058696469"
+        }
+      ],
+      "accessories": []
+    },
     "1545880750": {
       "model": "S24 Ultra",
       "price": 139,

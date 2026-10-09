@@ -4,7 +4,7 @@
   if (window.__linkBundleUpsells) return;
   window.__linkBundleUpsells = true;
   const BASE = 'https://link-video-shop.vercel.app';
-  const allowed = new Set(['1721100195', '1545880750', '2079294120']);
+  const allowed = new Set(['1721100195', '1545880750', '2079294120', '1225376403', '93354413']);
   const id = location.pathname.match(/\/p(\d+)\/?$/)?.[1];
   if (!allowed.has(id)) return;
   const el = (tag, text, cls) => {
@@ -82,6 +82,7 @@
     cart.event.onItemAddedFailed?.((_error, productId) => {if (String(productId) === id) pending = null;});
     retry.addEventListener('click', () => {if (retryItem && !adding) addScreen(retryItem);});
     updateSummary();
+    if (!config.accessories?.length) return true;
     const accessories = el('section', '', 'link-bundle-extra');
     accessories.id = 'link-bundle-accessories';
     accessories.append(el('h2', 'منتجات مختارة لك'), el('p', 'إضافات تناسب استخدامك اليومي'));
