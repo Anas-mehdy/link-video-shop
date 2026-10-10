@@ -70,3 +70,7 @@
 
 ### إصلاح مهلة إعادة التحليل (57014)
 إذا توقفت مرحلة حفظ التصنيف وتوليد العروض، شغّل `crm-postpurchase-analysis-fix.sql` مرة واحدة في SQL Editor، ثم أعد التحليل المحلي. التحديث يستبدل الحفظ المتكرر بحفظ دفعي، ويختار العروض مرة واحدة لكل موديل ونوع حماية، ويضيف فهرس الموديلات. لا يغيّر حد مهلة سوبابيس ولا يجلب منتجات جديدة ولا يرسل رسائل. يحافظ على التعريفات اليدوية وإيقاف العروض ويعاد تشغيله بأمان. تم اختباره محليًا على 1500 منتج؛ زمن الإنتاج يعتمد على قاعدة البيانات.
+
+
+## Current targeting: one product
+Apply `crm-postpurchase-single-product.sql` once to existing installations. Preview scans delivered orders from the last 30 days but targets only orders with one item line, one classified device model and one protection component. Known bundles and orders with multiple item lines are excluded. Quantity does not change the product type. Offers must share the exact model and add a protection component not purchased. Unknown products appear with an explanation; matching counts are not sent-message counts. No Salla requests or WhatsApp sends are added. Existing schedule, optout and later-purchase checks remain.
