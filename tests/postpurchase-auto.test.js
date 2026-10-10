@@ -24,7 +24,7 @@ test('Importer has no retries, uses one reserved GET, honors cache/budget, and c
  network=0;assert.equal((await importPage({database:async()=>({idle:'budget_limit'}),credentials:creds,request:async()=>network++})).reason,'budget_limit');assert.equal(network,0);
  await assert.rejects(importPage({database:db,credentials:creds,request:async()=>{network++;throw Error('timeout');}}));assert.equal(network,1);assert.equal(finish.p_error,'connection_or_response_error');
 });
-test('SQL enforces concurrent lease, monthly budget, private grants and idempotent auto rules preserving manual profiles',async()=>{
+test('SQL enforces concurrent lease, monthly budget, private grants and idempotent auto rules preserving manual profiles',async(t)=>{
  const db=new PGlite();try{
  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create table stores(merchant_id bigint primary key);create table webhook_events(id uuid primary key);');
  const schema=JSON.parse(fs.readFileSync(__dirname+'/fixtures/crm-schema.json'));for(const t of schema.filter(x=>['customers','orders'].includes(x.table_name)))await db.exec(`create table ${t.table_name}(${t.columns.map(c=>`${c.column} ${c.type}${c.nullable==='NO'?' not null':''}${c.default?' default '+c.default:''}`).concat(t.constraints.filter(c=>!c.startsWith('FOREIGN KEY'))).join(',')});`);
@@ -40,6 +40,18 @@ test('SQL enforces concurrent lease, monthly budget, private grants and idempote
  await db.exec("update crm_postpurchase_import set completed_at=now()-interval '2 days'");for(let i=0;i<19;i++){const c=await reserve(true);assert.ok(c.token);await finish(c,[],false,'timeout');}assert.equal((await reserve()).idle,'budget_limit');assert.equal((await db.query('select requests from crm_postpurchase_api_usage')).rows[0].requests,20);
  assert.equal((await db.query("select has_function_privilege('anon','crm_pp_reserve_import(bigint,boolean)','EXECUTE') r")).rows[0].r,false);
  assert.equal((await db.query("select has_table_privilege('authenticated','crm_postpurchase_catalog_cache','SELECT') r")).rows[0].r,false);
+ // Exercise the real SQL at maximum supported catalog size, including a re-run.
+ await db.exec(fs.readFileSync(__dirname+'/../crm-postpurchase-analysis-fix.sql','utf8'));
+ await db.exec(fs.readFileSync(__dirname+'/../crm-postpurchase-analysis-fix.sql','utf8'));
+ const bulk=Array.from({length:1500},(_,i)=>({...base,id:1000+i,name:['كفر','حماية شاشة','عدسات','إطار كاميرا'][i%4]+' iPhone '+(14+Math.floor(i/4)%5)+' Pro Max',description:'حماية يومية',quantity:i,product_url:'https://linkstore-sa.com/p'+(1000+i)}));
+ await db.query("insert into crm_postpurchase_catalog_cache(merchant_id,product_id,product) select $1,x->>'id',x from jsonb_array_elements($2::jsonb) x on conflict(merchant_id,product_id) do update set product=excluded.product",[merchant,JSON.stringify(bulk)]);
+ let started=Date.now();assert.equal((await apply(bulk)).auto,1500);t.diagnostic('1500-product first analysis: '+(Date.now()-started)+'ms');
+ started=Date.now();assert.equal((await apply(bulk)).auto,1500);t.diagnostic('1500-product repeated analysis: '+(Date.now()-started)+'ms');
+ assert.equal((await db.query("select count(*) n from (select r.trigger_product_id,f.components,count(*) from crm_postpurchase_rules r join crm_postpurchase_products f on f.merchant_id=r.merchant_id and f.product_id=r.offer_product_id and f.variant_id=r.offer_variant_id where r.active and r.origin='auto' group by r.trigger_product_id,f.components having count(*)>1) q")).rows[0].n,0);
+ const top=(await db.query("select offer_product_id from crm_postpurchase_rules where active and origin='auto' limit 1")).rows[0].offer_product_id;
+ await db.query("update crm_postpurchase_catalog_cache set product=jsonb_set(product,'{is_available}','false') where product_id=$1",[top]);await apply(bulk);
+ assert.equal((await db.query("select count(*) n from crm_postpurchase_rules where active and origin='auto' and offer_product_id=$1",[top])).rows[0].n,0);
+ await assert.rejects(apply([bulk[0],bulk[0]]),/Duplicate suggestions/);
  }finally{await db.close();}
 });
 test('Local analysis pauses on an incomplete catalog without external or write calls',async()=>{let calls=0;const r=await require('../lib/postpurchase-auto').analyze(async path=>{calls++;assert.ok(path.startsWith('crm_postpurchase_import?'));return [{completed:false}];});assert.equal(r.deferred,true);assert.equal(calls,1);assert.equal(r.salla_requests,0);});
