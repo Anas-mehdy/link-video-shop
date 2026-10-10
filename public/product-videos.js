@@ -1119,8 +1119,8 @@
   function mount() {
     if (location.pathname.match(/\/p(\d+)\/?$/)?.[1] !== productId) return true;
     if (document.getElementById(noticeId)) return true;
-    const title = findTitle(productId);
-    if (!isCompatible(productId)) return !!title; // No warning on other models.
+    const visibleName = findTitle(productId);
+    if (!isCompatible(productId)) return !!visibleName; // No warning on other models.
     const form = document.querySelector('#product-' + productId + ' .main-content .product-form') ||
       document.querySelector('#product-' + productId + ' .product-form');
     const purchase = findPurchaseSection(form, productId);
