@@ -1062,13 +1062,33 @@
   if (!onProductPage() || window.__linkModelWarning1614180940) return;
   window.__linkModelWarning1614180940 = true;
 
+  // Place the notice immediately before the purchase controls, AFTER Tabby/Tamara
+  // and other payment plan messages, without relying on their async-rendered markup.
+  function findPurchaseSection(form) {
+    const addButton = form?.querySelector('salla-add-product-button[product-id="' + productId + '"]');
+    if (!addButton) return null;
+    let current = addButton;
+    const quantitySelector = 'salla-quantity-input,salla-quantity-input-component,[class*="quantity"],input[name="quantity"],input[type="number"]';
+    let fallback = null;
+    while (current.parentElement && current.parentElement !== form) {
+      current = current.parentElement;
+      // The tightest ancestor holding both the add button and quantity controls
+      // is the purchase panel shown below the payment-plan banners.
+      if (!fallback) fallback = current;
+      if (current.querySelector(quantitySelector)) return current;
+    }
+    // When the theme omits the quantity control, target the purchase area
+    // rather than placing the warning back above financing banners.
+    return current !== addButton ? current : fallback || addButton;
+  }
+
   function mount() {
     if (!onProductPage()) return true;
     if (document.getElementById(noticeId)) return true;
     const form = document.querySelector('#product-' + productId + ' .main-content .product-form') ||
       document.querySelector('#product-' + productId + ' .product-form');
-    const price = document.querySelector('#product-' + productId + ' .main-content .price');
-    if (!form && !price) return false;
+    const purchase = findPurchaseSection(form);
+    if (!purchase || !purchase.parentElement) return false;
 
     const notice = document.createElement('aside');
     notice.id = noticeId;
@@ -1094,21 +1114,23 @@
       const style = document.createElement('style');
       style.id = 'link-model-warning-style-' + productId;
       style.textContent = [
-        '#' + noticeId + '{box-sizing:border-box;direction:rtl;width:100%;margin:14px 0 16px;padding:13px 15px;border:1.5px solid #9b61bc;border-right:4px solid #6b1f91;border-radius:13px;background:#f8f2fc;color:#36164a;box-shadow:0 1px 5px rgba(81,0,122,.06);font-family:inherit;animation:linkModelIntro 1.3s ease-out 1;}',
+        '#' + noticeId + '{box-sizing:border-box;position:relative;isolation:isolate;overflow:hidden;direction:rtl;width:100%;margin:14px 0 16px;padding:13px 15px;border:1px solid #c89cda;border-radius:14px;background:#f8f2fc;color:#36164a;box-shadow:0 2px 8px rgba(81,0,122,.07);font-family:inherit;animation:linkModelIntro .65s ease-out both;}',
+        '#' + noticeId + '::before{content:"";position:absolute;inset:-175%;z-index:0;pointer-events:none;background:conic-gradient(from 0deg,transparent 0deg,transparent 54deg,#6b1f91 85deg,#21b0f1 105deg,#a957d8 122deg,transparent 152deg,transparent 360deg);animation:linkModelBorderSpin 8s linear infinite;opacity:.85;}',
+        '#' + noticeId + '::after{content:"";position:absolute;inset:2px;z-index:0;pointer-events:none;border-radius:11px;background:#f8f2fc;}',
+        '#' + noticeId + ' > *{position:relative;z-index:1;}',
         '#' + noticeId + ' .link-model-warning-head{display:flex;align-items:center;gap:9px;font-size:15px;line-height:1.6;}',
         '#' + noticeId + ' .link-model-warning-head strong{font-weight:800;}',
         '#' + noticeId + ' .link-model-warning-icon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 25px;width:25px;height:25px;border-radius:50%;background:#6b1f91;color:white;font-size:15px;font-weight:800;}',
         '#' + noticeId + ' p{margin:5px 34px 0 0;font-size:12.5px;line-height:1.65;color:#654775;}',
-        '@keyframes linkModelIntro{0%,100%{box-shadow:0 1px 5px rgba(81,0,122,.06)}42%{box-shadow:0 0 0 5px rgba(107,31,145,.15)}}',
-        '@media(prefers-reduced-motion:reduce){#' + noticeId + '{animation:none;}}',
+        '@keyframes linkModelIntro{from{opacity:.75;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}',
+        '@keyframes linkModelBorderSpin{to{transform:rotate(360deg)}}',
+        '@media(prefers-reduced-motion:reduce){#' + noticeId + '{animation:none;}#' + noticeId + '::before{animation:none;}}',
         '@media(max-width:390px){#' + noticeId + '{padding:11px 12px;}#' + noticeId + ' .link-model-warning-head{font-size:13px;}#' + noticeId + ' p{font-size:12px;margin-right:34px;}}'
       ].join('\n');
       document.head.appendChild(style);
     }
 
-    if (form && form.parentElement) form.before(notice);
-    else if (price) price.after(notice);
-    else return false;
+    purchase.before(notice);
     return true;
   }
 
