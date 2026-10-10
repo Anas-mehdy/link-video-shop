@@ -11,6 +11,7 @@ test('Arabic/English model parsing and conservative inference distinguish bundle
 test('Side frames use body protection and explicit negative compatibility does not become a conflict',()=>{
  const side=infer({...base,name:'إطار Link المعدني – iPhone 14 Pro',description:'حماية الجوانب والزوايا بدون تغطية الظهر'});
  assert.equal(side.decision,'auto');assert.deepEqual(side.profile.components,['case']);
+ for(const name of ['إطارLink المعدني – iPhone 14 Pro','إطارلنك المعدني – iPhone 14 Pro','إطار Linkالمعدني – iPhone 14 Pro'])assert.equal(infer({...base,name,description:'حماية الجوانب'}).decision,'auto');
  assert.deepEqual(infer({...base,name:'إطار Link المعدني للكاميرا iPhone 14 Pro'}).profile.components,['camera_frame']);
  assert.equal(infer({...base,name:'إطار iPhone 14 Pro'}).decision,'review');
  for(const description of ['مخصص لـ iPhone 17 Pro Max.<p>لا يناسب iPhone 17 Pro</p>','Not compatible with iPhone 16 Pro. Fits iPhone 17 Pro Max.','تنبيه: لا يتوافق مع iPhone 16 Pro'])assert.equal(infer({...base,description}).decision,'auto');
@@ -42,3 +43,12 @@ test('SQL enforces concurrent lease, monthly budget, private grants and idempote
  }finally{await db.close();}
 });
 test('Local analysis pauses on an incomplete catalog without external or write calls',async()=>{let calls=0;const r=await require('../lib/postpurchase-auto').analyze(async path=>{calls++;assert.ok(path.startsWith('crm_postpurchase_import?'));return [{completed:false}];});assert.equal(r.deferred,true);assert.equal(calls,1);assert.equal(r.salla_requests,0);});
+test('Analysis button shows progress and keeps the returned result after rendering',async()=>{
+ const nodes=new Map(),document={getElementById:id=>{if(!nodes.has(id))nodes.set(id,{isConnected:true,textContent:'',disabled:false,handlers:{},addEventListener(event,fn){this.handlers[event]=fn;},querySelectorAll:()=>[]});return nodes.get(id);},querySelectorAll:()=>[]};
+ const window={};require('node:vm').runInNewContext(fs.readFileSync(__dirname+'/../public/dashboard-postpurchase.js','utf8'),{window,document,URL,Date});
+ const d={ready:true,automatic:{ready:true,suggestions:[],requests:9,budget:20,import:{completed:true}},products:[],rules:[],catalog:[],settings:{batch_hours:[11,17,20]},preview:{rows:[],scanned_orders:0,matched_orders:0}};
+ window.LinkPostPurchase.render(d);let rendered='';
+ window.LinkPostPurchase.bind({api:async(resource,opts)=>{assert.equal(resource,'postpurchase');assert.equal(JSON.parse(opts.body).action,'analyze');assert.match(nodes.get('pp-auto-progress').textContent,/جارٍ/);return {auto:250,review:134,excluded:114};},navigate:async()=>{rendered=window.LinkPostPurchase.render(d);},toast:()=>{}});
+ await nodes.get('pp-auto-analyze').handlers.click({currentTarget:nodes.get('pp-auto-analyze')});
+ assert.match(rendered,/اكتمل التحليل المحلي · 250 واضحًا · 134 للمراجعة · 114 مستبعدًا · 0 طلبات سلة/);
+});
