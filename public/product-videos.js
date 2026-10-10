@@ -1053,41 +1053,77 @@
 })();
 
 
-/* Link model compatibility notice — single product pilot p1614180940. */
+/* Link Store model warning — iPhone 18 Pro Max products, no selection required. */
 (function () {
   'use strict';
-  const productId = '1614180940';
-  const noticeId = 'link-model-warning-' + productId;
-  const onProductPage = () => new RegExp('/p' + productId + '/?$').test(location.pathname);
-  if (!onProductPage() || window.__linkModelWarning1614180940) return;
-  window.__linkModelWarning1614180940 = true;
+  if (window.__link18ProMaxWarning) return;
+  if (!/\/p\d+\/?$/.test(location.pathname)) return;
+  window.__link18ProMaxWarning = true;
 
-  // Place the notice immediately before the purchase controls, AFTER Tabby/Tamara
-  // and other payment plan messages, without relying on their async-rendered markup.
-  function findPurchaseSection(form) {
-    const addButton = form?.querySelector('salla-add-product-button[product-id="' + productId + '"]');
+  // Verified product IDs, so existing products still work even if the theme
+  // does not expose an H1 immediately. Future correctly titled products work too.
+  const verifiedIds = new Set([
+    '1614180940', '1113457117', '78229497', '1794025144',
+    '1329297598', '185061029', '15893551', '965494067',
+    '474220781', '1748592024', '1781707658', '1653187224',
+    '1936666261'
+  ]);
+  const noticeId = 'link-model-warning';
+  const productId = (location.pathname.match(/\/p(\d+)\/?$/) || [])[1];
+  const normalized = text => (text || '').normalize('NFKC')
+    .replace(/[٠-٩۰-۹]/g, ch => {
+      const n = '٠١٢٣٤٥٦٧٨٩'.indexOf(ch);
+      return String(n >= 0 ? n : '۰۱۲۳۴۵۶۷۸۹'.indexOf(ch));
+    })
+    .replace(/[\u064B-\u065F\u0640]/g, '').replace(/[–—−‐‑_]/g, ' ')
+    .replace(/\s+/g, ' ').toLowerCase();
+  const targetRegex = /(?:^|[^\d])18\s*(?:pro\s*max|برو\s*ماكس)(?![a-z0-9])/i;
+  const otherModelRegex = /(?:^|[^\d])(?:1[4-9]|2\d)\s*(?:pro\s*max|pro\b|برو\s*ماكس|برو|plus\b|بلس)/i;
+
+  function findTitle(id) {
+    const root = document.getElementById('product-' + id);
+    const selectors = [
+      root?.querySelector('.main-content h1'),
+      root?.querySelector('h1'),
+      document.querySelector('h1.product-title, h1[itemprop="name"], .product-title h1')
+    ];
+    const node = selectors.find(n => n && n.textContent.trim().length > 4);
+    return node ? node.textContent.trim() : '';
+  }
+  function isCompatible(id) {
+    const title = normalized(findTitle(id));
+    if (title) {
+      // Refuse ambiguous multi-model products: "only 18 Pro Max" would be wrong.
+      if (targetRegex.test(title)) {
+        const withoutTarget = title.replace(targetRegex, ' ');
+        return !otherModelRegex.test(withoutTarget);
+      }
+      if (otherModelRegex.test(title)) return false;
+    }
+    return verifiedIds.has(id);
+  }
+  function findPurchaseSection(form, id) {
+    const addButton = form?.querySelector('salla-add-product-button[product-id="' + id + '"]');
     if (!addButton) return null;
     let current = addButton;
     const quantitySelector = 'salla-quantity-input,salla-quantity-input-component,[class*="quantity"],input[name="quantity"],input[type="number"]';
     let fallback = null;
     while (current.parentElement && current.parentElement !== form) {
       current = current.parentElement;
-      // The tightest ancestor holding both the add button and quantity controls
-      // is the purchase panel shown below the payment-plan banners.
       if (!fallback) fallback = current;
       if (current.querySelector(quantitySelector)) return current;
     }
-    // When the theme omits the quantity control, target the purchase area
-    // rather than placing the warning back above financing banners.
     return current !== addButton ? current : fallback || addButton;
   }
 
   function mount() {
-    if (!onProductPage()) return true;
+    if (location.pathname.match(/\/p(\d+)\/?$/)?.[1] !== productId) return true;
     if (document.getElementById(noticeId)) return true;
+    const title = findTitle(productId);
+    if (!isCompatible(productId)) return !!title; // No warning on other models.
     const form = document.querySelector('#product-' + productId + ' .main-content .product-form') ||
       document.querySelector('#product-' + productId + ' .product-form');
-    const purchase = findPurchaseSection(form);
+    const purchase = findPurchaseSection(form, productId);
     if (!purchase || !purchase.parentElement) return false;
 
     const notice = document.createElement('aside');
