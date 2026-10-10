@@ -1051,3 +1051,78 @@
   function start(){if(mount())return;const observer=new MutationObserver(()=>{if(mount())observer.disconnect();});observer.observe(document.body,{childList:true,subtree:true});setTimeout(()=>observer.disconnect(),15000);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
+
+
+/* Link model compatibility notice — single product pilot p1614180940. */
+(function () {
+  'use strict';
+  const productId = '1614180940';
+  const noticeId = 'link-model-warning-' + productId;
+  const onProductPage = () => new RegExp('/p' + productId + '/?$').test(location.pathname);
+  if (!onProductPage() || window.__linkModelWarning1614180940) return;
+  window.__linkModelWarning1614180940 = true;
+
+  function mount() {
+    if (!onProductPage()) return true;
+    if (document.getElementById(noticeId)) return true;
+    const form = document.querySelector('#product-' + productId + ' .main-content .product-form') ||
+      document.querySelector('#product-' + productId + ' .product-form');
+    const price = document.querySelector('#product-' + productId + ' .main-content .price');
+    if (!form && !price) return false;
+
+    const notice = document.createElement('aside');
+    notice.id = noticeId;
+    notice.dir = 'rtl';
+    notice.setAttribute('role', 'note');
+    notice.setAttribute('aria-label', 'توافق الكفر مع موديل الهاتف');
+
+    const headline = document.createElement('div');
+    headline.className = 'link-model-warning-head';
+    const icon = document.createElement('span');
+    icon.className = 'link-model-warning-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '✓';
+    const title = document.createElement('strong');
+    title.textContent = 'مخصص لـ iPhone 18 Pro Max فقط';
+    headline.append(icon, title);
+
+    const detail = document.createElement('p');
+    detail.textContent = 'تأكد من موديل جوالك قبل الطلب — لا يناسب iPhone 18 Pro.';
+    notice.append(headline, detail);
+
+    if (!document.getElementById('link-model-warning-style-' + productId)) {
+      const style = document.createElement('style');
+      style.id = 'link-model-warning-style-' + productId;
+      style.textContent = [
+        '#' + noticeId + '{box-sizing:border-box;direction:rtl;width:100%;margin:14px 0 16px;padding:13px 15px;border:1.5px solid #9b61bc;border-right:4px solid #6b1f91;border-radius:13px;background:#f8f2fc;color:#36164a;box-shadow:0 1px 5px rgba(81,0,122,.06);font-family:inherit;animation:linkModelIntro 1.3s ease-out 1;}',
+        '#' + noticeId + ' .link-model-warning-head{display:flex;align-items:center;gap:9px;font-size:15px;line-height:1.6;}',
+        '#' + noticeId + ' .link-model-warning-head strong{font-weight:800;}',
+        '#' + noticeId + ' .link-model-warning-icon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 25px;width:25px;height:25px;border-radius:50%;background:#6b1f91;color:white;font-size:15px;font-weight:800;}',
+        '#' + noticeId + ' p{margin:5px 34px 0 0;font-size:12.5px;line-height:1.65;color:#654775;}',
+        '@keyframes linkModelIntro{0%,100%{box-shadow:0 1px 5px rgba(81,0,122,.06)}42%{box-shadow:0 0 0 5px rgba(107,31,145,.15)}}',
+        '@media(prefers-reduced-motion:reduce){#' + noticeId + '{animation:none;}}',
+        '@media(max-width:390px){#' + noticeId + '{padding:11px 12px;}#' + noticeId + ' .link-model-warning-head{font-size:13px;}#' + noticeId + ' p{font-size:12px;margin-right:34px;}}'
+      ].join('\n');
+      document.head.appendChild(style);
+    }
+
+    if (form && form.parentElement) form.before(notice);
+    else if (price) price.after(notice);
+    else return false;
+    return true;
+  }
+
+  function init() {
+    if (mount()) return;
+    let retries = 0;
+    const interval = setInterval(() => {
+      retries++;
+      if (mount() || retries >= 50) clearInterval(interval);
+    }, 250);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init, { once: true });
+  } else {
+    init();
+  }
+})();
