@@ -1053,12 +1053,12 @@
 })();
 
 
-/* Link Store model warning — iPhone 18 Pro Max products, no selection required. */
+/* Link Store model warning — iPhone 18 Pro and Pro Max products, no selection required. */
 (function () {
   'use strict';
-  if (window.__link18ProMaxWarning) return;
+  if (window.__link18ProSeriesWarning) return;
   if (!/\/p\d+\/?$/.test(location.pathname)) return;
-  window.__link18ProMaxWarning = true;
+  window.__link18ProSeriesWarning = true;
 
   // Verified product IDs, so existing products still work even if the theme
   // does not expose an H1 immediately. Future correctly titled products work too.
@@ -1067,6 +1067,12 @@
     '1329297598', '185061029', '15893551', '965494067',
     '474220781', '1748592024', '1781707658', '1653187224',
     '1936666261'
+  ]);
+  const verifiedProIds = new Set([
+    '2103335357', '131071154', '1236296988', '321208074',
+    '1379489283', '672600360', '1372761380', '457598930',
+    '1825255880', '2039773122', '1010951580', '616324592',
+    '1933649164', '279669813', '1142994364'
   ]);
   const noticeId = 'link-model-warning';
   const productId = (location.pathname.match(/\/p(\d+)\/?$/) || [])[1];
@@ -1078,7 +1084,9 @@
     .replace(/[\u064B-\u065F\u0640]/g, '').replace(/[–—−‐‑_]/g, ' ')
     .replace(/\s+/g, ' ').toLowerCase();
   const targetRegex = /(?:^|[^\d])18\s*(?:pro\s*max|برو\s*ماكس)(?![a-z0-9])/i;
+  const proRegex = /(?:^|[^\d])18\s*(?:pro\b(?!\s*max\b)|برو(?!\s*ماكس))(?![a-z0-9])/i;
   const otherModelRegex = /(?:^|[^\d])(?:1[4-9]|2\d)\s*(?:pro\s*max|pro\b|برو\s*ماكس|برو|plus\b|بلس)/i;
+  const extraModelTokenRegex = /(?:^|[^\p{L}])(?:pro\s*max|pro|برو\s*ماكس|برو)(?=$|[^\p{L}])/iu;
 
   function findTitle(id) {
     const root = document.getElementById('product-' + id);
@@ -1090,17 +1098,22 @@
     const node = selectors.find(n => n && n.textContent.trim().length > 4);
     return node ? node.textContent.trim() : '';
   }
-  function isCompatible(id) {
-    const title = normalized(findTitle(id));
-    if (title) {
-      // Refuse ambiguous multi-model products: "only 18 Pro Max" would be wrong.
-      if (targetRegex.test(title)) {
-        const withoutTarget = title.replace(targetRegex, ' ');
-        return !otherModelRegex.test(withoutTarget);
+  function compatibleModel(id) {
+    const name = normalized(findTitle(id));
+    if (name) {
+      const hasMax = targetRegex.test(name);
+      const hasPro = proRegex.test(name);
+      if (hasMax || hasPro) {
+        const remaining = name.replace(hasMax ? targetRegex : proRegex, ' ');
+        // Avoid an incorrect "only" message for multi-model products.
+        if (otherModelRegex.test(remaining) || extraModelTokenRegex.test(remaining)) return null;
+        return hasMax ? 'max' : 'pro';
       }
-      if (otherModelRegex.test(title)) return false;
+      if (otherModelRegex.test(name)) return null;
     }
-    return verifiedIds.has(id);
+    if (verifiedIds.has(id)) return 'max';
+    if (verifiedProIds.has(id)) return 'pro';
+    return null;
   }
   function findPurchaseSection(form, id) {
     const addButton = form?.querySelector('salla-add-product-button[product-id="' + id + '"]');
@@ -1120,7 +1133,8 @@
     if (location.pathname.match(/\/p(\d+)\/?$/)?.[1] !== productId) return true;
     if (document.getElementById(noticeId)) return true;
     const visibleName = findTitle(productId);
-    if (!isCompatible(productId)) return !!visibleName; // No warning on other models.
+    const model = compatibleModel(productId);
+    if (!model) return !!visibleName; // No warning on other models.
     const form = document.querySelector('#product-' + productId + ' .main-content .product-form') ||
       document.querySelector('#product-' + productId + ' .product-form');
     const purchase = findPurchaseSection(form, productId);
@@ -1130,7 +1144,7 @@
     notice.id = noticeId;
     notice.dir = 'rtl';
     notice.setAttribute('role', 'note');
-    notice.setAttribute('aria-label', 'توافق الكفر مع موديل الهاتف');
+    notice.setAttribute('aria-label', 'توافق المنتج مع موديل الهاتف');
 
     const headline = document.createElement('div');
     headline.className = 'link-model-warning-head';
@@ -1139,11 +1153,11 @@
     icon.setAttribute('aria-hidden', 'true');
     icon.textContent = '✓';
     const title = document.createElement('strong');
-    title.textContent = 'مخصص لـ iPhone 18 Pro Max فقط';
+    title.textContent = model === 'max' ? 'مخصص لـ iPhone 18 Pro Max فقط' : 'مخصص لـ iPhone 18 Pro فقط';
     headline.append(icon, title);
 
     const detail = document.createElement('p');
-    detail.textContent = 'تأكد من موديل جوالك قبل الطلب — لا يناسب iPhone 18 Pro.';
+    detail.textContent = model === 'max' ? 'تأكد من موديل جوالك قبل الطلب — لا يناسب iPhone 18 Pro.' : 'تأكد من موديل جوالك قبل الطلب — لا يناسب iPhone 18 Pro Max.';
     notice.append(headline, detail);
 
     if (!document.getElementById('link-model-warning-style-' + productId)) {
