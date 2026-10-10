@@ -68,3 +68,7 @@ html{overflow-x:clip}body{min-width:0}.app{width:100%;min-width:0}
   .toast{inset:auto 14px calc(16px + env(safe-area-inset-bottom));max-width:none;padding:12px 16px;overflow-wrap:anywhere}
 }
 @media(max-width:350px){.metrics,.ads-metrics{grid-template-columns:minmax(0,1fr)}.ads-platform-tabs button{gap:7px;padding:10px}.ads-platform-tabs small{padding:0}.topbar{gap:8px}.top-actions .avatar{display:none}}
+
+
+/* Post-purchase mapping workspace */
+.pp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-block:20px}.pp-grid label{display:flex;flex-direction:column;gap:8px;min-width:0}.pp-grid input,.pp-grid select{width:100%;min-width:0}.pp-components{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:16px;border:1px solid var(--border,#343548);border-radius:12px;padding:16px}.pp-components label{flex-direction:row;align-items:center}.pp-components input{width:auto}.pp-grid button{align-self:end}@media(max-width:640px){.pp-grid{grid-template-columns:minmax(0,1fr)}.pp-components{gap:12px}.pp-grid button{width:100%}}

@@ -15,7 +15,7 @@
     protection: '<path d="M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
   };
-  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['customers','العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
+  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['customers','العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['postpurchase','ما بعد البيع'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.overview}</svg>`;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt = value => value == null ? '—' : Number(value).toLocaleString('ar-SA-u-nu-latn');
@@ -191,6 +191,7 @@
     });
     if (page==='ads') window.LinkAds.bind({navigate,toast});
     if (page==='whatsapp') window.LinkWhatsApp.bind({navigate,toast,api});
+    if (page==='postpurchase') window.LinkPostPurchase.bind({navigate,toast,api});
     if (page==='automations') window.LinkCartFollowup.bind({api,toast});
     if (recordState[page]) {
       const resource=page,state=recordState[resource];
@@ -231,6 +232,7 @@
       let html;
       if (page==='overview') { overview=await api('overview'); html=home(overview); }
       else if (page==='whatsapp') { html=window.LinkWhatsApp.render(await api('whatsapp')); }
+      else if (page==='postpurchase') { html=window.LinkPostPurchase.render(await api('postpurchase')); }
       else if (page==='ads') { html=await window.LinkAds.load(token); }
       else if (recordState[page]) { const state=recordState[page]; html=recordsView(page,await api(`${page}&${new URLSearchParams({page:state.page,search:state.search})}`)); }
       else if (page==='automations') { const {rules}=await api('rules'); html=rulesView(rules); }
@@ -313,3 +315,4 @@
     else if(token)await enter();
   }).catch(e=>{$('login-error').textContent=e.message;});
 })();
+
