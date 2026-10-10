@@ -1,6 +1,6 @@
 (()=>{'use strict';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const tags={case:'كفر',screen:'حماية شاشة',lens:'حماية عدسات',camera_frame:'إطار كاميرا',charger:'شاحن',cable:'كيبل',other:'أخرى'};
+const tags={case:'كفر / إطار جانبي',screen:'حماية شاشة',lens:'حماية عدسات',camera_frame:'إطار كاميرا',charger:'شاحن',cable:'كيبل',other:'أخرى'};
 const reasons={customer_missing:'الطلب غير مرتبط بعميل؛ يلزم إصلاح الربط',delivery_date_unknown:'ننتظر تسجيل تاريخ تسليم مؤكّد',phone_missing:'هاتف غير صالح',optout:'ألغى الاشتراك',later_purchase:'اشترى مجددًا بعد هذا الطلب',model_mismatch:'موديل الجهاز مختلف',unmapped_items:'عرّف باقي منتجات الطلب ومحتويات البكج',already_owned:'يمتلك أحد مكونات العرض بالفعل',offer_url_missing:'أضف رابط المنتج المقترح',delay:'بانتظار موعد المتابعة',stock_check_required:'موعده حان؛ فحص المخزون والقالب مطلوب قبل الإرسال'};
 const date=v=>v?new Date(v).toLocaleString('ar-SA-u-nu-latn',{timeZone:'Asia/Riyadh',dateStyle:'short',timeStyle:'short'}):'—';
 const reviewReasons={catalog_required:'يلزم جلب بيانات الكتالوج',multiple_models:'أكثر من موديل',model_unknown:'الموديل غير واضح',model_conflict:'تعارض بين العنوان والوصف',variants_review:'خيارات موديل أو نسخ تحتاج مراجعة',type_unknown:'نوع الحماية غير واضح',bundle_contents_review:'تأكيد محتويات البكج',url_missing:'رابط المنتج ناقص',name_missing:'اسم المنتج ناقص'};

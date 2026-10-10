@@ -8,6 +8,15 @@ test('Arabic/English model parsing and conservative inference distinguish bundle
  assert.equal(infer({...base,name:'حماية شاشة iPhone 17 Pro',options:[{name:'اللون',values:[{name:'شفاف'}]}]}).decision,'auto');
  assert.deepEqual(infer({...base,name:'إطار كاميرا ايفون 17 برو'}).profile.components,['camera_frame']);
 });
+test('Side frames use body protection and explicit negative compatibility does not become a conflict',()=>{
+ const side=infer({...base,name:'إطار Link المعدني – iPhone 14 Pro',description:'حماية الجوانب والزوايا بدون تغطية الظهر'});
+ assert.equal(side.decision,'auto');assert.deepEqual(side.profile.components,['case']);
+ assert.deepEqual(infer({...base,name:'إطار Link المعدني للكاميرا iPhone 14 Pro'}).profile.components,['camera_frame']);
+ assert.equal(infer({...base,name:'إطار iPhone 14 Pro'}).decision,'review');
+ for(const description of ['مخصص لـ iPhone 17 Pro Max.<p>لا يناسب iPhone 17 Pro</p>','Not compatible with iPhone 16 Pro. Fits iPhone 17 Pro Max.','تنبيه: لا يتوافق مع iPhone 16 Pro'])assert.equal(infer({...base,description}).decision,'auto');
+ for(const description of ['متوافق مع iPhone 16 Pro','لا يناسب iPhone 16 Pro لكن يناسب iPhone 15 Pro','لا يناسب iPhone 16 Pro ويناسب iPhone 15 Pro','يناسب iPhone 17 Pro Max ولا يناسب iPhone 16 Pro'])assert.ok(infer({...base,description}).reasons.includes('model_conflict'));
+ assert.equal(infer({...base,name:'إطار Link المعدني – iPhone 14 Pro',options:[{name:'الموديل',values:[{name:'iPhone 14 Pro'},{name:'iPhone 14 Pro Max'}]}]}).decision,'review');
+});
 test('Importer has no retries, uses one reserved GET, honors cache/budget, and counts failures',async()=>{
  let network=0,finish;const db=async(path,opts)=>{if(path.endsWith('reserve_import'))return {page:2,token:'test',requests:2};finish=JSON.parse(opts.body);return true;};const creds=async()=>({access_token:'test'});
  const r=await importPage({database:db,credentials:creds,request:async url=>{network++;assert.ok(url.endsWith('products?page=2&per_page=60'));return {ok:true,text:async()=>JSON.stringify({success:true,data:[{...base,urls:{customer:base.product_url}}],pagination:{totalPages:2}})};}});assert.equal(network,1);assert.equal(r.done,true);assert.equal(finish.p_products[0].id,'100');
