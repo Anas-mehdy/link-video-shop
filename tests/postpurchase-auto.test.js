@@ -43,6 +43,13 @@ test('SQL enforces concurrent lease, monthly budget, private grants and idempote
  }finally{await db.close();}
 });
 test('Local analysis pauses on an incomplete catalog without external or write calls',async()=>{let calls=0;const r=await require('../lib/postpurchase-auto').analyze(async path=>{calls++;assert.ok(path.startsWith('crm_postpurchase_import?'));return [{completed:false}];});assert.equal(r.deferred,true);assert.equal(calls,1);assert.equal(r.salla_requests,0);});
+test('Analysis errors identify the failing boundary without leaking database details',async()=>{
+ for(const code of ['57014','23514','42702','PGRST202'])await assert.rejects(require('../lib/postpurchase-auto').analyze(async path=>{
+  if(path.includes('crm_postpurchase_import?'))return [{completed:true}];if(path.includes('catalog_cache?'))return [{product:base}];
+  throw Error('Supabase 400: '+JSON.stringify({code,message:'PRIVATE_CUSTOMER_AND_TOKEN'}));
+ }),e=>e.postpurchaseSafe&&e.analysisStage==='save'&&e.analysisCode===code&&!e.message.includes('PRIVATE_CUSTOMER_AND_TOKEN'));
+ await assert.rejects(require('../lib/postpurchase-auto').analyze(async()=>{throw Object.assign(Error('private'),{name:'TimeoutError'});}),e=>e.analysisStage==='read_state'&&e.analysisCode==='TIMEOUT');
+});
 test('Analysis button shows progress and keeps the returned result after rendering',async()=>{
  const nodes=new Map(),document={getElementById:id=>{if(!nodes.has(id))nodes.set(id,{isConnected:true,textContent:'',disabled:false,handlers:{},addEventListener(event,fn){this.handlers[event]=fn;},querySelectorAll:()=>[]});return nodes.get(id);},querySelectorAll:()=>[]};
  const window={};require('node:vm').runInNewContext(fs.readFileSync(__dirname+'/../public/dashboard-postpurchase.js','utf8'),{window,document,URL,Date});

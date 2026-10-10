@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
       }catch(e){if(e.statusCode===401&&action==='session')auth.clearSession(res);return json(res,[400,401,403,429,503].includes(e.statusCode)?e.statusCode:503,{ok:false,error:e.statusCode?e.message:'تعذر تسجيل الدخول'});}
     }
     await requireAdmin(req);
-    if(resource==='postpurchase')return require('../lib/postpurchase').admin(req,res);
+    if(resource==='postpurchase')return await require('../lib/postpurchase').admin(req,res);
     if(resource==='whatsapp-second')return require('../lib/cart-reminder-two').admin(req,res);
     if(resource==='whatsapp-delivery')return require('../lib/whatsapp-delivery').admin(req,res);
     if(resource==='cart-followup'){
