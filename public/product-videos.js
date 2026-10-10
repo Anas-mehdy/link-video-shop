@@ -1053,12 +1053,12 @@
 })();
 
 
-/* Link Store model warning — iPhone 18 Pro and Pro Max products, no selection required. */
+/* Link Store phone model compatibility notice — model-specific protection products only. */
 (function () {
   'use strict';
-  if (window.__link18ProSeriesWarning) return;
+  if (window.__linkPhoneModelWarning) return;
   if (!/\/p\d+\/?$/.test(location.pathname)) return;
-  window.__link18ProSeriesWarning = true;
+  window.__linkPhoneModelWarning = true;
 
   // Verified product IDs, so existing products still work even if the theme
   // does not expose an H1 immediately. Future correctly titled products work too.
@@ -1076,45 +1076,95 @@
   ]);
   const noticeId = 'link-model-warning';
   const productId = (location.pathname.match(/\/p(\d+)\/?$/) || [])[1];
-  const normalized = text => (text || '').normalize('NFKC')
+  const normalized = text => (text || '').normalize('NFKC').toLowerCase()
     .replace(/[٠-٩۰-۹]/g, ch => {
       const n = '٠١٢٣٤٥٦٧٨٩'.indexOf(ch);
       return String(n >= 0 ? n : '۰۱۲۳۴۵۶۷۸۹'.indexOf(ch));
     })
-    .replace(/[\u064B-\u065F\u0640]/g, '').replace(/[–—−‐‑_]/g, ' ')
-    .replace(/\s+/g, ' ').toLowerCase();
-  const targetRegex = /(?:^|[^\d])18\s*(?:pro\s*max|برو\s*ماكس)(?![a-z0-9])/i;
-  const proRegex = /(?:^|[^\d])18\s*(?:pro\b(?!\s*max\b)|برو(?!\s*ماكس))(?![a-z0-9])/i;
-  const otherModelRegex = /(?:^|[^\d])(?:1[4-9]|2\d)\s*(?:pro\s*max|pro\b|برو\s*ماكس|برو|plus\b|بلس)/i;
-  const extraModelTokenRegex = /(?:^|[^\p{L}])(?:pro\s*max|pro|برو\s*ماكس|برو)(?=$|[^\p{L}])/iu;
+    .replace(/[إأآٱ]/g, 'ا').replace(/ى/g, 'ي')
+    .replace(/[\u064B-\u065F\u0640]/g, '')
+    .replace(/[–—−‐‑_]/g, ' ').replace(/\s+/g, ' ').trim();
 
+  // Phone-specific protection only; generic stands, car mounts, chargers and
+  // power banks will not pass this check even if they mention an iPhone model.
+  const needsPhoneFit = /(كفر|جراب|حافظ[هة]|غطاء|حماي|حامي|استيكر|ستيكر|استكير|لصق|ملصق|لزق|عدسات|عدسه|عدسة|مسطح|اطار|فريم|باكج|باكدج|بكج|باقة حماية|case|cover|screen.?protector|protector|lens|glass|bundle|camera.?frame|film|shield|carbon.?fiber)/i;
+  const specs = [
+    { kind: 'iphone', regex: /(?:^|[^\p{L}\p{N}])(?:iphone|ايفون)\s*(1[0-9]|20|[9])\s*(pro\s*max|برو\s*ماكس|pro|برو|plus|بلس|air|اير|mini|ميني|se|اس\s*اي)?(?=$|[^\p{L}\p{N}])/giu, number: 1, variant: 2 },
+    { kind: 's', regex: /(?:^|[^\p{L}\p{N}])s(1\d|2\d|3\d)\s*(ultra|الترا|plus|بلس|fe|اف\s*اي)?(?=$|[^\p{L}\p{N}])/giu, number: 1, variant: 2 },
+    { kind: 'fold', regex: /(?:^|[^\p{L}\p{N}])(?:z\s*)?(fold|flip|فولد|فليب)\s*(\d{1,2})\s*(ultra|الترا)?(?=$|[^\p{L}\p{N}])/giu, number: 2, variant: 3 },
+    { kind: 'a', regex: /(?:^|[^\p{L}\p{N}])a(\d{2})\s*(5g)?(?=$|[^\p{L}\p{N}])/giu, number: 1, variant: 2 },
+    { kind: 'note', regex: /(?:^|[^\p{L}\p{N}])(?:note|نوت)\s*(\d{1,2})\s*(ultra|الترا|plus|بلس)?(?=$|[^\p{L}\p{N}])/giu, number: 1, variant: 2 },
+    { kind: 's', regex: /(?:galaxy|جالكسي|سامسونج)\s*(2\d)\s*(ultra|الترا|plus|بلس|fe)?(?=$|[^\p{L}\p{N}])/giu, number: 1, variant: 2 },
+    // Titles such as "كفر ... 17 برو" omit the word iPhone.
+    { kind: 'iphone', regex: /(?:^|[^\p{L}\p{N}])(1[2-9])\s*(pro\s*max|برو\s*ماكس|pro|برو|plus|بلس|air|اير|mini|ميني)(?=$|[^\p{L}\p{N}])/giu, number: 1, variant: 2 }
+  ];
+  function formattedVariant(name) {
+    if (/^(pro\s*max|برو\s*ماكس)$/.test(name || '')) return 'Pro Max';
+    if (/^(pro|برو)$/.test(name || '')) return 'Pro';
+    if (/^(plus|بلس)$/.test(name || '')) return 'Plus';
+    if (/^(air|اير)$/.test(name || '')) return 'Air';
+    if (/^(mini|ميني)$/.test(name || '')) return 'Mini';
+    if (/^(ultra|الترا)$/.test(name || '')) return 'Ultra';
+    if (/^(fe|اف\s*اي)$/.test(name || '')) return 'FE';
+    if (/^(se|اس\s*اي)$/.test(name || '')) return 'SE';
+    return '';
+  }
   function findTitle(id) {
     const root = document.getElementById('product-' + id);
-    const selectors = [
-      root?.querySelector('.main-content h1'),
-      root?.querySelector('h1'),
+    const nodes = [
+      root?.querySelector('.main-content h1'), root?.querySelector('h1'),
       document.querySelector('h1.product-title, h1[itemprop="name"], .product-title h1')
     ];
-    const node = selectors.find(n => n && n.textContent.trim().length > 4);
-    return node ? node.textContent.trim() : '';
+    const node = nodes.find(n => n && n.textContent.trim().length > 4);
+    return node?.textContent.trim() || document.querySelector('meta[property="og:title"]')?.content?.trim() || '';
+  }
+  function modelFromTitle(title) {
+    const name = normalized(title);
+    if (!needsPhoneFit.test(name)) return null;
+    const mentions = [];
+    for (const spec of specs) {
+      for (const match of name.matchAll(spec.regex)) {
+        const number = match[spec.number];
+        const variant = formattedVariant(match[spec.variant]);
+        let label;
+        if (spec.kind === 'iphone') {
+          label = 'iPhone ' + number + (variant ? ' ' + variant : '');
+        } else if (spec.kind === 's') {
+          label = 'Samsung Galaxy S' + number + (variant ? ' ' + variant : '');
+        } else if (spec.kind === 'fold') {
+          const family = /flip|فليب/.test(match[1]) ? 'Flip' : 'Fold';
+          label = 'Samsung Galaxy Z ' + family + ' ' + number + (variant ? ' ' + variant : '');
+        } else if (spec.kind === 'a') {
+          label = 'Samsung Galaxy A' + number;
+        } else {
+          label = 'Samsung Galaxy Note ' + number + (variant ? ' ' + variant : '');
+        }
+        mentions.push({ label, start: match.index, end: match.index + match[0].length });
+      }
+    }
+    const unique = [...new Set(mentions.map(m => m.label))];
+    if (unique.length !== 1) return null;
+
+    // A trailing "Pro Max", "Ultra" or another model number indicates that
+    // the title may cover multiple devices. Prefer no notice over a wrong one.
+    const remaining = name.split('');
+    mentions.forEach(m => {
+      for (let i = m.start; i < m.end; i++) remaining[i] = ' ';
+    });
+    const rest = remaining.join('');
+    if (/(?:^|[^\p{L}\p{N}])(?:pro\s*max|pro|plus|ultra|max|air|mini|برو\s*ماكس|برو|ماكس|بلس|الترا|اير|فولد|فليب)(?=$|[^\p{L}\p{N}])/iu.test(rest)) return null;
+    if (/(?:^|[^\d])(?:1[2-9]|20)(?=$|[^\d])/.test(rest)) return null;
+    return unique[0];
   }
   function compatibleModel(id) {
-    const name = normalized(findTitle(id));
-    if (name) {
-      const hasMax = targetRegex.test(name);
-      const hasPro = proRegex.test(name);
-      if (hasMax || hasPro) {
-        const remaining = name.replace(hasMax ? targetRegex : proRegex, ' ');
-        // Avoid an incorrect "only" message for multi-model products.
-        if (otherModelRegex.test(remaining) || extraModelTokenRegex.test(remaining)) return null;
-        return hasMax ? 'max' : 'pro';
-      }
-      if (otherModelRegex.test(name)) return null;
-    }
-    if (verifiedIds.has(id)) return 'max';
-    if (verifiedProIds.has(id)) return 'pro';
+    const title = findTitle(id);
+    if (title) return modelFromTitle(title);
+    // Fallback for previously verified iPhone 18 products before H1 appears.
+    if (verifiedIds.has(id)) return 'iPhone 18 Pro Max';
+    if (verifiedProIds.has(id)) return 'iPhone 18 Pro';
     return null;
   }
+
   function findPurchaseSection(form, id) {
     const addButton = form?.querySelector('salla-add-product-button[product-id="' + id + '"]');
     if (!addButton) return null;
@@ -1153,11 +1203,11 @@
     icon.setAttribute('aria-hidden', 'true');
     icon.textContent = '✓';
     const title = document.createElement('strong');
-    title.textContent = model === 'max' ? 'مخصص لـ iPhone 18 Pro Max فقط' : 'مخصص لـ iPhone 18 Pro فقط';
+    title.textContent = 'مخصص لـ ' + model + ' فقط';
     headline.append(icon, title);
 
     const detail = document.createElement('p');
-    detail.textContent = model === 'max' ? 'تأكد من موديل جوالك قبل الطلب — لا يناسب iPhone 18 Pro.' : 'تأكد من موديل جوالك قبل الطلب — لا يناسب iPhone 18 Pro Max.';
+    detail.textContent = 'تأكد من موديل جوالك قبل الطلب.';
     notice.append(headline, detail);
 
     if (!document.getElementById('link-model-warning-style-' + productId)) {
