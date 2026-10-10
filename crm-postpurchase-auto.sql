@@ -95,10 +95,8 @@ begin
   end if;
  end loop;
  update public.crm_postpurchase_suggestions s set decision='excluded',reasons=array['removed_from_source'] where s.merchant_id=p_merchant_id and not exists(select 1 from jsonb_array_elements(p_suggestions) incoming(value) where incoming.value->>'product_id'=s.product_id and coalesce(incoming.value->>'variant_id','')=s.variant_id);
- -- Invalidate previous automatic rules before recomputing: reviewed/hidden products cannot remain active.
- update public.crm_postpurchase_rules set active=false where merchant_id=p_merchant_id and origin='auto'
- and (not exists(select 1 from public.crm_postpurchase_catalog_cache c where c.merchant_id=p_merchant_id and c.product_id=offer_product_id and c.product->>'status'='sale' and c.product->>'is_available'='true') or exists(select 1 from public.crm_postpurchase_suggestions s where s.merchant_id=p_merchant_id and s.product_id=trigger_product_id and s.variant_id=trigger_variant_id and s.decision<>'auto')
- or exists(select 1 from public.crm_postpurchase_suggestions s where s.merchant_id=p_merchant_id and s.product_id=offer_product_id and s.variant_id=offer_variant_id and s.decision<>'auto'));
+ -- Recompute the active automatic set so old alternatives cannot accumulate.
+ update public.crm_postpurchase_rules set active=false where merchant_id=p_merchant_id and origin='auto';
  -- High-confidence compatible suggestions are enrolled in preview only. Existing rules retain user pauses.
  insert into public.crm_postpurchase_rules(merchant_id,name,trigger_product_id,trigger_variant_id,offer_product_id,offer_variant_id,origin)
  select p_merchant_id,left(t.name||' ← '||f.name,120),t.product_id,t.variant_id,f.product_id,f.variant_id,'auto'
