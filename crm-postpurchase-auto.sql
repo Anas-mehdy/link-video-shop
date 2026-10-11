@@ -234,7 +234,7 @@ returns jsonb language sql security invoker set search_path='' as $$
  ), single_orders as (
  select * from recent where jsonb_array_length(case when jsonb_typeof(source_payload->'items')='array' then source_payload->'items' else '[]'::jsonb end)=1
  ), context as (
- select o.id,external_order_id,customer_name,delivered_at+make_interval(days=>delay_days) scheduled_for,
+ select o.id,external_order_id,customer_name,ordered_at+make_interval(days=>delay_days) scheduled_for,
  jsonb_build_object(
  'product_id',coalesce(i->'product'->>'id',i->>'product_id'),
  'variant_id',coalesce(i->'sku'->>'id',i->>'sku_id',''),
@@ -245,12 +245,11 @@ returns jsonb language sql security invoker set search_path='' as $$
  when coalesce(o.normalized_phone,regexp_replace(coalesce(o.phone,''),'[^0-9]','','g')) !~ '^[1-9][0-9]{7,14}$' then 'phone_missing'
  when exists(select 1 from public.crm_whatsapp_optouts z where z.merchant_id=o.merchant_id and z.phone=coalesce(o.normalized_phone,regexp_replace(coalesce(o.phone,''),'[^0-9]','','g'))) then 'optout'
  when exists(select 1 from public.orders later where later.merchant_id=o.merchant_id and later.customer_id=o.customer_id and later.ordered_at>o.ordered_at and coalesce(later.status_slug,'') not in ('cancelled','canceled','refunded')) then 'later_purchase'
- when o.delivered_at is null then 'delivery_date_unknown'
- when o.delivered_at+make_interval(days=>o.delay_days)>now() then 'delay'
+ when o.ordered_at+make_interval(days=>o.delay_days)>now() then 'delay'
  else 'stock_check_required' end reason
  from single_orders o cross join lateral (select o.source_payload->'items'->0 i) x
  )
- select jsonb_build_object('scanned_orders',(select count(*) from recent),
+ select jsonb_build_object('schedule_basis','purchase','scanned_orders',(select count(*) from recent),
  'single_product_orders',(select count(*) from single_orders),
  'rows',coalesce((select jsonb_agg(to_jsonb(x) order by x.scheduled_for nulls last,x.external_order_id) from context x),'[]'::jsonb));
 $$;

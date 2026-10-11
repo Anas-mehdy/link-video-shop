@@ -55,10 +55,23 @@ test('SQL context returns only this merchant and last month, applies eligibility
  const insert=async(ext,items,m=merchant,date='2026-10-10T08:00Z')=>(await db.query("insert into orders(merchant_id,external_order_id,customer_id,status_slug,ordered_at,crm_source_at,source_payload) values($1,$2,$3,'delivered',$4,$4,$5) returning id",[m,ext,c,date,JSON.stringify({items,private_secret:'should_not_be_returned'})])).rows[0].id;
  const first=await insert('1',[{product_id:111,name:item.name,options:[{name:'اللون',value:'أسود'}]}]);await insert('2',[{product_id:111,name:item.name},{product_id:222}]);await insert('old',[{product_id:111} ],merchant,'2026-09-01T00:00Z');await insert('other',[{product_id:111}],99);
  const get=async()=>(await db.query('select crm_postpurchase_single_context($1) r',[merchant])).rows[0].r;
- let r=await get();assert.equal(r.scanned_orders,2);assert.equal(r.single_product_orders,1);assert.equal(r.rows[0].reason,'delivery_date_unknown');assert.equal(r.rows[0].item.product_id,'111');assert.ok(!JSON.stringify(r).includes('private_secret'));
+ let r=await get();assert.equal(r.scanned_orders,2);assert.equal(r.single_product_orders,1);assert.equal(r.rows[0].reason,'delay');assert.equal(r.schedule_basis,'purchase');assert.equal(r.rows[0].item.product_id,'111');assert.ok(!JSON.stringify(r).includes('private_secret'));
  await db.query("insert into crm_postpurchase_delivered(merchant_id,order_id,delivered_at) values($1,$2,'2026-10-10T08:00Z')",[merchant,first]);assert.equal((await get()).rows[0].reason,'delay');
  await db.exec("insert into crm_whatsapp_optouts values(1829345766,'966500000001')");assert.equal((await get()).rows[0].reason,'optout');await db.exec('delete from crm_whatsapp_optouts');
  await insert('later',[{product_id:111}],merchant,'2026-10-10T08:30Z');assert.equal((await get()).rows.find(x=>x.external_order_id==='1').reason,'later_purchase');
+ // Historical delivered purchases become due from their actual purchase date,
+ // even if delivery was only observed now or no delivery timestamp was imported.
+ const hc=(await db.query("insert into customers(merchant_id,external_customer_id,name,phone,normalized_phone) values($1,'hist','Historical','+966500000002','966500000002') returning id",[merchant])).rows[0].id;
+ const hist=(await db.query("insert into orders(merchant_id,external_order_id,customer_id,status_slug,ordered_at,source_payload) values($1,'historical',$2,'delivered','2026-10-03T09:00Z',$3) returning id",[merchant,hc,JSON.stringify({items:[{name:item.name}]})])).rows[0].id;
+ const historical=async()=>(await get()).rows.find(x=>x.external_order_id==='historical');
+ assert.equal((await historical()).reason,'stock_check_required');
+ assert.equal(Date.parse((await historical()).scheduled_for),Date.parse('2026-10-10T09:00Z'));
+ await db.query("insert into crm_postpurchase_delivered(merchant_id,order_id,delivered_at) values($1,$2,'2026-10-10T09:00Z')",[merchant,hist]);
+ assert.equal((await historical()).reason,'stock_check_required');
+ await db.exec("update test_clock set t='2026-10-10T08:59:59Z'");assert.equal((await historical()).reason,'delay');
+ await db.exec("update test_clock set t='2026-10-10T09:00Z';insert into crm_whatsapp_optouts values(1829345766,'966500000002')");assert.equal((await historical()).reason,'optout');
+ await db.exec('delete from crm_whatsapp_optouts');
+ await db.query("update orders set status_slug='under_review' where id=$1",[hist]);assert.equal(await historical(),undefined);
  for(const role of ['anon','authenticated'])assert.equal((await db.query('select has_function_privilege($1,$2,$3) r',[role,'crm_postpurchase_single_context(bigint)','EXECUTE'])).rows[0].r,false);
  }finally{await db.close();}
 });
