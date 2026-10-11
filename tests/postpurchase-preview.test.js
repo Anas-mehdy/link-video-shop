@@ -81,3 +81,30 @@ test('Admin GET builds title matches from local RPC and handles a pending SQL up
  assert.equal(res.status,200);assert.equal(res.data.preview.matched_orders,1);assert.equal(res.data.preview.rows.length,2);assert.equal(res.data.preview.matching,'order_title');assert.ok(calls.every(x=>!x.startsWith('http')));
  missing=true;calls=[];res={};await sandbox.module.exports.admin({method:'GET'},res);assert.equal(res.data.ready,true);assert.equal(res.data.preview.requires_title_update,true);
 });
+test('Fold 8 is explicitly out of scope, including Arabic digits, manual profiles and selected options',()=>{
+ for(const name of ['كفر لنك كاربون فاير Samsung Galaxy Z Fold 8 – MagSafe','كفر سامسونج فولد 8','كفر فولد ٨ الترا','كفر Galaxy Fold8 Ultra'])assert.equal(inferPurchased({...item,name}).excluded,'unsupported_model',name);
+ assert.equal(inferPurchased(item,profile('111','Samsung Z Fold 8','case','manual')).excluded,'unsupported_model');
+ assert.equal(inferPurchased({...item,options:[{name:'الموديل',value:'فولد ٨'}]}).excluded,'unsupported_model');
+ assert.notEqual(inferPurchased({...item,name:'كفر Fold 80'}).excluded,'unsupported_model');
+ const rows=[order(1,{...item,name:'كفر Galaxy Z Fold 8'}),order(2,item)];
+ const r=buildPreview({scanned_orders:2,single_product_orders:2,rows},products,[],suggestions,catalog);
+ assert.equal(r.excluded_model_orders,1);assert.equal(r.target_orders,1);assert.equal(r.matched_orders,1);assert.equal(r.unclassified_orders,0);assert.ok(r.rows.every(x=>x.external_order_id==='2'));
+});
+test('Unknown purchases are grouped by exact name, selected model and cause, without customer or order data',()=>{
+ const unknown={...item,name:'كفر غير واضح'};
+ const rows=[order(1,unknown),order(2,unknown),order(3,{...item,options:[{name:'الموديل',value:'iPhone 17 Pro'}]})];
+ const r=buildPreview({scanned_orders:3,single_product_orders:3,rows},products,[],suggestions,catalog);
+ assert.equal(r.unclassified_orders,3);assert.equal(r.unmatched_products.length,2);assert.equal(r.unmatched_products[0].orders,2);assert.equal(r.unmatched_products[0].reason,'model_missing');assert.equal(r.unmatched_products[1].reason,'model_conflict');
+ assert.deepEqual(r.unmatched_products[1].title_models,['iPhone 17']);assert.deepEqual(r.unmatched_products[1].selected_models,['iPhone 17 Pro']);
+ for(const group of r.unmatched_products)assert.deepEqual(Object.keys(group).sort(),['name','orders','product_id','reason','selected_models','title_models','variant_id'].sort());
+});
+test('Unmatched-products UI copies product-only diagnostics and safely renders names',async()=>{
+ const vm=require('node:vm'),nodes=new Map();let copied='',toastText='';
+ const document={getElementById:id=>{if(!nodes.has(id))nodes.set(id,{handlers:{},addEventListener(event,fn){this.handlers[event]=fn;},querySelectorAll:()=>[]});return nodes.get(id);},querySelectorAll:()=>[]};
+ const window={};vm.runInNewContext(fs.readFileSync(__dirname+'/../public/dashboard-postpurchase.js','utf8'),{window,document,URL,Date,navigator:{clipboard:{writeText:async text=>{copied=text;}}}});
+ const preview=buildPreview({scanned_orders:1,single_product_orders:1,rows:[order(1,{...item,name:'كفر مجهول <img src=x onerror=alert(1)>'})]},products,[],suggestions,catalog);
+ const d={ready:true,automatic:{ready:true,suggestions:[],requests:9,budget:20},products:[],rules:[],catalog:[],settings:{batch_hours:[11,17,20]},preview};
+ const html=window.LinkPostPurchase.render(d);assert.match(html,/المنتجات غير المطابقة وأسبابها/);assert.ok(!html.includes('<img src=x'));assert.ok(html.includes('&lt;img'));
+ window.LinkPostPurchase.bind({api:async()=>assert.fail('No network for copying'),navigate:async()=>assert.fail('No navigation'),toast:s=>{toastText=s;}});
+ await nodes.get('pp-copy-unmatched').handlers.click();assert.deepEqual(JSON.parse(copied),preview.unmatched_products);assert.ok(!copied.includes('customer_name'));assert.ok(!copied.includes('external_order_id'));assert.match(toastText,/تم نسخ/);
+});
