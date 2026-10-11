@@ -56,3 +56,60 @@ test('Both senders save acceptance before labeling; label failure cannot change 
   const result=await require('../lib/'+module).tick({database,request,environment});assert.equal(result.status,'accepted');assert.equal(result.sent,true);assert.equal(result.labeling.status,'pending');assert.equal(sends,1);
  }
 });
+const {recoverOne}=require('../lib/etisalna-labels');
+const eventId='11111111-1111-4111-8111-111111111111',cartId='22222222-2222-4222-8222-222222222222';
+const recoveryTime=Date.parse('2026-10-11T15:00:00Z');
+function recoveryDb({cart=true,send=true,payload={data:{id:'3122162686596967249'}},attempts=0}={}){
+ const calls=[];let patch;
+ const database=async(path,options)=>{
+  calls.push(path);
+  if(options?.method==='PATCH'){patch=JSON.parse(options.body);return [];}
+  if(path.startsWith('crm_event_inbox?'))return [{id:eventId,occurred_at:'2026-10-11T14:00:00Z',payload:{...payload,_crm_recovery_attempts:attempts}}];
+  if(path.startsWith('abandoned_carts?')){assert.ok(path.includes('external_cart_id=eq.3122162686596967249'));assert.ok(path.includes('status=eq.recovered'));return cart?[{id:cartId}]:[];}
+  if(path.startsWith('crm_cart_second_deliveries?'))return [];
+  if(path.startsWith('crm_cart_deliveries?')){assert.ok(path.includes('cart_id=eq.'+cartId));assert.ok(path.includes('attempted_at=lte.'));assert.ok(path.includes('status=eq.accepted'));return send?[{provider_message_id:'987',attempted_phone:'966500000001'}]:[];}
+  assert.fail('unexpected query '+path);
+ };
+ return {database,calls,get patch(){return patch;}};
+}
+test('Recovery requires the exact purchased cart and a prior accepted reminder, preserving event data',async()=>{
+ const db=recoveryDb(),m=mock();
+ const result=await recoverOne({database:db.database,request:m.request,environment,now:recoveryTime});
+ assert.equal(result.labeling.status,'added');assert.deepEqual(m.labels,['staff_label','cart_recovered']);
+ assert.equal(db.patch.payload._crm_recovery_label,'done');assert.equal(db.patch.payload.data.id,'3122162686596967249');
+ const query=new URL('https://test/'+db.calls[0]).searchParams;
+ assert.equal(query.get('event_name'),'eq.abandoned.cart.purchased');assert.equal(query.get('records_synced_at'),'not.is.null');assert.equal(query.get('limit'),'1');assert.equal(query.get('occurred_at'),'gte.2026-09-11T15:00:00.000Z');
+ assert.ok(query.get('or').includes('pending'));assert.ok(m.calls.every(x=>!x.url.includes('/developer/')));
+});
+test('No arbitrary order/active cart, uncontacted cart, or rounded identifier can receive recovery label',async()=>{
+ for(const options of [{cart:false},{send:false},{payload:{data:{id:9007199254740992}}}]){
+  const db=recoveryDb(options);const r=await recoverOne({database:db.database,request:()=>assert.fail('must not call provider'),environment,now:recoveryTime});
+  assert.equal(r.labeling.status,'ignored');assert.equal(db.patch.payload._crm_recovery_label,'ignored');
+ }
+ assert.deepEqual(await recoverOne({database:async()=>[],request:()=>assert.fail('no pending event'),now:recoveryTime}),{worked:false});
+});
+test('Failed recovery labels are persisted for bounded retry, never re-send WhatsApp',async()=>{
+ for(const [attempts,state] of [[0,'pending'],[4,'exhausted']]){
+  const db=recoveryDb({attempts});let requests=0;
+  const r=await recoverOne({database:db.database,request:async url=>{requests++;assert.ok(!url.includes('/developer/'));throw Error('provider unavailable');},environment,now:recoveryTime});
+  assert.equal(r.labeling.status,'pending');assert.equal(requests,1);assert.equal(db.patch.payload._crm_recovery_label,state);assert.equal(db.patch.payload._crm_recovery_attempts,attempts+1);assert.equal(db.patch.payload._crm_recovery_retry_at,'2026-10-11T15:15:00.000Z');
+ }
+});
+test('Minute worker processes recovery locally without sending; empty/failed label job allows reminders',async()=>{
+ const labels=require('../lib/etisalna-labels'),delivery=require('../lib/whatsapp-delivery'),sync=require('../lib/salla-sync');
+ const original={recover:labels.recoverOne,tick:delivery.tick,process:sync.processEvents};
+ const keys=['CRM_WORKER_TOKEN','ETISALNA_API_ACCESS_TOKEN','WHATSAPP_AUTOMATION_ENABLED'],env=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
+ const worker=require('../api/crm-worker');let sent=0,projections=0;
+ try {
+  process.env.CRM_WORKER_TOKEN='worker-label-test';process.env.ETISALNA_API_ACCESS_TOKEN='synthetic-token';process.env.WHATSAPP_AUTOMATION_ENABLED='true';
+  sync.processEvents=async(event,options)=>{projections++;assert.equal(event,undefined);assert.equal(options.localOnly,true);return {processed:0};};
+  delivery.tick=async()=>{sent++;return {sent:true,status:'accepted'};};
+  const run=async()=>{const res={setHeader(){},end(raw){this.body=JSON.parse(raw);}};await worker({method:'POST',headers:{authorization:'Bearer worker-label-test'},query:{action:'whatsapp-delivery'}},res);assert.equal(res.statusCode,200);return res.body;};
+  labels.recoverOne=async()=>({worked:true,labeling:{status:'added',label:'cart_recovered'}});assert.equal((await run()).reason,'recovery_label_processed');assert.equal(sent,0);
+  labels.recoverOne=async()=>({worked:false});assert.equal((await run()).sent,true);assert.equal(sent,1);
+  labels.recoverOne=async()=>{throw Error('unavailable');};assert.equal((await run()).sent,true);assert.equal(sent,2);assert.equal(projections,3);
+ } finally {
+  labels.recoverOne=original.recover;delivery.tick=original.tick;sync.processEvents=original.process;
+  for(const k of keys)if(env[k]===undefined)delete process.env[k];else process.env[k]=env[k];
+ }
+});

@@ -9,6 +9,11 @@ module.exports = async function handler(req, res) {
       if(!require('../lib/whatsapp-delivery').readiness().ready)return json(res,200,{ok:true,...await require('../lib/whatsapp-delivery').tick()});
       // Repair at most one local batch first; this path never fetches Salla.
       await require('../lib/salla-sync').processEvents(undefined,{localOnly:true});
+      // One bounded label job takes this tick; never delay a send beyond its claim lease.
+      let recovery;
+      try { recovery=await require('../lib/etisalna-labels').recoverOne(); }
+      catch { recovery={worked:false,error:'recovery_label_unavailable'}; }
+      if(recovery.worked)return json(res,200,{ok:true,mode:'automatic',sent:false,reason:'recovery_label_processed',...recovery});
       return json(res,200,{ok:true,...await require('../lib/whatsapp-delivery').tick()});
     }
     if(req.query?.action==='whatsapp-test')return json(res,200,{ok:true,...await require('../lib/whatsapp-test-send').send(require('../lib/crm').bodyObject(req))});
