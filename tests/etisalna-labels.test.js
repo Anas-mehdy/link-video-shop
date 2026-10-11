@@ -64,7 +64,7 @@ function recoveryDb({cart=true,send=true,payload={data:{id:'3122162686596967249'
  const database=async(path,options)=>{
   calls.push(path);
   if(options?.method==='PATCH'){patch=JSON.parse(options.body);return [];}
-  if(path.startsWith('crm_event_inbox?'))return [{id:eventId,occurred_at:'2026-10-11T14:00:00Z',payload:{...payload,_crm_recovery_attempts:attempts}}];
+  if(path.startsWith('crm_event_inbox?'))return [{id:eventId,occurred_at:'2026-10-11T14:00:00Z',payload:{...payload,_crm_recovery_version:2,_crm_recovery_attempts:attempts}}];
   if(path.startsWith('abandoned_carts?')){assert.ok(path.includes('external_cart_id=eq.3122162686596967249'));assert.ok(path.includes('status=eq.recovered'));return cart?[{id:cartId}]:[];}
   if(path.startsWith('crm_cart_second_deliveries?'))return [];
   if(path.startsWith('crm_cart_deliveries?')){assert.ok(path.includes('cart_id=eq.'+cartId));assert.ok(path.includes('attempted_at=lte.'));assert.ok(path.includes('status=eq.accepted'));return send?[{provider_message_id:'987',attempted_phone:'966500000001'}]:[];}
@@ -78,7 +78,7 @@ test('Recovery requires the exact purchased cart and a prior accepted reminder, 
  assert.equal(result.labeling.status,'added');assert.deepEqual(m.labels,['staff_label','cart_recovered']);
  assert.equal(db.patch.payload._crm_recovery_label,'done');assert.equal(db.patch.payload.data.id,'3122162686596967249');
  const query=new URL('https://test/'+db.calls[0]).searchParams;
- assert.equal(query.get('event_name'),'eq.abandoned.cart.purchased');assert.equal(query.get('records_synced_at'),'not.is.null');assert.equal(query.get('limit'),'1');assert.equal(query.get('occurred_at'),'gte.2026-09-11T15:00:00.000Z');
+ assert.equal(query.get('event_name'),'in.(abandoned.cart.purchased,order.created)');assert.equal(query.get('records_synced_at'),'not.is.null');assert.equal(query.get('limit'),'1');assert.equal(query.get('occurred_at'),'gte.2026-09-11T15:00:00.000Z');
  assert.ok(query.get('or').includes('pending'));assert.ok(m.calls.every(x=>!x.url.includes('/developer/')));
 });
 test('No arbitrary order/active cart, uncontacted cart, or rounded identifier can receive recovery label',async()=>{
@@ -111,5 +111,33 @@ test('Minute worker processes recovery locally without sending; empty/failed lab
  } finally {
   labels.recoverOne=original.recover;delivery.tick=original.tick;sync.processEvents=original.process;
   for(const k of keys)if(env[k]===undefined)delete process.env[k];else process.env[k]=env[k];
+ }
+});
+test('Exact order checkout ID repairs recovery despite a rounded purchased-cart event',async()=>{
+ const m=mock(),writes=[];const exact='3194693797752685754';
+ const database=async(path,options)=>{
+  if(path.startsWith('crm_event_inbox?') && options?.method!=='PATCH'){assert.equal(options.preserveLargeIntegers,true);return [{id:eventId,event_name:'order.created',occurred_at:'2026-10-11T15:23:16Z',payload:{data:{id:1135272158,checkout_id:exact},_crm_recovery_label:'ignored'}}];}
+  if(path.startsWith('orders?'))return [{status_slug:'under_review'}];
+  if(path.startsWith('abandoned_carts?')){assert.ok(path.includes('external_cart_id=eq.'+exact));assert.ok(!path.includes('2685600'));return [{id:cartId}];}
+  if(path.startsWith('crm_cart_second_deliveries?'))return [];
+  if(path.startsWith('crm_cart_deliveries?'))return [{provider_message_id:'987',attempted_phone:'966500000001'}];
+  if(options?.method==='POST'||options?.method==='PATCH'){writes.push({path,body:JSON.parse(options.body)});return 1;}
+  assert.fail(path);
+ };
+ const r=await recoverOne({database,request:m.request,environment,now:recoveryTime});assert.equal(r.worked,true);assert.equal(r.labeling.status,'added');assert.ok(m.labels.includes('cart_recovered'));
+ const repair=writes.find(x=>x.path==='rpc/crm_apply_salla_records');assert.equal(repair.body.p_records[0].external_cart_id,exact);assert.equal(repair.body.p_records[0].status,'recovered');assert.equal(repair.body.p_event_id,null);
+ const mark=writes.find(x=>x.path.startsWith('crm_event_inbox?'));assert.equal(mark.body.payload._crm_recovery_version,2);assert.equal(mark.body.payload._crm_recovery_label,'done');assert.equal(mark.body.payload._crm_recovery_attempts,1);
+});
+test('Cancelled order or missing exact cart cannot be matched by phone or nearby numeric ID',async()=>{
+ for(const cancelled of [true,false]){
+  let provider=0,patch;
+  const database=async(path,options)=>{
+   if(options?.method==='PATCH'){patch=JSON.parse(options.body);return [];}
+   if(path.startsWith('crm_event_inbox?'))return [{id:eventId,event_name:'order.created',occurred_at:'2026-10-11T15:23:16Z',payload:{data:{id:1135272158,checkout_id:'3194693797752685754'}}}];
+   if(path.startsWith('orders?'))return [{status_slug:cancelled?'cancelled':'under_review'}];
+   if(path.startsWith('abandoned_carts?'))return [];
+   assert.fail(path);
+  };
+  const r=await recoverOne({database,request:()=>{provider++;assert.fail();},environment,now:recoveryTime});assert.equal(provider,0);assert.equal(r.worked,false);assert.equal(patch.payload._crm_recovery_reason,cancelled?'order_not_eligible':'exact_cart_not_found');
  }
 });
