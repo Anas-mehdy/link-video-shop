@@ -108,3 +108,37 @@ test('Unmatched-products UI copies product-only diagnostics and safely renders n
  window.LinkPostPurchase.bind({api:async()=>assert.fail('No network for copying'),navigate:async()=>assert.fail('No navigation'),toast:s=>{toastText=s;}});
  await nodes.get('pp-copy-unmatched').handlers.click();assert.deepEqual(JSON.parse(copied),preview.unmatched_products);assert.ok(!copied.includes('customer_name'));assert.ok(!copied.includes('external_order_id'));assert.match(toastText,/تم نسخ/);
 });
+test('Reported purchase names: ten orders resolve, fourteen are excluded, one keeps ambiguous model',()=>{
+ const names=[
+ ['تكلفة الشحن',3,'outside_scope'],
+ ['كفر دريب لنك – 17 برو ماكس | MagSafe',3,'iPhone 17 Pro Max'],
+ ['قطعة ماج سيف جلد أسود',2,'outside_scope'],
+ ['كفر دريب لنك + إطار لنك ايفون 17 برو , 17 برو ماكس',2,'bundle'],
+ ['كفر ستيل خشبي جالكسي اس 25 الترا',2,'Samsung S25 ULTRA'],
+ ['كفر ستيل سامسونج اس 24 الترا - link',2,'Samsung S24 ULTRA'],
+ ['مسكة لنك المغناطيسية الفاخرة',2,'outside_scope'],
+ ['باور بنك Link 10000mAh +  مسطح الكاميرا + حامي العدسات - لأجهزة الايفون 17 برو , 17 برو ماكس',1,'bundle'],
+ ['قطعة ماج سيف جلد أسود',1,'outside_scope'],
+ ['كفر دريب + مسطح كاميرا + وصلة تايب سي link  لهواتف ايفون 17 برو ,برو ماكس',1,'bundle'],
+ ['كفر دريب لنك – 17 برو | MagSafe',1,'iPhone 17 Pro'],
+ ['كفر دريب لنك – 18 برو | MagSafe',1,'iPhone 18 Pro'],
+ ['كفر ستيل خشبي جالكسي اس 23 الترا',1,'Samsung S23 ULTRA'],
+ ['مسطح LV لهواتف الايفون 17 برو , برو ماكس',1,'model_ambiguous'],
+ ['مسطح كاميرا + خلفية LV – iPhone 17 Pro',1,'bundle'],
+ ['مسكة لنك المغناطيسية الفاخرة',1,'outside_scope']];
+ let matched=0,excluded=0,ambiguous=0;
+ for(const [name,count,expected]of names){const r=inferPurchased({name,product_id:'',variant_id:''});assert.equal(r.model||r.excluded||r.reason,expected,name);if(r.model)matched+=count;else if(r.excluded)excluded+=count;else ambiguous+=count;}
+ assert.equal(matched,10);assert.equal(excluded,14);assert.equal(ambiguous,1);
+ const rows=names.flatMap(([name,count],n)=>Array.from({length:count},(_,i)=>order(n+'-'+i,{name,product_id:'',variant_id:''})));
+ const p=profile('801','iPhone 17 Pro Max','lens');const c={id:'801',status:'sale',is_available:true,quantity:20};
+ const preview=buildPreview({scanned_orders:25,single_product_orders:25,rows},[p],[],[{product_id:'801',decision:'auto'}],[c]);
+ assert.equal(preview.target_orders,11);assert.equal(preview.excluded_bundle_orders,5);assert.equal(preview.excluded_other_orders,9);assert.equal(preview.unclassified_orders,1);assert.equal(preview.matched_orders,3);assert.equal(preview.no_offer_orders,7);
+});
+test('Abbreviated DriB titles stay bounded to their case family and retain exact model variants',()=>{
+ assert.equal(inferPurchased({name:'كفر دريب لنك – ١٧ برو ماكس | MagSafe'}).model,'iPhone 17 Pro Max');
+ assert.notEqual(inferPurchased({name:'عدسات حماية 17 برو ماكس'}).model,'iPhone 17 Pro Max');
+ assert.notEqual(inferPurchased({name:'كفر عام 17 برو'}).model,'iPhone 17 Pro');
+ assert.notEqual(inferPurchased({name:'شاحن 17 واط'}).model,'iPhone 17');
+ assert.equal(inferPurchased({name:'كفر دريب 17 برو / 18 برو'}).reason,'model_ambiguous');
+ assert.equal(inferPurchased({name:'كفر دريب لنك – 17 برو',options:[{value:'iPhone 17 Pro Max'}]}).reason,'model_conflict');
+});

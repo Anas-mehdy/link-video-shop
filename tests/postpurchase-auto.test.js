@@ -71,3 +71,7 @@ test('Analysis button shows progress and keeps the returned result after renderi
  await nodes.get('pp-auto-analyze').handlers.click({currentTarget:nodes.get('pp-auto-analyze')});
  assert.match(rendered,/اكتمل التحليل المحلي · 250 واضحًا · 134 للمراجعة · 114 مستبعدًا · 0 طلبات سلة/);
 });
+test('Arabic Galaxy and S-series spellings match exact canonical Samsung models',()=>{
+ for(const [name,model]of [['كفر ستيل خشبي جالكسي اس 25 الترا','Samsung S25 ULTRA'],['كفر ستيل سامسونج اس 24 الترا - link','Samsung S24 ULTRA'],['كفر ستيل خشبي جالكسي اس ٢٣ الترا','Samsung S23 ULTRA']]){assert.deepEqual(models(name),[model]);const r=infer({...base,name});assert.equal(r.decision,'auto');assert.equal(r.profile.model,model);}
+ assert.deepEqual(models('قياس 25 سنتيمتر'),[]);
+});
