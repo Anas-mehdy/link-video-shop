@@ -185,11 +185,11 @@
   if (window.__linkDripLoader) return;
   window.__linkDripLoader = true;
   function loadDripAdditions() {
-    if (!/\/p(101121129|1335345819|1622979904|284157041|387390654)\/?$/.test(location.pathname)) return;
+    if (!/\/p(101121129|1335345819|1622979904|284157041|387390654|603754862|428080745|1801985386|1161116779)\/?$/.test(location.pathname)) return;
     if (document.getElementById('link-drip-upsells-loader')) return;
     var script = document.createElement('script');
     script.id = 'link-drip-upsells-loader';
-    script.src = 'https://link-video-shop.vercel.app/drip-upsells.js?v=1';
+    script.src = 'https://link-video-shop.vercel.app/drip-upsells.js?v=2';
     script.async = true;
     document.head.appendChild(script);
   }
