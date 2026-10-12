@@ -46,7 +46,8 @@ button{border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:poin
     </div>
     <div style="margin-top:12px"><label>الوصف</label><textarea id="desc"></textarea></div>
     <div style="margin-top:12px">
-      <label>ابحث عن المنتجات واربطها بالفيديو</label>
+      <div class="row" style="justify-content:space-between"><label>ابحث عن المنتجات واربطها بالفيديو</label><button id="syncProducts" class="ghost" onclick="syncProducts()">مزامنة المنتجات من سلة</button></div>
+      <div id="productSyncStatus" class="status" role="status" aria-live="polite" style="margin:8px 0">المزامنة يدوية عند الضغط فقط. البحث يستخدم المنتجات المحفوظة.</div>
       <input id="productSearch" placeholder="اكتب اسم المنتج..." oninput="searchProducts()">
       <div id="searchResults" class="search-results"></div>
       <div id="selectedProducts" class="row" style="margin-top:8px"></div>
@@ -83,6 +84,25 @@ async function showApp(){await loadVideos();document.getElementById('login').cla
 LinkAuth.init().then(async mode=>{document.getElementById('account-login').hidden=mode!=='supabase';document.getElementById('legacy-login').hidden=mode==='supabase';if(mode==='supabase'){try{await LinkAuth.session();TOKEN='session';await showApp();}catch(e){if(e.status!==401)document.getElementById('loginStatus').textContent=e.message;}}else if(TOKEN)await showApp();}).catch(e=>document.getElementById('loginStatus').textContent=e.message);
 window.addEventListener('link-auth-expired',()=>{document.getElementById('app').classList.add('hidden');document.getElementById('login').classList.remove('hidden');});
 
+let productSyncBusy=false;
+async function syncProducts(){
+  if(productSyncBusy)return;
+  productSyncBusy=true;
+  const button=document.getElementById('syncProducts'),status=document.getElementById('productSyncStatus');
+  button.disabled=true;button.textContent='جارٍ المزامنة...';
+  let saved=0,requests=0,page=1;
+  try{
+    while(page){
+      if(page>20)throw new Error('توقفنا عند الحد الاحترازي: 20 طلبًا لهذه المزامنة؛ القائمة لم تكتمل');
+      status.textContent=`جارٍ جلب الدفعة ${page} · تم تحديث ${saved} منتج · ${requests} طلب من سلة`;
+      const result=await api('/api/video-shop-products',{method:'POST',body:JSON.stringify({page})});
+      saved+=result.saved;requests+=result.requests;page=result.next_page;
+    }
+    status.textContent=`تمت مزامنة ${saved} منتج بنجاح · استُخدم ${requests} طلب من سلة`;
+    searchProducts();
+  }catch(e){status.textContent=`لم تكتمل المزامنة: ${e.message} · حُفظ ${saved} منتج من الدفعات المكتملة. لا توجد إعادة تلقائية.`;}
+  finally{productSyncBusy=false;button.disabled=false;button.textContent='مزامنة المنتجات من سلة';}
+}
 let timer;
 function searchProducts(){
   clearTimeout(timer); timer=setTimeout(async()=>{
