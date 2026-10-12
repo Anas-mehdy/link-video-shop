@@ -3,7 +3,7 @@
   'use strict';
   if (window.__linkDripUpsells) return;
   const id = location.pathname.match(/\/p(\d+)\/?$/)?.[1];
-  if (!['101121129','1335345819','1622979904','284157041','387390654'].includes(id)) return;
+  if (!['101121129','1335345819','1622979904','284157041','387390654','603754862','428080745','1801985386','1161116779'].includes(id)) return;
   window.__linkDripUpsells = true;
   const base = 'https://link-video-shop.vercel.app';
   const el = (tag, text, cls) => {
@@ -38,7 +38,7 @@
     document.head.append(style);
     function mountAccessories() {
     const accessories=el('section','','link-drip-extra');accessories.id='link-drip-accessories';
-    accessories.append(el('h2','منتجات مختارة لك'),el('p','إكسسوارات لاستخدامك اليومي'));
+    accessories.append(el('h2',config.accessoriesTitle || 'منتجات مختارة لك'),el('p',config.accessoriesSubtitle || 'إكسسوارات لاستخدامك اليومي'));
     for(const p of config.accessories){
       const row=el('div','','ld-row'),image=el('img');image.src=p.image;image.alt='';image.loading='lazy';
       const copy=el('div','','ld-copy'),link=el('a',p.name);link.href=p.url;
@@ -48,7 +48,7 @@
       const quantity=quantityPicker(p.name,p.available),actions=el('div','','ld-actions');actions.append(quantity.box,add);
       add.addEventListener('click',async()=>{
         if(add.disabled)return;const count=quantity.value();add.disabled=true;quantity.disable(true);notice.textContent='تتم الإضافة...';
-        try{const result=await cart.addItem({id:p.id,quantity:count});if(result?.success===false||Number(result?.status)>=400)throw new Error('add failed');notice.textContent='تمت الإضافة ✓';}
+        try{const result=await cart.addItem({id:p.id,quantity:count,...(p.options ? {options:p.options} : {})});if(result?.success===false||Number(result?.status)>=400)throw new Error('add failed');notice.textContent='تمت الإضافة ✓';}
         catch(_){notice.textContent='تعذرت الإضافة؛ تحقق من التوفر.';}finally{add.disabled=!p.available;quantity.disable(!p.available);}
       });
       row.append(image,copy,actions);accessories.append(row);
@@ -149,7 +149,7 @@
     update();
     mountAccessories();return true;
   }
-  fetch(base+'/drip-upsells-config.json?v=1',{credentials:'omit'}).then(r=>r.ok?r.json():null).then(data=>{
+  fetch(base+'/drip-upsells-config.json?v=2',{credentials:'omit'}).then(r=>r.ok?r.json():null).then(data=>{
     const config=data?.products?.[id];if(!config)return;
     if(mount(config))return;
     const observer=new MutationObserver(()=>{if(mount(config))observer.disconnect();});
