@@ -29,7 +29,7 @@ test('provider failure stops remaining products and records cooldown without ret
  await stock.checkIds(['123'],options);assert.equal(calls,1);
 });
 test('rerunnable SQL: budget and lease are enforced by the database, private grants',async()=>{
- const {PGlite}=require('@electric-sql/pglite'),db=new PGlite();await db.exec('create role anon;create role authenticated;create role service_role;create table crm_postpurchase_settings(merchant_id bigint primary key,stock_api_budget int);insert into crm_postpurchase_settings values(1829345766,1)');const sql=fs.readFileSync(path.join(__dirname,'../crm-postpurchase-stock.sql'),'utf8');await db.exec(sql);await db.exec(sql);
+ const {PGlite}=require('@electric-sql/pglite'),db=new PGlite();await db.exec('create role anon;create role authenticated;create role service_role;create table crm_postpurchase_settings(merchant_id bigint primary key,stock_api_budget int,updated_at timestamptz default now());insert into crm_postpurchase_settings(merchant_id,stock_api_budget) values(1829345766,1)');const sql=fs.readFileSync(path.join(__dirname,'../crm-postpurchase-stock.sql'),'utf8');await db.exec(sql);await db.exec(sql);await db.exec("update crm_postpurchase_settings set stock_api_budget=1");
  let r=await db.query("select crm_pp_stock_reserve(1829345766,'123') v");assert.equal(r.rows[0].v.reason,'reserved');const token=r.rows[0].v.token;
  r=await db.query("select crm_pp_stock_reserve(1829345766,'123') v");assert.equal(r.rows[0].v.reason,'busy');
  r=await db.query("select crm_pp_stock_reserve(1829345766,'124') v");assert.equal(r.rows[0].v.reason,'budget_limit');
