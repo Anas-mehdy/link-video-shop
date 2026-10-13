@@ -1,3 +1,15 @@
+/* Protection-page bootstrap: inactive on ordinary storefront URLs. */
+(function(){
+ if(window.__linkCompleteBootstrap)return;window.__linkCompleteBootstrap=true;
+ function start(){
+  if(!/^#link-complete=[-_A-Za-z0-9]{80,300}$/.test(location.hash)||document.getElementById('link-complete-storefront-loader'))return;
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',start,{once:true});return;}
+  var script=document.createElement('script');script.id='link-complete-storefront-loader';
+  script.src='https://link-video-shop.vercel.app/complete-storefront.js?v=20261013';
+  document.head.appendChild(script);
+ }
+ start();window.addEventListener('hashchange',start);
+})();
 /* Link Store product videos v2 — no database credentials, no autoplay on page load. */
 (function () {
   'use strict';
