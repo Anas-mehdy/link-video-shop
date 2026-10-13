@@ -28,3 +28,8 @@ test('cancelled orders and wrong customer identifiers cannot produce a public pa
  const created=await service.create({external_order_id:'111'},{database:database().fn,environment,now});assert.match(created.path,/^\/complete\//);assert.equal(created.products,4);
  await assert.rejects(service.create({external_order_id:'111'},{database:database().fn,environment,now:now+40*86400000}));
 });
+test('public landing requests use the existing feed function and reject invalid links without reading data',async()=>{
+ const handler=require('../api/video-shop-feed');const headers={},res={setHeader:(k,v)=>{headers[k]=v;},end:text=>{res.body=JSON.parse(text);}};
+ await handler({method:'GET',query:{resource:'postpurchase',token:'invalid'}},res);
+ assert.equal(res.statusCode,404);assert.equal(headers['Cache-Control'],'no-store');assert.equal(headers['Referrer-Policy'],'no-referrer');assert.equal(headers['X-Robots-Tag'],'noindex, nofollow');assert.ok(!res.body.products);
+});

@@ -1,6 +1,7 @@
 const { sb, json, cors, MERCHANT_ID } = require('../lib/supabase');
 
 module.exports = async function handler(req, res) {
+  if(req.query?.resource==='postpurchase')return require('../lib/postpurchase-page')(req,res);
   cors(req, res);
   if (req.method === 'OPTIONS') return json(res, 204, {});
   if (req.method !== 'GET') return json(res, 405, { ok:false, error:'Method not allowed' });
