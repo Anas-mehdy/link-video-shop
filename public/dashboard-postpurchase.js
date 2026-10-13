@@ -32,16 +32,7 @@ document.getElementById('pp-landing-link')?.addEventListener('click',async e=>{
  if(testForm.elements.offer.value===''||!row){status.textContent='اختر عرضًا من القائمة أولًا؛ الصفحة ستجمع جميع المنتجات المكملة للطلب.';return;}
  const b=e.currentTarget;b.disabled=true;status.textContent='جارٍ تجهيز الصفحة من البيانات المحفوظة…';
  try{const r=await api('postpurchase',{method:'POST',body:JSON.stringify({action:'landing-link',external_order_id:String(row.external_order_id)})});
- status.innerHTML=`<a class="secondary" href="${esc(r.path)}" target="_blank" rel="noopener noreferrer">فتح صفحة ${esc(r.model)} · ${r.products} منتجًا</a><div class="pp-grid" style="margin-top:12px"><label for="pp-store-preview-url">رابط معاينة ملاك تجارب الذي يفتح معك<input id="pp-store-preview-url" type="url" dir="ltr" placeholder="الصق رابط المعاينة هنا"></label><button id="pp-open-store-preview" class="secondary" type="button">فتح تجربة الإضافة على هذه المعاينة</button></div><p class="muted">افتح ملاك تجارب من محرر سلة واضغط معاينة، ثم انسخ رابط الصفحة المفتوحة والصقه هنا. نحافظ على بيانات التفويض الموجودة بالرابط؛ لا نرسله إلى الخادم.</p><p id="pp-store-preview-error" role="status"></p>`;
- document.getElementById('pp-open-store-preview').onclick=()=>{
-  const error=document.getElementById('pp-store-preview-error');error.textContent='';
-  try{
-   const url=new URL(document.getElementById('pp-store-preview-url').value.trim());
-   if(url.protocol!=='https:'||url.username||url.password||url.port||!['linkstore-sa.com','www.linkstore-sa.com','salla.sa'].includes(url.hostname)||url.hostname==='salla.sa'&&!url.pathname.startsWith('/linkstore122'))throw Error();
-   url.hash='link-complete='+r.path.split('/').pop();
-   window.open(url.href,'_blank','noopener,noreferrer');
-  }catch{error.textContent='الصق رابط معاينة متجر لنك الذي فتحته من سلة.';}
- };
+ status.innerHTML=`<a class="secondary" href="${esc(r.path)}" target="_blank" rel="noopener noreferrer">فتح صفحة ${esc(r.model)} · ${r.products} منتجًا</a> <a class="secondary" href="https://linkstore-sa.com/#link-complete=${esc(r.path.split('/').pop())}" target="_blank" rel="noopener noreferrer">فتح صفحة الحماية والإضافة للسلة داخل المتجر</a>`;
 
  }catch(err){status.textContent=err.message;}finally{b.disabled=false;}
 });
