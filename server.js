@@ -24,7 +24,7 @@ const server = http.createServer(async (req,res) => {
       return await handler(req,res);
     }
     if(!['GET','HEAD'].includes(req.method))return reject(res,405,'Method not allowed');
-    const file=path.resolve(publicDir, aliases[url.pathname]||'.'+decodeURIComponent(url.pathname));
+    const file=path.resolve(publicDir, (/^\/complete\/[-_A-Za-z0-9]{80,300}$/.test(url.pathname)?'complete.html':aliases[url.pathname])||'.'+decodeURIComponent(url.pathname));
     if(!file.startsWith(publicDir+path.sep))return reject(res,404,'Not found');
     const stat=await fs.promises.stat(file).catch(()=>null);
     if(!stat?.isFile())return reject(res,404,'Not found');

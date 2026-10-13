@@ -31,6 +31,10 @@
     {
       "source": "/protection-admin",
       "destination": "/protection-admin.html"
+    },
+    {
+      "source": "/complete/:token",
+      "destination": "/complete.html"
     }
   ],
   "headers": [
