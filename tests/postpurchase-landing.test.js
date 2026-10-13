@@ -6,7 +6,7 @@ const p=(id,name,component,model='iPhone 18 Pro Max')=>({product_id:String(id),n
 const profiles=[p(1,'كفر iPhone 18 Pro Max','case'),p(2,'حماية شاشة iPhone 18 Pro Max','screen'),p(3,'استيكر خصوصية iPhone 18 Pro Max','screen'),p(4,'عدسات iPhone 18 Pro Max','lens'),p(5,'مسطح كاميرا iPhone 18 Pro Max','camera_frame'),p(6,'عدسات iPhone 18 Pro','lens','iPhone 18 Pro')];
 const catalog=profiles.map(p=>({id:p.product_id,name:p.name,status:'sale',is_available:true,quantity:20,options:[]}));
 const live=profiles.map(p=>({external_product_id:p.product_id,name:p.name,status:'sale',is_available:true,price:80,sale_price:null,currency:'SAR',main_image_url:'https://cdn.salla.sa/'+p.product_id+'.jpg'}));
-function database({later=[],rules=[],overrides={}}={}){const paths=[];const fn=async path=>{paths.push(path);if(path.startsWith('orders?'))return path.includes('ordered_at=gt.')?later:[order];if(path.startsWith('crm_postpurchase_products?'))return profiles;if(path.startsWith('crm_postpurchase_rules?'))return rules;if(path.startsWith('crm_postpurchase_suggestions?'))return [];if(path.startsWith('crm_postpurchase_catalog_cache?'))return catalog.map(product=>({product}));if(path.startsWith('products?'))return live.map(p=>({...p,...overrides[p.external_product_id]}));throw Error('Unexpected '+path);};return {fn,paths};}
+function database({later=[],rules=[],overrides={},stockRows=[]}={}){const paths=[];const fn=async path=>{paths.push(path);if(path.startsWith('crm_pp_stock_cache?'))return stockRows;if(path.startsWith('orders?'))return path.includes('ordered_at=gt.')?later:[order];if(path.startsWith('crm_postpurchase_products?'))return profiles;if(path.startsWith('crm_postpurchase_rules?'))return rules;if(path.startsWith('crm_postpurchase_suggestions?'))return [];if(path.startsWith('crm_postpurchase_catalog_cache?'))return catalog.map(product=>({product}));if(path.startsWith('products?'))return live.map(p=>({...p,...overrides[p.external_product_id]}));throw Error('Unexpected '+path);};return {fn,paths};}
 test('opaque links authenticate, expire and use fresh random nonces',()=>{
  const a=service.seal(order.id,{environment,now}),b=service.seal(order.id,{environment,now});assert.notEqual(a,b);assert.ok(!a.includes(order.id));assert.equal(service.unseal(a,{environment,now}),order.id);
  assert.throws(()=>service.unseal(a,{environment:{CRM_ENCRYPTION_KEY:'b'.repeat(64)},now}));assert.throws(()=>service.unseal(a,{environment,now:now+91*86400000}));assert.throws(()=>service.unseal('123',{environment,now}));
@@ -32,4 +32,10 @@ test('public landing requests use the existing feed function and reject invalid 
  const handler=require('../api/video-shop-feed');const headers={},res={setHeader:(k,v)=>{headers[k]=v;},end:text=>{res.body=JSON.parse(text);}};
  await handler({method:'GET',query:{resource:'postpurchase',token:'invalid'}},res);
  assert.equal(res.statusCode,404);assert.equal(headers['Cache-Control'],'no-store');assert.equal(headers['Referrer-Policy'],'no-referrer');assert.equal(headers['X-Robots-Tag'],'noindex, nofollow');assert.ok(!res.body.products);
+});
+
+test('stock cache hides unavailable products and refreshes visible prices without Salla requests',async()=>{
+ const db=database({stockRows:[{product_id:'2',state:'checked',available:false,checked_at:new Date().toISOString()},{product_id:'4',state:'checked',available:true,checked_at:new Date().toISOString(),snapshot:{currency:'SAR',price:90,sale_price:69}}]});
+ const result=await service.data(order,{database:db.fn});assert.ok(!result.products.some(p=>p.id==='2'));assert.equal(result.products.find(p=>p.id==='4').price,69);
+ const candidates=await service.data(order,{database:db.fn,stockFilter:false});assert.ok(candidates.products.some(p=>p.id==='2'));
 });
