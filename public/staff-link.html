@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#51007a">
+  <title>لنك | منشئ روابط خدمة العملاء</title>
+  <style>
+    :root{--purple:#51007a;--purple2:#6b1f91;--blue:#21b0f1;--ink:#21152a;--muted:#756b7d;--line:#eadff0;--bg:#f7f3f9;--white:#fff;--ok:#18794e;--shadow:0 18px 50px rgba(55,13,77,.12)}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Tahoma,Arial,sans-serif;background:radial-gradient(circle at 85% 5%,#eadcf0 0,transparent 34%),linear-gradient(180deg,#fbf9fc,#f6f1f8);color:var(--ink)}
+    body{padding:28px 16px 46px}.shell{max-width:680px;margin:auto}.brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}.mark{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;font-size:25px;font-weight:900;box-shadow:0 10px 25px rgba(81,0,122,.24)}.brand b{display:block;font-size:18px}.brand small{display:block;color:var(--muted);margin-top:3px}
+    .card{background:rgba(255,255,255,.94);border:1px solid rgba(81,0,122,.09);border-radius:26px;padding:28px;box-shadow:var(--shadow)}.eyebrow{display:inline-flex;align-items:center;gap:7px;color:var(--purple);font-weight:800;font-size:12px;letter-spacing:.5px}.eyebrow:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--blue)}h1{font-size:30px;line-height:1.35;margin:10px 0 7px}.lead{color:var(--muted);line-height:1.8;margin:0 0 25px}
+    label{display:block;font-size:14px;font-weight:800;margin:18px 0 8px}.input{width:100%;border:1px solid var(--line);border-radius:14px;padding:14px 15px;font-size:15px;outline:0;background:#fff;color:var(--ink);transition:.2s}.input:focus{border-color:#b386c8;box-shadow:0 0 0 4px rgba(81,0,122,.08)}
+    .platforms{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.platform{position:relative}.platform input{position:absolute;opacity:0;pointer-events:none}.platform span{display:flex;min-height:48px;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:13px;background:#fff;font-weight:700;cursor:pointer;transition:.2s}.platform input:checked+span{border-color:var(--purple);background:#f7eefb;color:var(--purple);box-shadow:inset 0 0 0 1px var(--purple)}
+    .primary,.copy{width:100%;border:0;border-radius:14px;padding:14px 18px;font-size:16px;font-weight:900;cursor:pointer;transition:.18s}.primary{margin-top:22px;background:linear-gradient(135deg,var(--purple),var(--purple2));color:#fff;box-shadow:0 10px 26px rgba(81,0,122,.18)}.primary:hover,.copy:hover{transform:translateY(-1px)}button:disabled{opacity:.55;cursor:not-allowed;transform:none!important}
+    .result{margin-top:22px;padding-top:22px;border-top:1px solid var(--line)}.result[hidden]{display:none}.result-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}.result-head b{font-size:14px}.badge{font-size:12px;padding:5px 9px;border-radius:999px;background:#eaf8f1;color:var(--ok);font-weight:800}.url-box{direction:ltr;text-align:left;word-break:break-all;background:#faf7fb;border:1px solid var(--line);border-radius:13px;padding:13px;font:12px/1.7 Consolas,monospace;min-height:72px}.copy{margin-top:10px;background:#151019;color:#fff}.hint{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7}.status{min-height:22px;margin-top:12px;font-size:13px;font-weight:700}.status.ok{color:var(--ok)}.status.err{color:#b42318}.session{margin-top:16px;display:flex;justify-content:center;color:var(--muted);font-size:12px}.session b{color:var(--purple);margin:0 4px}
+    .footer{text-align:center;color:#8d8294;font-size:11px;margin-top:18px}@media(max-width:520px){body{padding:18px 12px 36px}.card{padding:22px 17px;border-radius:21px}h1{font-size:25px}.platforms{grid-template-columns:1fr}.platform span{min-height:45px}.brand{margin-bottom:16px}}
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="brand"><div class="mark">L↗</div><div><b>Link Store</b><small>أداة خدمة العملاء · غفران</small></div></div>
+    <section class="card">
+      <span class="eyebrow">ASSISTED SALES</span>
+      <h1>حوّلي أي رابط إلى رابط تتبّع</h1>
+      <p class="lead">ضعي رابط المنتج أو الصفحة، اختاري المنصة، ثم أنشئي الرابط وانسخيه للعميل. كل إنشاء ونسخ يُسجّل تلقائيًا في لوحة لنك.</p>
+      <form id="form">
+        <label for="url">رابط المنتج أو الصفحة</label>
+        <input class="input" id="url" name="url" type="url" inputmode="url" autocomplete="off" required placeholder="https://linkstore-sa.com/...">
+        <label>المنصة</label>
+        <div class="platforms" role="radiogroup" aria-label="المنصة">
+          <label class="platform"><input type="radio" name="platform" value="instagram" checked><span>Instagram</span></label>
+          <label class="platform"><input type="radio" name="platform" value="facebook"><span>Facebook</span></label>
+          <label class="platform"><input type="radio" name="platform" value="tiktok"><span>TikTok</span></label>
+        </div>
+        <button class="primary" id="generate" type="submit">إنشاء الرابط</button>
+      </form>
+      <div class="result" id="result" hidden>
+        <div class="result-head"><b>الرابط جاهز</b><span class="badge">UTM مفعّل</span></div>
+        <div class="url-box" id="preview" aria-live="polite"></div>
+        <button class="copy" id="copy" type="button">نسخ الرابط للعميل</button>
+        <div class="hint">عند الضغط على «نسخ» يُنشأ معرّف تتبّع خاص بهذه النسخة حتى نربط الطلب بها بدقة.</div>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
+      <div class="session">عدد الروابط المنسوخة في هذه الجلسة: <b id="session-count">0</b></div>
+    </section>
+    <div class="footer">Link Store · خدمة العملاء</div>
+  </main>
+<script>
+(() => {
+  'use strict';
+  const $=id=>document.getElementById(id), form=$('form'), url=$('url'), result=$('result'), preview=$('preview'), copy=$('copy'), status=$('status'), generate=$('generate'), count=$('session-count');
+  let current=null, copies=0;
+  const platform=()=>form.elements.platform.value;
+  const message=(text,type='')=>{status.textContent=text;status.className='status '+type;};
+  async function api(action){
+    const res=await fetch('/api/staff-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,url:url.value.trim(),platform:platform()}),cache:'no-store'});
+    let data; try{data=await res.json();}catch{throw new Error('تعذر قراءة استجابة الخادم');}
+    if(!res.ok||!data.ok)throw new Error(data.error||'تعذر تنفيذ العملية'); return data;
+  }
+  form.addEventListener('submit',async e=>{
+    e.preventDefault(); generate.disabled=true; copy.disabled=true; message('جارٍ إنشاء الرابط…');
+    try{const data=await api('generate');current={url:url.value.trim(),platform:platform()};preview.textContent=data.url;result.hidden=false;copy.disabled=false;message('تم إنشاء الرابط وتسجيل العملية.','ok');}
+    catch(e){current=null;result.hidden=true;message(e.message,'err');}
+    finally{generate.disabled=false;}
+  });
+  copy.addEventListener('click',async()=>{
+    if(!current)return; copy.disabled=true; message('جارٍ تجهيز نسخة التتبّع…');
+    try{
+      const data=await api('copy'); preview.textContent=data.url;
+      if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(data.url); else {const ta=document.createElement('textarea');ta.value=data.url;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
+      copies++;count.textContent=String(copies);message('تم النسخ ✓ أرسلي الرابط للعميل.','ok');
+    }catch(e){message(e.message,'err');}
+    finally{copy.disabled=false;}
+  });
+  url.addEventListener('input',()=>{if(current&&url.value.trim()!==current.url){result.hidden=true;current=null;message('');}});
+  [...form.elements.platform].forEach(el=>el.addEventListener('change',()=>{if(current&&platform()!==current.platform){result.hidden=true;current=null;message('');}}));
+})();
+</script>
+</body>
+</html>
