@@ -25,6 +25,10 @@
       "destination": "/dashboard.html"
     },
     {
+      "source": "/ghofran-links",
+      "destination": "/staff-link.html"
+    },
+    {
       "source": "/video-shop-admin",
       "destination": "/admin.html"
     },
