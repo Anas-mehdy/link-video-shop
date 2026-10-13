@@ -22,7 +22,7 @@
    const products=await catalog,items=e.data.items;
    if(!Array.isArray(items)||!items.length||items.length>20||new Set(items.map(x=>x.id)).size!==items.length||items.some(x=>!products.has(x.id)||!Number.isInteger(x.quantity)||x.quantity<1||x.quantity>10))throw Error('اختيارات غير صالحة');
    if(!window.salla?.cart?.addItem)throw Error('سلة المتجر ليست جاهزة؛ أعد فتح الصفحة');
-   pending={id,items};root.querySelector('.lc-options').innerHTML=items.map(x=>{const p=products.get(x.id);return `<section class="lc-product"><h3>${esc(p.name)} · الكمية ${x.quantity}</h3>${p.has_options?`<salla-product-options product-id="${esc(x.id)}"></salla-product-options>`:'<p>لا يحتاج خيارات إضافية.</p>'}</section>`;}).join('');status.textContent='';confirm.disabled=false;dialog.showModal();
+   pending={id,items};root.querySelector('.lc-options').innerHTML=items.map(x=>{const p=products.get(x.id);return `<form class="lc-product"><h3>${esc(p.name)} · الكمية ${x.quantity}</h3>${p.has_options?`<salla-product-options product-id="${esc(x.id)}"></salla-product-options>`:'<p>لا يحتاج خيارات إضافية.</p>'}</form>`;}).join('');dialog.querySelectorAll('form.lc-product').forEach(form=>form.addEventListener('submit',event=>event.preventDefault()));status.textContent='';confirm.disabled=false;dialog.showModal();
   }catch(err){pending=null;const r={error:err.message,complete:false,results:[]};requests.set(id,r);send(id,r);}
  });
  dialog.addEventListener('cancel',e=>{if(busy){e.preventDefault();return;}if(pending){const r={error:'أُلغيت الإضافة',results:[],complete:false};requests.set(pending.id,r);send(pending.id,r);pending=null;}});
