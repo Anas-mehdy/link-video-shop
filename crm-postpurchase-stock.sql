@@ -16,7 +16,7 @@ returns jsonb language plpgsql security invoker set search_path='' as $$
 declare c public.crm_pp_stock_cache%rowtype; u public.crm_pp_stock_usage%rowtype; b integer; m date; t uuid;
 begin
  if p_merchant_id<>1829345766 or p_product_id is null or p_product_id !~ '^[0-9]{1,20}$' then raise exception 'invalid scope'; end if;
- select least(stock_api_budget,300) into b from public.crm_postpurchase_settings where merchant_id=p_merchant_id;
+ select least(stock_api_budget,700) into b from public.crm_postpurchase_settings where merchant_id=p_merchant_id;
  if b is null then return jsonb_build_object('reason','not_configured'); end if;
  m:=date_trunc('month',now() at time zone 'Asia/Riyadh')::date;
  insert into public.crm_pp_stock_usage(merchant_id,month) values(p_merchant_id,m) on conflict do nothing;
@@ -53,5 +53,6 @@ revoke all on public.crm_pp_stock_cache,public.crm_pp_stock_usage from public,an
 grant all on public.crm_pp_stock_cache,public.crm_pp_stock_usage to service_role;
 revoke all on function public.crm_pp_stock_reserve(bigint,text),public.crm_pp_stock_finish(bigint,text,uuid,jsonb,boolean) from public,anon,authenticated;
 grant execute on function public.crm_pp_stock_reserve(bigint,text),public.crm_pp_stock_finish(bigint,text,uuid,jsonb,boolean) to service_role;
+update public.crm_postpurchase_settings set stock_api_budget=700,updated_at=now() where merchant_id=1829345766;
 commit;
 select 'stock_check_ready' as result;

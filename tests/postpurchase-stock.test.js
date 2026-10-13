@@ -12,14 +12,14 @@ test('variant stock overrides product totals and never assumes a zero stock colo
  assert.throws(()=>stock.snapshot({...product,managed_by_branches:true},'123'));
  assert.throws(()=>stock.snapshot({...product,id:9007199254740992},'123'));
 });
-function mock(){const rows=new Map();let used=0,calls=[];return {rows,calls,database:async(p,o)=>{calls.push(p);if(p.startsWith('crm_pp_stock_cache?'))return [...rows.values()];if(p.startsWith('crm_pp_stock_usage?'))return [{requests:used}];const b=JSON.parse(o.body);if(p.endsWith('reserve')){used++;rows.set(b.p_product_id,{product_id:b.p_product_id,state:'checking'});return {reason:'reserved',token:'11111111-1111-4111-8111-111111111111',requests:used,budget:300};}if(p.endsWith('finish')){rows.set(b.p_product_id,{product_id:b.p_product_id,state:b.p_error?'error':'checked',available:b.p_snapshot.available,checked_at:b.p_error?null:new Date().toISOString(),retry_after:b.p_error?new Date(Date.now()+900000).toISOString():null,snapshot:b.p_snapshot});return true;}}};}
+function mock(){const rows=new Map();let used=0,calls=[];return {rows,calls,database:async(p,o)=>{calls.push(p);if(p.startsWith('crm_pp_stock_cache?'))return [...rows.values()];if(p.startsWith('crm_pp_stock_usage?'))return [{requests:used}];const b=JSON.parse(o.body);if(p.endsWith('reserve')){used++;rows.set(b.p_product_id,{product_id:b.p_product_id,state:'checking'});return {reason:'reserved',token:'11111111-1111-4111-8111-111111111111',requests:used,budget:700};}if(p.endsWith('finish')){rows.set(b.p_product_id,{product_id:b.p_product_id,state:b.p_error?'error':'checked',available:b.p_snapshot.available,checked_at:b.p_error?null:new Date().toISOString(),retry_after:b.p_error?new Date(Date.now()+900000).toISOString():null,snapshot:b.p_snapshot});return true;}}};}
 test('two calls maximum, deduplication, reserve before IO and fresh cache reuse',async()=>{
  const m=mock();let calls=0;const options={database:m.database,getTokens:async()=>({access_token:'test'}),request:async url=>{assert.equal(m.calls.at(-1),'rpc/crm_pp_stock_reserve');calls++;const id=url.split('/').pop();return {ok:true,text:async()=>JSON.stringify({success:true,data:{...product,id}})};}};
  const r=await stock.checkIds(['123','123','124','125'],options);assert.equal(calls,2);assert.equal(r.has_more,true);
  const again=await stock.checkIds(['123','124'],options);assert.equal(again.salla_requests,0);assert.equal(calls,2);
 });
 test('budget exhaustion prevents provider call; missing SQL prevents credential access',async()=>{
- let calls=0;const database=async(p)=>p.startsWith('crm_pp_stock_cache?')?[]:{reason:'budget_limit',requests:300,budget:300};
+ let calls=0;const database=async(p)=>p.startsWith('crm_pp_stock_cache?')?[]:{reason:'budget_limit',requests:700,budget:700};
  const r=await stock.checkIds(['123'],{database,getTokens:async()=>({access_token:'test'}),request:async()=>calls++});assert.equal(calls,0);assert.equal(r.has_more,false);
  await assert.rejects(stock.checkIds(['123'],{database:async()=>{throw Object.assign(Error('missing'),{code:'42P01'})},getTokens:async()=>{throw Error('must not read secrets')}}),/crm-postpurchase-stock.sql/);
 });
