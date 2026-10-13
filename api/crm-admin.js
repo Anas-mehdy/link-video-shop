@@ -42,6 +42,7 @@ module.exports = async function handler(req, res) {
     }
     if (resource === 'whatsapp' && req.method === 'GET') return json(res,200,{ok:true,...await require('../lib/whatsapp-workspace').load()});
     if (resource === 'whatsapp' && req.method === 'PUT') return json(res,200,{ok:true,...await require('../lib/whatsapp-workspace').save(bodyObject(req))});
+    if (resource === 'staff-sales' && req.method === 'GET') return json(res,200,{ok:true,...await require('../lib/staff-sales').stats(30)});
     if (req.method === 'GET' && resource === 'overview') {
       const results = await Promise.allSettled([
         countRows('products'), countRows('video_shop_videos'), countRows('orders'), countRows('customers'), countRows('abandoned_carts'),
