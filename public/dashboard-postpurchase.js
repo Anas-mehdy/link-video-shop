@@ -32,7 +32,7 @@ document.getElementById('pp-landing-link')?.addEventListener('click',async e=>{
  if(testForm.elements.offer.value===''||!row){status.textContent='اختر عرضًا من القائمة أولًا؛ الصفحة ستجمع جميع المنتجات المكملة للطلب.';return;}
  const b=e.currentTarget;b.disabled=true;status.textContent='جارٍ تجهيز الصفحة من البيانات المحفوظة…';
  try{const r=await api('postpurchase',{method:'POST',body:JSON.stringify({action:'landing-link',external_order_id:String(row.external_order_id)})});
- status.innerHTML=`<a class="secondary" href="${esc(r.path)}" target="_blank" rel="noopener noreferrer">فتح صفحة ${esc(r.model)} · ${r.products} منتجًا</a>`;
+ status.innerHTML=`<a class="secondary" href="${esc(r.path)}" target="_blank" rel="noopener noreferrer">فتح صفحة ${esc(r.model)} · ${r.products} منتجًا</a> <a class="secondary" href="https://salla.sa/linkstore122/theme/1130931637/preview#link-complete=${esc(r.path.split('/').pop())}" target="_blank" rel="noopener noreferrer">تجربة الإضافة داخل المتجر</a><p>افتح معاينة ملاك تجارب أولًا، ثم استخدم رابط تجربة المتجر.</p>`;
  }catch(err){status.textContent=err.message;}finally{b.disabled=false;}
 });
 testForm?.addEventListener('submit',async e=>{e.preventDefault();const row=state.preview.rows[Number(testForm.elements.offer.value)];if(!row?.offer_product_id)return;
