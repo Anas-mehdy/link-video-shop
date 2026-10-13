@@ -29,3 +29,25 @@ button:disabled{opacity:.55;cursor:wait}.footnote{font-size:13px;color:#827689}
 @media(max-width:800px){.hero{padding:32px;min-height:260px}.orb{width:130px;left:16px;opacity:.2}.benefits{gap:12px 22px;font-size:13px}.cards{gap:16px}}
 @media(max-width:600px){.top{padding:18px 20px;padding-left:58px}.hero{padding:30px 24px;border-radius:25px}.hero h1{font-size:32px;letter-spacing:-.7px}.hero p{font-size:17px}.orb{opacity:.12}.benefits{justify-content:flex-start;padding:18px 4px;gap:10px 16px}.browse-heading{margin-top:14px}.browse-heading h2{font-size:26px}.browse-heading p{font-size:15px}.cards{grid-template-columns:1fr;gap:20px}.card{border-radius:24px}.photo{aspect-ratio:1.2;max-height:360px;padding:22px}.card-body{padding:19px}.card h3{font-size:19px;min-height:0}.price{font-size:26px}.pick{font-size:15px}.add-one{flex:2;font-size:18px;padding:14px;min-height:54px}.product-link{font-size:14px;flex:1}.options-note{font-size:13px}.selection{padding:14px 16px}.selection button{font-size:15px}.selection strong{font-size:22px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.card,.photo,nav a{transition:none}.card:hover,.card:hover .photo,nav a:hover{transform:none}}
+
+/* Two products per row on mobile, keeping the cart action prominent. */
+@media(max-width:600px){
+ .cards{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .card{border-radius:18px;min-width:0}
+ .photo{aspect-ratio:1;max-height:none;padding:10px}
+ .card-body{padding:12px}
+ .card h3{font-size:15px;line-height:1.6;min-height:72px;overflow-wrap:anywhere}
+ .price{font-size:21px}
+ .pick{font-size:13px;gap:6px;padding:12px 0}
+ .pick input{width:20px;height:20px;flex-shrink:0}
+ .card-actions{gap:5px}
+ .add-one{flex:1.65;font-size:13px;padding:10px 4px;min-height:45px;white-space:nowrap;border-radius:10px}
+ .add-one span{font-size:15px}
+ .product-link{flex:1;font-size:11px;padding:8px 3px;border-radius:10px}
+ .options-note{font-size:11px}
+ .quantity{gap:5px;font-size:12px}.quantity input{width:52px}
+}
+@media(max-width:360px){
+ main{padding-inline:12px}.cards{gap:8px}.card-body{padding:9px}
+ .add-one{font-size:12px}.add-one span{display:none}.product-link{font-size:10px}
+}
