@@ -5,6 +5,7 @@
     overview: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
     orders: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h3"/>',
     customers: '<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0112 0v3M16 5a3 3 0 010 6M21 21v-3a6 6 0 00-3-5"/>',
+    staffsales: '<path d="M4 19V9M10 19V5M16 19v-7M3 19h18M18 7l2 2 3-4"/>',
     carts: '<path d="M3 3h2l3 12h11l2-8H6M9 20h.01M18 20h.01"/>',
     ads: '<path d="M4 20h16M6 16V9M12 16V4M18 16v-5"/>',
     whatsapp: '<path d="M21 11.5a9 9 0 01-13 8L3 21l1.5-5A9 9 0 1121 11.5zM8 8c0 4 4 7 7 7"/>',
@@ -15,7 +16,7 @@
     protection: '<path d="M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
   };
-  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['customers','العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['postpurchase','ما بعد البيع'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
+  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['customers','العملاء'],['staffsales','مبيعات خدمة العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['postpurchase','ما بعد البيع'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.overview}</svg>`;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt = value => value == null ? '—' : Number(value).toLocaleString('ar-SA-u-nu-latn');
@@ -60,6 +61,24 @@
       `<section class="metrics">${metrics.map(([label,value,sub,icon]) => `<div class="metric"><div class="metric-top"><span>${label}</span><span class="metric-icon">${svg(icon)}</span></div><strong>${label === 'سلة' ? `<span style="font-size:20px">${connected ? 'متصل' : 'بانتظار الربط'}</span>` : fmt(value)}</strong><small>${sub}</small></div>`).join('')}</section>` +
       `<div class="columns"><div><section class="panel"><div class="panel-header"><h3>آخر أحداث المتجر</h3><button class="text-button" data-page="events">عرض السجل ←</button></div>${d.events === null ? empty('السجل غير متاح','لم يكتمل إعداد سجل الأحداث بعد.') : eventTable(d.events)}</section><section class="panel"><div class="panel-header"><h3>أدوات المتجر</h3><span class="badge green">متاحة الآن</span></div><div class="form-row"><button class="secondary" data-page="videos">${svg('videos')} إدارة الفيديو شوب</button><button class="secondary" data-page="protection">${svg('protection')} إدارة حماية الهاتف</button></div></section></div><div><section class="panel"><div class="panel-header"><h3>حالة التكاملات</h3><span class="badge">${fmt(d.connections?.filter(c => c.status === 'connected' && (!c.token_expires_at || new Date(c.token_expires_at) > new Date())).length ?? 0)} متصل</span></div>${connectionRows(d.connections)}</section><section class="panel"><h3>خطوات الانطلاق</h3><div class="step done"><span class="step-number">✓</span><div><b>تجهيز مساحة الإدارة</b><small>الفيديو شوب والحماية داخل لوحة واحدة.</small></div></div><div class="step ${connected ? 'done' : ''}"><span class="step-number">${connected ? '✓' : '2'}</span><div><b>ربط تطبيق سلة</b><small>نستقبل التفويض والأحداث بعد إتمام التثبيت.</small></div></div><div class="step"><span class="step-number">3</span><div><b>تجربة الأتمتة ثم تشغيلها</b><small>نراجع نتائج الاختبار قبل ربط الإرسال الفعلي.</small></div></div></section></div></div>`;
   }
+  function staffSalesView(result) {
+    const m=result.metrics||{}, employee=result.employee||{name:'غفران'};
+    const rate=value=>`${Number(value||0).toLocaleString('ar-SA-u-nu-latn',{maximumFractionDigits:1})}%`;
+    const platformRows=(result.platforms||[]).map(p=>`<tr><td>${esc(p.label)}</td><td>${fmt(p.generated)}</td><td>${fmt(p.copies)}</td><td>${fmt(p.orders)}</td><td>${money(p.sales,'SAR')}</td><td>${rate(p.conversion_rate)}</td></tr>`).join('');
+    const orderRows=(result.recent_orders||[]).map(o=>`<tr><td>${esc(o.reference||o.id||'—')}</td><td>${esc(o.platform||'—')}</td><td>${esc(o.status||'—')}</td><td>${money(o.amount,o.currency)}</td><td>${o.matched_copy?'<span class="badge green">مطابق للنسخة</span>':'<span class="badge">UTM منسوب</span>'}</td><td>${date(o.ordered_at)}</td></tr>`).join('');
+    return heading('مبيعات خدمة العملاء',`متابعة مبيعات ${esc(employee.name)} المنسوبة للروابط التي تُرسل للعملاء.`, '<a class="back-link" href="/ghofran-links" target="_blank" rel="noopener">فتح أداة الروابط ↗</a>') +
+      '<div class="notice">نسبة التحويل هنا = عدد الطلبات المنسوبة لغفران ÷ عدد مرات نسخ الرابط. كل ضغطة «نسخ» تنشئ utm_term فريدًا لربط الطلب بالنسخة قدر الإمكان.</div>' +
+      `<section class="metrics">
+        <div class="metric"><div class="metric-top"><span>روابط تم إنشاؤها</span><span class="metric-icon">${svg('staffsales')}</span></div><strong>${fmt(m.generated)}</strong><small>آخر ${fmt(result.days)} يومًا</small></div>
+        <div class="metric"><div class="metric-top"><span>مرات النسخ</span><span class="metric-icon">${svg('staffsales')}</span></div><strong>${fmt(m.copies)}</strong><small>الروابط التي جُهزت للإرسال</small></div>
+        <div class="metric"><div class="metric-top"><span>الطلبات</span><span class="metric-icon">${svg('orders')}</span></div><strong>${fmt(m.orders)}</strong><small>${fmt(m.matched_orders)} منها مطابقة لمعرّف نسخة</small></div>
+        <div class="metric"><div class="metric-top"><span>المبيعات</span><span class="metric-icon">${svg('staffsales')}</span></div><strong style="font-size:24px">${money(m.sales,'SAR')}</strong><small>بعد استبعاد الحالات الملغاة/المسترجعة</small></div>
+        <div class="metric"><div class="metric-top"><span>نسبة التحويل</span><span class="metric-icon">${svg('staffsales')}</span></div><strong>${rate(m.conversion_rate)}</strong><small>طلبات ÷ نسخ</small></div>
+      </section>` +
+      `<section class="panel"><div class="panel-header"><h3>حسب المنصة</h3><span class="badge green">${esc(employee.name)}</span></div><div class="table-wrap"><table><thead><tr><th>المنصة</th><th>إنشاء</th><th>نسخ</th><th>طلبات</th><th>مبيعات</th><th>تحويل</th></tr></thead><tbody>${platformRows||'<tr><td colspan="6">لا توجد بيانات بعد.</td></tr>'}</tbody></table></div></section>` +
+      `<section class="panel"><div class="panel-header"><h3>آخر الطلبات المنسوبة</h3><span class="muted">آخر 30 يومًا</span></div>${orderRows?`<div class="table-wrap"><table><thead><tr><th>الطلب</th><th>المنصة</th><th>الحالة</th><th>الإجمالي</th><th>التتبع</th><th>التاريخ</th></tr></thead><tbody>${orderRows}</tbody></table></div>`:empty('لا توجد طلبات منسوبة بعد','ستظهر هنا الطلبات التي تحمل UTM الخاص بغفران.','staffsales')}</section>`;
+  }
+
   function rulesView(rules) {
     return heading('الأتمتة','قواعد متابعة المتجر، من الحدث إلى الإجراء.', '<button class="secondary" id="process-events">اختبار الأحداث المعلقة</button>') +
       window.LinkCartFollowup.shell() +
@@ -234,6 +253,7 @@
       else if (page==='whatsapp') { html=window.LinkWhatsApp.render(await api('whatsapp')); }
       else if (page==='postpurchase') { html=window.LinkPostPurchase.render(await api('postpurchase')); }
       else if (page==='ads') { html=await window.LinkAds.load(token); }
+      else if (page==='staffsales') { html=staffSalesView(await api('staff-sales')); }
       else if (recordState[page]) { const state=recordState[page]; html=recordsView(page,await api(`${page}&${new URLSearchParams({page:state.page,search:state.search})}`)); }
       else if (page==='automations') { const {rules}=await api('rules'); html=rulesView(rules); }
       else if (page==='events') { const {events}=await api('events'); html=heading(title,'كل حدث يصل إلى اللوحة، مع حالته ووقت استقباله.')+`<section class="panel">${eventTable(events)}</section>`; }
