@@ -41,11 +41,14 @@ test('SQL is rerunnable and test log is private',async()=>{
 test('personal page keeps approved template parameters and exact encrypted hash button',async()=>{
  const landing=path.resolve(__dirname,'../lib/postpurchase-landing.js'),token='a'.repeat(120);
  let captured,claims=0;
- require.cache[landing]={id:landing,filename:landing,loaded:true,exports:{create:async(b,{environment:env})=>{assert.equal(b.external_order_id,'111');assert.equal(env,environment);return {path:'/complete/'+token};}}};
+ require.cache[landing]={id:landing,filename:landing,loaded:true,exports:{create:async(b,{environment:env})=>{assert.equal(b.external_order_id,'111');assert.equal(env,environment);return {path:'/complete/'+token,model:'iPhone 17 Pro Max'};}}};
  const database=async(p,o)=>{if(p.startsWith('products?'))return [{main_image_url:'https://cdn.salla.sa/image.png'}];if(p==='crm_postpurchase_test_sends')claims++;return [];};
  const r=await sender.send({...body,destination:'personal_page',phone:'966111111111'},{database,environment,request:async(_,o)=>{assert.equal(claims,1);captured=JSON.parse(o.body);return {status:201,json:async()=>({message_id:123})};}});
- assert.equal(captured.message.whatsapp_template.name,'link_postpurchase_complement_ar');
- assert.equal(captured.message.whatsapp_template.components[3].parameters[0].text,'#link-complete='+token);
+ assert.equal(captured.message.whatsapp_template.name,'link_complete_protection_ar');
+ assert.equal(captured.message.whatsapp_template.components[1].parameters.length,2);
+ assert.equal(captured.message.whatsapp_template.components[1].parameters[1].text,'iPhone 17 Pro Max');
+ assert.match(captured.message.whatsapp_template.components[0].parameters[0].image.link,/link-complete-header.jpg$/);
+ assert.equal(captured.message.whatsapp_template.components[3].parameters[0].text,token);
  assert.equal(captured.contact.phone_number,'+905350215375');
  assert.equal(r.destination,'personal_page');
  assert.throws(()=>sender.payload(row,'https://cdn.salla.sa/image.png',environment.WHATSAPP_TEST_PHONE,{landingPath:'/complete/invalid'}));
