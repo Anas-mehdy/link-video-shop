@@ -38,3 +38,22 @@ test('SQL is rerunnable and test log is private',async()=>{
  const r=await db.query("select relrowsecurity from pg_class where relname='crm_postpurchase_test_sends'");assert.equal(r.rows[0].relrowsecurity,true);
  const grants=await db.query("select has_table_privilege('anon','public.crm_postpurchase_test_sends','SELECT') a,has_table_privilege('authenticated','public.crm_postpurchase_test_sends','INSERT') b");assert.equal(grants.rows[0].a,false);assert.equal(grants.rows[0].b,false);await db.close();
 });
+test('personal page keeps approved template parameters and exact encrypted hash button',async()=>{
+ const landing=path.resolve(__dirname,'../lib/postpurchase-landing.js'),token='a'.repeat(120);
+ let captured,claims=0;
+ require.cache[landing]={id:landing,filename:landing,loaded:true,exports:{create:async(b,{environment:env})=>{assert.equal(b.external_order_id,'111');assert.equal(env,environment);return {path:'/complete/'+token};}}};
+ const database=async(p,o)=>{if(p.startsWith('products?'))return [{main_image_url:'https://cdn.salla.sa/image.png'}];if(p==='crm_postpurchase_test_sends')claims++;return [];};
+ const r=await sender.send({...body,destination:'personal_page',phone:'966111111111'},{database,environment,request:async(_,o)=>{assert.equal(claims,1);captured=JSON.parse(o.body);return {status:201,json:async()=>({message_id:123})};}});
+ assert.equal(captured.message.whatsapp_template.name,'link_postpurchase_complement_ar');
+ assert.equal(captured.message.whatsapp_template.components[3].parameters[0].text,'#link-complete='+token);
+ assert.equal(captured.contact.phone_number,'+905350215375');
+ assert.equal(r.destination,'personal_page');
+ assert.throws(()=>sender.payload(row,'https://cdn.salla.sa/image.png',environment.WHATSAPP_TEST_PHONE,{landingPath:'/complete/invalid'}));
+});
+test('page eligibility failure happens before durable send claim or provider request',async()=>{
+ const landing=path.resolve(__dirname,'../lib/postpurchase-landing.js');let sends=0,claims=0;
+ require.cache[landing]={id:landing,filename:landing,loaded:true,exports:{create:async()=>{throw Error('no eligible complementary products');}}};
+ const database=async p=>{if(p.startsWith('products?'))return [{main_image_url:'https://cdn.salla.sa/image.png'}];if(p==='crm_postpurchase_test_sends')claims++;return [];};
+ await assert.rejects(sender.send({...body,destination:'personal_page'},{database,environment,request:async()=>{sends++;}}));
+ assert.equal(sends,0);assert.equal(claims,0);
+});
