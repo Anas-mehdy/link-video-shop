@@ -15,19 +15,34 @@ function render(d){
  const groups=Object.keys(labels).filter(c=>products.some(p=>p.component===c));
  $('categories').innerHTML=groups.map(c=>`<a href="#group-${c}">${labels[c]}</a>`).join('');
  $('status').textContent=products.length?'':'حمايتك مكتملة، أو لا توجد خيارات مكملة متاحة حاليًا. تقدر ترجع لصفحتك لاحقًا.';
- $('products').innerHTML=groups.map(c=>`<section class="group" id="group-${c}"><h2>${labels[c]}</h2><p>${descriptions[c]}</p><div class="cards">${products.filter(p=>p.component===c).map(p=>`<article class="card" data-card="${esc(p.id)}"><img class="photo" src="${esc(safeUrl(p.image))}" alt="${esc(p.name)}" loading="lazy" referrerpolicy="no-referrer"><div class="card-body"><h3>${esc(p.name)}</h3><span class="price">${money(p.price)}</span><label class="pick"><input type="checkbox" data-pick="${esc(p.id)}"> أضف لاختياراتي</label><label class="quantity" hidden>الكمية <input type="number" min="1" max="10" value="1" data-quantity="${esc(p.id)}"></label><a class="product-link" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener noreferrer">شوف المنتج ↗</a>${p.has_options?'<span class="options-note">اختر اللون والخيارات داخل صفحة المنتج.</span>':''}</div></article>`).join('')}</div></section>`).join('');$('footnote').hidden=!products.length;
+ $('products').innerHTML=groups.map(c=>`<section class="group" id="group-${c}"><h2>${labels[c]}</h2><p>${descriptions[c]}</p><div class="cards">${products.filter(p=>p.component===c).map(p=>`<article class="card" data-card="${esc(p.id)}"><img class="photo" src="${esc(safeUrl(p.image))}" alt="${esc(p.name)}" loading="lazy" referrerpolicy="no-referrer"><div class="card-body"><h3>${esc(p.name)}</h3><span class="price">${money(p.price)}</span><label class="pick"><input type="checkbox" data-pick="${esc(p.id)}"> أضف لاختياراتي</label><label class="quantity" hidden>الكمية <input type="number" min="1" max="10" value="1" data-quantity="${esc(p.id)}"></label><div class="card-actions"><button class="add-one" type="button" data-add="${esc(p.id)}">أضف للسلة <span aria-hidden="true">＋</span></button><a class="product-link" href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener noreferrer">شوف المنتج ↗</a></div>${p.has_options?'<span class="options-note">تقدر تختار اللون والخيارات قبل الإضافة.</span>':''}</div></article>`).join('')}</div></section>`).join('');$('footnote').hidden=!products.length;
  $('products').querySelectorAll('img').forEach(img=>img.addEventListener('error',()=>{img.removeAttribute('src');img.alt='صورة المنتج غير متاحة';},{once:true}));
 }
 $('products').addEventListener('change',e=>{const el=e.target;if(el.dataset.pick){el.checked?picked.set(el.dataset.pick,1):picked.delete(el.dataset.pick);const card=el.closest('.card');card.classList.toggle('picked',el.checked);card.querySelector('.quantity').hidden=!el.checked;card.querySelector('[data-quantity]').value='1';}else if(el.dataset.quantity){const n=Math.max(1,Math.min(10,Math.trunc(Number(el.value)||1)));el.value=n;if(picked.has(el.dataset.quantity))picked.set(el.dataset.quantity,n);}selection();});
+function sendCart(items){
+ if(cartPending||!items.length)return;
+ cartPending=crypto.randomUUID();$('review').disabled=true;
+ $('products').querySelectorAll('input,button').forEach(x=>x.disabled=true);
+ $('status').textContent='نجهّز إضافتك للسلة…';
+ parent.postMessage({type:'link-complete-cart-add',request_id:cartPending,items},storeOrigin);
+}
+$('products').addEventListener('click',e=>{
+ const button=e.target.closest('[data-add]');if(!button||cartPending)return;
+ const product=products.find(p=>p.id===button.dataset.add);if(!product)return;
+ if(inStore){sendCart([{id:product.id,quantity:picked.get(product.id)||1}]);return;}
+ const token=location.pathname.split('/').filter(Boolean)[1];
+ location.assign('https://linkstore-sa.com/#link-complete='+encodeURIComponent(token));
+});
 window.addEventListener('message',e=>{if(!inStore||e.origin!==storeOrigin||e.source!==parent||e.data?.type!=='link-complete-cart-result'||e.data.request_id!==cartPending)return;
- cartPending=null;$('review').disabled=false;$('products').querySelectorAll('input').forEach(x=>x.disabled=false);
+ cartPending=null;$('review').disabled=false;$('products').querySelectorAll('input,button').forEach(x=>x.disabled=false);
  for(const r of e.data.results||[]){if(r.status==='added'){picked.delete(r.id);const card=$('products').querySelector(`[data-card="${r.id}"]`);if(card){card.querySelector('[data-pick]').checked=false;card.classList.remove('picked');card.querySelector('.quantity').hidden=true;}}}
  selection();$('status').textContent=e.data.error||(e.data.complete?'تمت الإضافة؛ نفتح سلتك الآن.':(e.data.results||[]).some(x=>x.status==='unknown')?'تعذّر تأكيد إضافة إحدى القطع. تحقق من السلة قبل إعادة الإضافة.':'لم تكتمل بعض الإضافات؛ القطع التي نجحت محفوظة في السلة.');
  if(!e.data.complete){const a=document.createElement('a');a.href=storeOrigin+'/cart';a.target='_top';a.textContent=' فتح السلة ←';a.style.color='#51007a';$('status').append(a);}
 });
 $('review').addEventListener('click',()=>{const {selected,total}=selection();
- if(inStore){if(cartPending||!selected.length)return;cartPending=crypto.randomUUID();$('review').disabled=true;$('products').querySelectorAll('input').forEach(x=>x.disabled=true);parent.postMessage({type:'link-complete-cart-add',request_id:cartPending,items:selected.map(p=>({id:p.id,quantity:picked.get(p.id)}))},storeOrigin);return;}$('summary-products').innerHTML=selected.map(p=>`<div class="summary-row"><div>${esc(p.name)}<br><small>${picked.get(p.id)} × ${money(p.price)}</small></div><a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener noreferrer">فتح المنتج ↗</a></div>`).join('');$('summary-total').textContent='المجموع التقديري: '+money(total);$('summary').showModal();});$('close').addEventListener('click',()=>$('summary').close());
+ if(inStore){sendCart(selected.map(p=>({id:p.id,quantity:picked.get(p.id)})));return;}$('summary-products').innerHTML=selected.map(p=>`<div class="summary-row"><div>${esc(p.name)}<br><small>${picked.get(p.id)} × ${money(p.price)}</small></div><a href="${esc(safeUrl(p.url))}" target="_blank" rel="noopener noreferrer">فتح المنتج ↗</a></div>`).join('');$('summary-total').textContent='المجموع التقديري: '+money(total);$('summary').showModal();});$('close').addEventListener('click',()=>$('summary').close());
 const token=location.pathname.split('/').filter(Boolean)[1];
 if(!/^[-_A-Za-z0-9]{80,300}$/.test(token||'')){$('status').textContent='افتح الرابط الخاص الذي وصلك من لنك.';$('subtitle').textContent='منتجات تكمل حماية جوالك.';return;}
 fetch('/api/video-shop-feed?resource=postpurchase&token='+encodeURIComponent(token),{cache:'no-store',referrerPolicy:'no-referrer'}).then(async r=>{const d=await r.json();if(!r.ok||!d.ok)throw Error(d.error||'تعذر فتح الصفحة');render(d);}).catch(e=>{$('status').textContent=e.message;$('subtitle').textContent='تقدر تحاول لاحقًا، أو تتواصل معنا من متجر لنك.';});
 })();
+
