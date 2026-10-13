@@ -55,7 +55,7 @@
   const platform=()=>form.elements.platform.value;
   const message=(text,type='')=>{status.textContent=text;status.className='status '+type;};
   async function api(action){
-    const res=await fetch('/api/staff-link',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,url:url.value.trim(),platform:platform()}),cache:'no-store'});
+    const res=await fetch('/api/crm-admin?resource=staff-link-public',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,url:url.value.trim(),platform:platform()}),cache:'no-store'});
     let data; try{data=await res.json();}catch{throw new Error('تعذر قراءة استجابة الخادم');}
     if(!res.ok||!data.ok)throw new Error(data.error||'تعذر تنفيذ العملية'); return data;
   }
