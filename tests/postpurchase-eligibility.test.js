@@ -27,3 +27,8 @@ test('missing phone and unreadable relevant later purchases fail closed; no priv
  let r=await evaluate(context([order(1)],{customers:[{id:customer,name:'أنس'}]}),{now});assert.equal(r.counts.phone_missing,1);
  const later=order(2,1,'delivered',{name:'قطعة حماية مخصصة'});r=await evaluate(context([order(1),later]),{now});assert.equal(r.rows.find(x=>x.external_order_id==='1').reason,'later_purchase_review');assert.ok(!JSON.stringify(r).includes('905350215375'));
 });
+
+test('live ledger blocks prior attempts and phone cooldown; test sends are not part of this ledger',async()=>{
+ let r=await evaluate(context([order(1)],{deliveries:[{external_order_id:'1',phone:'905350215375',attempted_at:new Date(now).toISOString()}]}),{now});assert.equal(r.counts.already_attempted,1);assert.equal(r.eligible_customers,0);
+ r=await evaluate(context([order(1)],{deliveries:[{external_order_id:'99',phone:'905350215375',attempted_at:new Date(now-5*86400000).toISOString()}]}),{now});assert.equal(r.counts.cooldown,1);
+});

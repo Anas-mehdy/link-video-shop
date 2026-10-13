@@ -9,6 +9,11 @@ module.exports = async function handler(req, res) {
       if(!require('../lib/whatsapp-delivery').readiness().ready)return json(res,200,{ok:true,...await require('../lib/whatsapp-delivery').tick()});
       // Repair at most one local batch first; this path never fetches Salla.
       await require('../lib/salla-sync').processEvents(undefined,{localOnly:true});
+      // Share even-minute ticks in configured batch hours; cart sends retain odd minutes.
+      if(new Date().getUTCMinutes()%2===0){
+        try{const aftersale=await require('../lib/postpurchase-delivery').tick();if(aftersale.worked)return json(res,200,{ok:true,...aftersale});}
+        catch{/* A postpurchase failure must not interrupt cart reminders. */}
+      }
       // One bounded label job takes this tick; never delay a send beyond its claim lease.
       let recovery;
       try { recovery=await require('../lib/etisalna-labels').recoverOne(); }

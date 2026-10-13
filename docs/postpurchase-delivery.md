@@ -1,0 +1,15 @@
+# Live after-sales delivery
+
+Apply `crm-postpurchase-delivery.sql` to the Link Store Supabase project after the stock schema. It is rerunnable and defaults to paused; reapplying preserves the enabled state and all send history. No new Function, environment variable or n8n workflow is required.
+
+The existing authenticated `crm-worker?action=whatsapp-delivery` handles postpurchase work on even-numbered minutes. Odd minutes remain available for cart reminders. An idle, paused, outside-hour, full-batch or failed after-sales tick falls back to the existing cart path. Existing local event projection runs first. The server must already have the existing WhatsApp enable flag, provider token, worker token and CRM encryption key.
+
+Enable through the authenticated postpurchase dashboard. The configured hours (default 11,17,20 Asia/Riyadh) are one-hour windows. The default maximum is 10 durable send attempts per window, including ambiguous or rejected outcomes. Stock checks run separately from send attempts, at most two Salla calls per tick, using the shared four-hour cache and the existing 700-request monthly feature budget. No Salla calls are made outside configured batch hours by this sender.
+
+The review includes existing delivered single-product purchases from the last 30 days whose purchase-based delay has already elapsed. It excludes opt-outs, classified bundles, incomplete compatible offers, previous order attempts and the configured phone cooldown (default 14 days). Later purchases remove categories already owned for the exact model. Unknown relevant later purchases block sending. Every send re-reads the customer's order, identity and page data. SQL rechecks delivery, due date, phone, optout, fresh stock, cooldown and new order data/events since review began before reserving the attempt. A final pause/optout read precedes provider IO.
+
+A batch lease prevents simultaneous workers; ledger uniqueness prevents a second attempt for the same order. The control row serializes phone cooldown checks. The claim is stored before network IO. Timeout, malformed provider success or server interruption stays unknown/sending and never gets automatically retried. An accepted provider response is not proof of delivery. The UI shows the last 100 customer attempts; test sends use a separate ledger.
+
+The approved `link_complete_protection_ar` template uses the fixed public header, customer name, exact phone model and encrypted token suffix. Production tokens only display products with a saved successful available stock check; their options and final stock are still confirmed by the native store cart. No email or phone appears in public page data. Fresh cache is mandatory at sending time; links do not suddenly expire just because a cache entry becomes older than four hours.
+
+All tables have RLS, no anon/authenticated grants, and service-only function execution. No live customer messages are sent during deployment or tests. Applying SQL and pressing the activation control are the remaining operational steps.

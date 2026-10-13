@@ -39,3 +39,10 @@ test('stock cache hides unavailable products and refreshes visible prices withou
  const result=await service.data(order,{database:db.fn});assert.ok(!result.products.some(p=>p.id==='2'));assert.equal(result.products.find(p=>p.id==='4').price,69);
  const candidates=await service.data(order,{database:db.fn,stockFilter:false});assert.ok(candidates.products.some(p=>p.id==='2'));
 });
+
+test('production verified links only show checked products, and send gating demands fresh stock',async()=>{
+ const db=database({stockRows:[{product_id:'2',state:'checked',available:true,checked_at:new Date(Date.now()-5*3600000).toISOString(),snapshot:{}}]});
+ const token=service.seal(order.id,{environment,now,verified:true});
+ const page=await service.read(token,{database:db.fn,environment,now});assert.deepEqual(page.products.map(p=>p.id),['2']);
+ const sendPage=await service.data(order,{database:db.fn,requireFreshStock:true});assert.equal(sendPage.products.length,0);
+});
