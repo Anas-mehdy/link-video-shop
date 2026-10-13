@@ -31,8 +31,8 @@
   try{
    const items=[];
    for(const x of job.items){const el=dialog.querySelector(`salla-product-options[product-id="${x.id}"]`);let options;
-    if(el){await timeout(customElements.whenDefined('salla-product-options'),15000);if(typeof el.reportValidty!=='function'||typeof el.getSelectedOptionsData!=='function')throw Error('خيارات المنتج ليست جاهزة');
-     if(!await timeout(el.reportValidty(),15000)||await timeout(el.hasOutOfStockOption(),15000))throw Error('أكمل خيارات المنتجات واختر خيارات متوفرة');options=await timeout(el.getSelectedOptionsData(),15000);
+    if(el){await timeout(customElements.whenDefined('salla-product-options'),15000);const validate=typeof el.reportValidity==='function'?el.reportValidity.bind(el):typeof el.reportValidty==='function'?el.reportValidty.bind(el):null;if(!validate||typeof el.getSelectedOptionsData!=='function')throw Error('خيارات المنتج ليست جاهزة');
+     if(!await timeout(validate(),15000)||await timeout(el.hasOutOfStockOption(),15000))throw Error('أكمل خيارات المنتجات واختر خيارات متوفرة');options=await timeout(el.getSelectedOptionsData(),15000);
      if(!options||Array.isArray(options)||typeof options!=='object')throw Error('تعذر قراءة الخيارات');}
     items.push({...x,options});
    }
