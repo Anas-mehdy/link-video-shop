@@ -17,6 +17,13 @@ module.exports = async function handler(req, res) {
         return json(res,405,{ok:false,error:'Method not allowed'});
       }catch(e){if(e.statusCode===401&&action==='session')auth.clearSession(res);return json(res,[400,401,403,429,503].includes(e.statusCode)?e.statusCode:503,{ok:false,error:e.statusCode?e.message:'تعذر تسجيل الدخول'});}
     }
+    if(resource==='staff-link-public') {
+      if(req.method!=='POST') return json(res,405,{ok:false,error:'Method not allowed'});
+      const staffSales=require('../lib/staff-sales'),body=bodyObject(req),action=String(body.action||'');
+      if(action==='generate') return json(res,200,{ok:true,...await staffSales.generate(body.url,body.platform)});
+      if(action==='copy') return json(res,200,{ok:true,...await staffSales.copy(body.url,body.platform)});
+      return json(res,400,{ok:false,error:'الإجراء غير صالح'});
+    }
     await requireAdmin(req);
     if(resource==='postpurchase')return await require('../lib/postpurchase').admin(req,res);
     if(resource==='whatsapp-second')return require('../lib/cart-reminder-two').admin(req,res);
