@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { pipeline } = require('node:stream');
 const publicDir = path.join(__dirname, 'public');
-const aliases = { '/':'dashboard.html', '/dashboard':'dashboard.html', '/video-shop-admin':'admin.html', '/protection-admin':'protection-admin.html' };
+const aliases = { '/':'dashboard.html', '/dashboard':'dashboard.html', '/ghofran-links':'staff-link.html', '/video-shop-admin':'admin.html', '/protection-admin':'protection-admin.html' };
 const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.css':'text/css; charset=utf-8', '.json':'application/json; charset=utf-8', '.webp':'image/webp', '.mp4':'video/mp4', '.txt':'text/plain; charset=utf-8' };
 const handlers = Object.fromEntries(fs.readdirSync(path.join(__dirname,'api')).filter(f=>f.endsWith('.js')).map(f=>[f.slice(0,-3),require(`./api/${f}`)]));
 function reject(res, status, message) { res.writeHead(status,{'Content-Type':'application/json; charset=utf-8'});res.end(JSON.stringify({ok:false,error:message})); }
