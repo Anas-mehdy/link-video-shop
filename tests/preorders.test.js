@@ -18,6 +18,7 @@ test('actual SQL: paid reservations, FIFO receipts, stale projection, cancellati
   await db.exec("create table test_clock(t timestamptz);insert into test_clock values('2026-10-14T17:00Z');create function public.po_now() returns timestamptz language sql as $$select t from public.test_clock$$;");
   const sql=fs.readFileSync(__dirname+'/../crm-preorders.sql','utf8').replaceAll('now()','public.po_now()');
   await db.exec(sql);await db.exec(sql);
+  await db.exec(fs.readFileSync(__dirname+'/../crm-preorders-activate.sql','utf8'));
   const save=async(data=config)=>(await db.query('select crm_preorder_save_batch($1,$2) id',[merchant,JSON.stringify(data)])).rows[0].id;
   const bid=await save();
   await assert.rejects(save({...config,product_id:'900',variant_id:'2'}),/overlapping_batch/);
@@ -67,6 +68,14 @@ test('actual SQL: paid reservations, FIFO receipts, stale projection, cancellati
   // Receipt cannot create surplus sellable inventory or send any notification.
   const allocated=(await db.query('select sum(allocated_quantity)::int n from crm_preorder_reservations')).rows[0].n;assert.ok(allocated<=3);
   assert.equal((await db.query("select count(*)::int n from crm_preorder_notices where details->>'message_sent'<>'false'")).rows[0].n,0);
+  // Deletion keeps the original reservation and allocated stock under review.
+  // Reimport must reattach it, not create a second booking/confirmation.
+  const previous=(await rows()).find(x=>x.external_order_id==='3');
+  await db.exec("delete from orders where external_order_id='3'");
+  let detached=(await db.query('select * from crm_preorder_reservations where id=$1',[previous.id])).rows[0];
+  assert.equal(detached.order_id,null);assert.equal(detached.review_reason,'order_deleted');assert.equal(detached.allocated_quantity,1);
+  await apply(3,[line(1,13)],'paid','in_progress','2026-11-20T19:00Z');await sync();
+  const reattached=(await rows()).find(x=>x.external_order_id==='3');assert.equal(reattached.id,previous.id);assert.ok(reattached.order_id);assert.equal(reattached.state,'review');assert.equal((await rows()).length,4);
   for(const t of ['crm_preorder_batches','crm_preorder_reservations','crm_preorder_order_queue','crm_preorder_notices','crm_preorder_audit']){
    assert.equal((await db.query('select has_table_privilege($1,$2,$3) allowed',['anon',t,'SELECT'])).rows[0].allowed,false);
    assert.equal((await db.query('select relrowsecurity from pg_class where relname=$1',[t])).rows[0].relrowsecurity,true);
@@ -108,6 +117,7 @@ test('malformed order details stay queued and receipt is blocked; draft is inert
  const db=new PGlite();try{
  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;create table orders(id uuid primary key default gen_random_uuid(),merchant_id bigint,external_order_id text,ordered_at timestamptz,crm_source_at timestamptz,payment_status text,status_slug text,source_payload jsonb);');
  await db.exec(fs.readFileSync(__dirname+'/../crm-preorders.sql','utf8'));
+ await db.exec(fs.readFileSync(__dirname+'/../crm-preorders-activate.sql','utf8'));
  let b=(await db.query('select crm_preorder_save_batch($1,$2) id',[merchant,JSON.stringify({...config,status:'draft'})])).rows[0].id;
  await db.query("insert into orders(merchant_id,external_order_id,ordered_at,crm_source_at,payment_status,status_slug,source_payload) values($1,'1',now()+interval '1 minute',now(),'paid','in_progress',$2)",[merchant,JSON.stringify({items:[{product_id:900,quantity:1}]})]);
  assert.equal((await db.query('select count(*)::int n from crm_preorder_order_queue')).rows[0].n,0);

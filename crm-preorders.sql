@@ -1,5 +1,12 @@
 begin;
 
+-- Refuse an older preorder schema rather than modifying its constraints silently.
+do $$ begin
+ if to_regclass('public.crm_preorder_reservations') is not null and not exists(
+  select 1 from information_schema.columns where table_schema='public' and table_name='crm_preorder_reservations' and column_name='external_order_id'
+ ) then raise exception 'preorder_schema_version_mismatch';end if;
+end $$;
+
 -- Stage 1: internal batch/reservation management. No Salla writes or outbound messages.
 create table if not exists public.crm_preorder_batches (
  id uuid primary key default gen_random_uuid(),
@@ -30,7 +37,9 @@ create table if not exists public.crm_preorder_reservations (
  id uuid primary key default gen_random_uuid(),
  merchant_id bigint not null,
  batch_id uuid not null,
- order_id uuid not null references public.orders(id),
+ order_id uuid references public.orders(id) on delete set null,
+ external_order_id text not null check(external_order_id ~ '^[0-9]{1,40}$'),
+ order_reference text,
  item_key text not null,
  quantity integer not null check(quantity between 1 and 100000),
  allocated_quantity integer not null default 0 check(allocated_quantity>=0 and allocated_quantity<=quantity),
@@ -45,12 +54,13 @@ create table if not exists public.crm_preorder_reservations (
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now(),
  foreign key(merchant_id,batch_id) references public.crm_preorder_batches(merchant_id,id),
- unique(merchant_id,order_id,item_key)
+ unique(merchant_id,order_id,item_key),
+ unique(merchant_id,external_order_id,item_key)
 );
 create index if not exists crm_preorder_reservation_batch on public.crm_preorder_reservations(merchant_id,batch_id,state,paid_at);
 create table if not exists public.crm_preorder_order_queue (
  merchant_id bigint not null,
- order_id uuid not null references public.orders(id),
+ order_id uuid not null references public.orders(id) on delete cascade,
  queued_at timestamptz not null default now(),
  last_error text,
  primary key(merchant_id,order_id)
@@ -81,7 +91,7 @@ create table if not exists public.crm_preorder_audit (
 create or replace function public.crm_queue_preorder_order()
 returns trigger language plpgsql security invoker set search_path='' as $$
 begin
- if exists(select 1 from public.crm_preorder_reservations r where r.merchant_id=new.merchant_id and r.order_id=new.id)
+ if exists(select 1 from public.crm_preorder_reservations r where r.merchant_id=new.merchant_id and (r.order_id=new.id or r.external_order_id=new.external_order_id))
  or exists(
   select 1 from public.crm_preorder_batches b
   cross join lateral jsonb_array_elements(case when jsonb_typeof(new.source_payload->'items')='array' then new.source_payload->'items' else '[]'::jsonb end) i
@@ -94,9 +104,29 @@ begin
  end if;
  return new;
 end $$;
-drop trigger if exists crm_queue_preorder_order on public.orders;
-create trigger crm_queue_preorder_order after insert or update of source_payload,status_slug,payment_status on public.orders
-for each row execute function public.crm_queue_preorder_order();
+-- The orders trigger is deliberately installed separately by crm-preorders-activate.sql.
+create or replace function public.crm_preorder_tracking_active()
+returns boolean language sql security invoker set search_path='' as $$
+ select exists(select 1 from pg_trigger where tgrelid=to_regclass('public.orders')
+ and tgname='crm_queue_preorder_order' and tgfoid='public.crm_queue_preorder_order()'::regprocedure and tgenabled in ('O','A'));
+$$;
+
+-- Only the NEW reservation row is changed. No reads/writes to unrelated tables
+-- occur during an orders DELETE's FK SET NULL operation.
+create or replace function public.crm_preorder_order_detached()
+returns trigger language plpgsql security invoker set search_path='' as $$
+begin
+ if old.order_id is not null and new.order_id is null and new.state not in ('cancelled','refunded') then
+  new.state:='review';new.review_reason:='order_deleted';new.updated_at:=now();
+ end if;
+ return new;
+end $$;
+do $$ begin
+ if not exists(select 1 from pg_trigger where tgrelid='public.crm_preorder_reservations'::regclass and tgname='crm_preorder_order_detached') then
+  create trigger crm_preorder_order_detached before update of order_id on public.crm_preorder_reservations
+  for each row execute function public.crm_preorder_order_detached();
+ end if;
+end $$;
 
 create or replace function public.crm_preorder_notice(p_reservation uuid,p_kind text,p_revision integer)
 returns void language sql security invoker set search_path='' as $$
@@ -121,7 +151,7 @@ begin
  select b.received_quantity-coalesce(sum(allocated_quantity),0)::integer into remaining
  from public.crm_preorder_reservations where merchant_id=p_merchant_id and batch_id=p_batch_id;
  for r in select * from public.crm_preorder_reservations
- where merchant_id=p_merchant_id and batch_id=p_batch_id and state='reserved'
+ where merchant_id=p_merchant_id and batch_id=p_batch_id and state='reserved' and order_id is not null
  order by paid_at,created_at,id for update loop
   -- Do not skip the first customer's larger reservation to fulfill a later one.
   if r.quantity>remaining then exit; end if;
@@ -153,8 +183,10 @@ begin
    for item in select value from jsonb_array_elements(items) loop
     product:=coalesce(item->'product'->>'id',item->>'product_id');variant:=coalesce(item->'sku'->>'id',item->>'sku_id','');
     key:=item->>'id';
-    select * into r from public.crm_preorder_reservations where merchant_id=p_merchant_id and order_id=o.id and item_key=key;
+    select * into r from public.crm_preorder_reservations where merchant_id=p_merchant_id and external_order_id=o.external_order_id and item_key=key;
     if r.id is not null then
+     -- Re-importing a deleted order reattaches its reservation, but retains review.
+     if r.order_id is null then update public.crm_preorder_reservations set order_id=o.id where id=r.id;end if;
      select * into b from public.crm_preorder_batches where merchant_id=p_merchant_id and id=r.batch_id for update;
     else
      select * into b from public.crm_preorder_batches where merchant_id=p_merchant_id and status='open'
@@ -168,8 +200,8 @@ begin
     qty:=(item->>'quantity')::integer;if qty not between 1 and 100000 then raise exception 'invalid_item_quantity'; end if;
     reason:=null;old_state:=r.state;
     if r.id is null then
-     insert into public.crm_preorder_reservations(merchant_id,batch_id,order_id,item_key,quantity,promised_ship_from,promised_ship_by,mixed_order)
-     values(p_merchant_id,b.id,o.id,key,qty,b.ship_from,b.ship_by,jsonb_array_length(items)>1) returning * into r;
+     insert into public.crm_preorder_reservations(merchant_id,batch_id,order_id,external_order_id,order_reference,item_key,quantity,promised_ship_from,promised_ship_by,mixed_order)
+     values(p_merchant_id,b.id,o.id,o.external_order_id,o.order_reference,key,qty,b.ship_from,b.ship_by,jsonb_array_length(items)>1) returning * into r;
     end if;
     new_state:=r.state;
     if product<>b.product_id or (b.variant_id<>'' and variant<>b.variant_id) or qty<>r.quantity then
@@ -233,6 +265,7 @@ begin
  perform pg_advisory_xact_lock(p_merchant_id);
  bid:=nullif(p_data->>'id','')::uuid;desired:=coalesce(p_data->>'status','draft');
  if desired not in ('draft','open','paused','closed') then raise exception 'invalid_status';end if;
+ if desired='open' and not public.crm_preorder_tracking_active() then raise exception 'tracking_not_active';end if;
  if bid is not null then
   select * into strict b from public.crm_preorder_batches where id=bid and merchant_id=p_merchant_id for update;
   if b.status='received' then raise exception 'received_batch_locked';end if;
@@ -309,5 +342,7 @@ do $$ declare t text; begin
 end $$;
 revoke all on function public.crm_queue_preorder_order(),public.crm_preorder_notice(uuid,text,integer),public.crm_preorder_allocate(bigint,uuid),public.crm_preorder_reconcile(bigint,integer),public.crm_preorder_save_batch(bigint,jsonb),public.crm_preorder_receive(bigint,uuid,integer),public.crm_preorder_summary(bigint) from public,anon,authenticated;
 grant execute on function public.crm_queue_preorder_order(),public.crm_preorder_notice(uuid,text,integer),public.crm_preorder_allocate(bigint,uuid),public.crm_preorder_reconcile(bigint,integer),public.crm_preorder_save_batch(bigint,jsonb),public.crm_preorder_receive(bigint,uuid,integer),public.crm_preorder_summary(bigint) to service_role;
+revoke all on function public.crm_preorder_tracking_active(),public.crm_preorder_order_detached() from public,anon,authenticated;
+grant execute on function public.crm_preorder_tracking_active(),public.crm_preorder_order_detached() to service_role;
 notify pgrst,'reload schema';
 commit;
