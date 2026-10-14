@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {parseHTML}=require('linkedom');
-const product={id:'318533359',name:'إطار Link',color:'بورغندي',status:'open',ship_from:'2026-11-04',ship_by:'2026-11-06',revision:1};
+const product={id:'318533359',name:'إطار Link',color:'بورغندي',status:'open',expected_arrival:'2026-11-03',ship_from:'2026-11-04',ship_by:'2026-11-06',revision:1};
 const code=fs.readFileSync(__dirname+'/../public/preorder-widget.js','utf8');
 async function harness({path='/p318533359',mode='',items=[],fail=false,products=[{...product}]}={}){
  const {window}=parseHTML('<html><head></head><body><main><form class="product-form"><button type="submit">إضافة</button></form><div class="cart-summary"><a href="/checkout">متابعة</a><form action="/coupon"><button type="submit">كوبون</button></form></div></main></body></html>');
@@ -19,7 +19,7 @@ async function harness({path='/p318533359',mode='',items=[],fail=false,products=
 test('preorder disclosure is scoped, precedes add form, escapes content, guards acknowledgement and expiry',async()=>{
  const other=await harness({path:'/p999'});assert.equal(other.calls(),0);assert.equal(other.document.querySelector('.link-preorder'),null);
  const bridge=await harness({path:'/p981596666',mode:'preview'});assert.ok(bridge.document.querySelector('.link-preorder').textContent.includes('للون البورغندي فقط'));assert.equal(bridge.document.querySelector('.link-preorder input'),null);const bridgeClick=new bridge.window.Event('click',{bubbles:true,cancelable:true});bridge.document.querySelector('.product-form button').dispatchEvent(bridgeClick);assert.equal(bridgeClick.defaultPrevented,false);
- const h=await harness();const root=h.document.querySelector('.link-preorder');assert.ok(root.textContent.includes('الشحن المتوقع'));assert.equal(root.nextElementSibling.className,'product-form');
+ const h=await harness();const root=h.document.querySelector('.link-preorder');assert.ok(root.textContent.includes('وصول الدفعة المتوقع'));assert.ok(root.textContent.includes('شحن طلبك المتوقع'));assert.ok(root.textContent.includes('3 نوفمبر'));assert.ok(root.textContent.includes('4–6 نوفمبر'));assert.equal(root.nextElementSibling.className,'product-form');
  const button=h.document.querySelector('.product-form button');let click=new h.window.Event('click',{bubbles:true,cancelable:true});button.dispatchEvent(click);assert.equal(click.defaultPrevented,true);
  const check=root.querySelector('input');check.checked=true;check.dispatchEvent(new h.window.Event('change',{bubbles:true}));click=new h.window.Event('click',{bubbles:true,cancelable:true});button.dispatchEvent(click);assert.equal(click.defaultPrevented,false);
  const escaped=await harness({products:[{...product,name:'<img src=x onerror=bad()>'}]});assert.equal(escaped.document.querySelector('.link-preorder img'),null);assert.ok(escaped.document.querySelector('.link-preorder').textContent.includes('<img'));
@@ -33,7 +33,7 @@ test('mixed cart updates on removal, does not guard coupons, never uses cart-lin
  const h=await harness({path:'/cart',items:[{product_id:318533359},{product:{id:981596666}}]});let root=h.document.querySelector('.link-preorder');assert.ok(root.textContent.includes('يُشحن الطلب كاملاً'));assert.ok(root.textContent.includes('منتجات جاهزة وحجزاً'));
  const coupon=new h.window.Event('submit',{bubbles:true,cancelable:true});h.document.querySelector('form[action="/coupon"]').dispatchEvent(coupon);assert.equal(coupon.defaultPrevented,false);
  const checkout=new h.window.Event('click',{bubbles:true,cancelable:true});h.document.querySelector('a[href="/checkout"]').dispatchEvent(checkout);assert.equal(checkout.defaultPrevented,true);
- root.remove();h.observers[0]([{target:h.document.querySelector('main')}]);await h.flush();root=h.document.querySelector('.link-preorder');assert.ok(root.textContent.includes('الشحن المتوقع'));
+ root.remove();h.observers[0]([{target:h.document.querySelector('main')}]);await h.flush();root=h.document.querySelector('.link-preorder');assert.ok(root.textContent.includes('شحن طلبك المتوقع'));
  h.setItems([{product_id:981596666}]);h.events.remove();await h.flush();assert.equal(h.document.querySelector('.link-preorder'),null);assert.equal(h.calls(),1);
 });
 test('public feed allows only sanitized schedule fields, hides drafts by default, rejects query injection',async()=>{

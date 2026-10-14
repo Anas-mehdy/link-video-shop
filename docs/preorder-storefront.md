@@ -1,5 +1,7 @@
 # Preorder storefront — test-theme stage
 
+Marketing copy now explains that demand exhausted the current burgundy batch and that the next shipment is on its way. Arrival and carrier handoff dates are separate fields, both read from the batch. Only an open, nonexpired production batch invites immediate booking; draft/preview text does not claim that customers can buy now. The native product description contains the same estimated dates and mixed-cart policy and must be kept aligned when changing the batch schedule.
+
 The original mixed-color frame page (`981596666`) also displays a clearly labeled burgundy-only bridge card. It never gates that product's normal purchase controls. The link to the dedicated preorder page appears only with an open, nonexpired batch outside preview; the draft preview has no purchase link. This makes the preorder discoverable from the original out-of-stock color page without treating ready colors as preorders.
 
 Dedicated product: `318533359`. The existing protection and sidebar loaders are unchanged. The new script is inert until its own loader is appended to the custom JavaScript of **ملاك تجارب**, version `1409940314`. Do not publish that entire experimental theme over the live theme; after review, copy only the approved loader to the current theme.
