@@ -5,9 +5,10 @@
  const script=document.currentScript,origin=new URL(script?.src||location.href).origin;
  const preview=script?.dataset.mode==='preview',targetId='318533359';
  const productId=(location.pathname.match(/\/p(\d+)(?:\/|$)/)||[])[1];
+ const bridge=productId==='981596666';
  const cartPage=/^\/(?:ar\/|en\/)?cart\/?$/.test(location.pathname);
  const demo=preview&&location.pathname==='/preorder-preview.html';
- if(!cartPage&&!demo&&productId!==targetId)return;
+ if(!cartPage&&!demo&&!bridge&&productId!==targetId)return;
  const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const day=d=>new Intl.DateTimeFormat('ar-SA-u-nu-latn',{day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Riyadh',calendar:'gregory'}).format(new Date(d+'T12:00:00Z'));
  const today=()=>new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Riyadh'}).format(new Date());
@@ -29,6 +30,10 @@
   const next=JSON.stringify({products,mixed,error});if(next===signature)return;signature=next;ack=false;
   if(error){root.innerHTML='<span class="po-tag">حجز مسبق</span><h3>تعذر التحقق من موعد الشحن</h3><p>حدّث الصفحة أو تواصل معنا للتأكد من الموعد قبل متابعة الطلب.</p>';return;}
   const unavailable=products.some(p=>p.status!=='open'||p.ship_by<today());
+  if(bridge){
+   root.innerHTML=`${preview?'<p class="po-test">معاينة — الحجز لم يُفتح للعملاء</p>':''}<span class="po-tag">للون البورغندي فقط</span><h3>تدور على البورغندي؟ الدفعة القادمة بالطريق</h3><p>البورغندي غير متوفر ضمن المخزون الجاهز. الحجز له في صفحة مستقلة بموعد شحن واضح.</p><p class="po-date">الشحن المتوقع: ${day(products[0].ship_from)} — ${day(products[0].ship_by)}</p>${!unavailable&&!preview?'<p><a href="https://linkstore-sa.com/حجز-مسبق-إطار-link-المعدني-iphone-18-pro-max-بورغندي/p318533359">انتقل لحجز البرغندي ←</a></p>':'<p class="po-muted">صفحة حجز البرغندي مجهّزة، والحجز لم يفتح بعد.</p>'}`;
+   return;
+  }
   root.innerHTML=`${preview?'<p class="po-test">معاينة على ثيم التجارب — الحجز لم يُفتح للعملاء</p>':''}<span class="po-tag">حجز مسبق</span><h3>${mixed?'طلبك يجمع منتجات جاهزة وحجزاً مسبقاً':'هذا المنتج غير متوفر للشحن الفوري'}</h3>${products.map(p=>`<p><b>${esc(p.name)} · ${esc(p.color)}</b></p><p class="po-date">الشحن المتوقع: ${day(p.ship_from)} — ${day(p.ship_by)}</p>`).join('')}<p>هذه فترة تسليم الطلب لشركة الشحن؛ تُضاف بعدها مدة التوصيل حسب مدينتك.</p>${mixed?'<p><strong>يُشحن الطلب كاملاً مع منتجات الحجز في شحنة واحدة عند جاهزيتها.</strong> إذا تبغى المنتجات الجاهزة الآن، اطلبها بطلب مستقل؛ تظهر رسوم كل طلب قبل الدفع.</p>':'<p class="po-muted">إذا أضفت منتجات جاهزة، يُشحن الطلب كاملاً عند جاهزية الحجز. لطلب الجاهز الآن، أنشئ طلباً مستقلاً.</p>'}${unavailable?'<p><strong>الحجز غير مفتوح حالياً. لا تتابع الدفع قبل تأكيد إتاحته وموعد الشحن.</strong></p>':''}<label><input type="checkbox" data-po-ack><span>اطّلعت على موعد الشحن، وأفهم أن الطلب سيُشحن كاملاً عند جاهزية منتجات الحجز.</span></label><p class="po-error" role="alert"></p>`;
  }
  async function refresh(){
@@ -53,7 +58,7 @@
  // Covers native DOM clicks/submit, including composed web-component paths.
  // This is a UI reminder, not a server-side checkout restriction or consent record.
  function guard(e){
-  if(!root?.isConnected)return;
+  if(bridge||!root?.isConnected)return;
   const path=e.composedPath?.()||[e.target];
   const checkout=cartPage||demo&&document.querySelector('[data-po-demo-cart]');
   const selector=checkout?'[data-cart-submit],.cart-submit,a[href*="/checkout"],button[name="checkout"],form[action*="checkout"]':`.product-form button[type="submit"],.product-form salla-add-product-button,salla-add-product-button[product-id="${targetId}"],[data-po-demo-add]`;

@@ -17,7 +17,8 @@ async function harness({path='/p318533359',mode='',items=[],fail=false,products=
  return {document,window,events,observers,flush,settle,calls:()=>calls,setItems:v=>currentItems=v,setData:v=>data=v,runAgain:()=>vm.runInContext(code,context)};
 }
 test('preorder disclosure is scoped, precedes add form, escapes content, guards acknowledgement and expiry',async()=>{
- const other=await harness({path:'/p981596666'});assert.equal(other.calls(),0);assert.equal(other.document.querySelector('.link-preorder'),null);
+ const other=await harness({path:'/p999'});assert.equal(other.calls(),0);assert.equal(other.document.querySelector('.link-preorder'),null);
+ const bridge=await harness({path:'/p981596666',mode:'preview'});assert.ok(bridge.document.querySelector('.link-preorder').textContent.includes('للون البورغندي فقط'));assert.equal(bridge.document.querySelector('.link-preorder input'),null);const bridgeClick=new bridge.window.Event('click',{bubbles:true,cancelable:true});bridge.document.querySelector('.product-form button').dispatchEvent(bridgeClick);assert.equal(bridgeClick.defaultPrevented,false);
  const h=await harness();const root=h.document.querySelector('.link-preorder');assert.ok(root.textContent.includes('الشحن المتوقع'));assert.equal(root.nextElementSibling.className,'product-form');
  const button=h.document.querySelector('.product-form button');let click=new h.window.Event('click',{bubbles:true,cancelable:true});button.dispatchEvent(click);assert.equal(click.defaultPrevented,true);
  const check=root.querySelector('input');check.checked=true;check.dispatchEvent(new h.window.Event('change',{bubbles:true}));click=new h.window.Event('click',{bubbles:true,cancelable:true});button.dispatchEvent(click);assert.equal(click.defaultPrevented,false);

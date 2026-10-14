@@ -1,5 +1,7 @@
 # Preorder storefront — test-theme stage
 
+The original mixed-color frame page (`981596666`) also displays a clearly labeled burgundy-only bridge card. It never gates that product's normal purchase controls. The link to the dedicated preorder page appears only with an open, nonexpired batch outside preview; the draft preview has no purchase link. This makes the preorder discoverable from the original out-of-stock color page without treating ready colors as preorders.
+
 Dedicated product: `318533359`. The existing protection and sidebar loaders are unchanged. The new script is inert until its own loader is appended to the custom JavaScript of **ملاك تجارب**, version `1409940314`. Do not publish that entire experimental theme over the live theme; after review, copy only the approved loader to the current theme.
 
 Append `docs/preorder-theme-loader.js` below the two existing loaders. Its `data-mode=preview` allows the existing draft's dates to be displayed for review, while the widget blocks its recognized purchase controls. The product remains hidden, quantity zero, and the batch remains draft. The current connector exposes theme settings but not custom JavaScript; installing this loader requires the merchant's editor or a separately approved browser interaction. No direct theme editor change has been made by this implementation.
