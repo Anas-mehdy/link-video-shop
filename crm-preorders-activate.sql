@@ -24,7 +24,7 @@ where o.merchant_id=1829345766 and (
   cross join lateral jsonb_array_elements(case when jsonb_typeof(o.source_payload->'items')='array' then o.source_payload->'items' else '[]'::jsonb end) i
   where b.merchant_id=o.merchant_id and b.status='open' and o.ordered_at>=b.opened_at
   and b.product_id=coalesce(i->'product'->>'id',i->>'product_id')
-  and (b.variant_id='' or b.variant_id=coalesce(i->'sku'->>'id',i->>'sku_id',''))
+  and (b.variant_id='' or b.variant_id=coalesce(i->>'product_sku_id',i->'sku'->>'id',i->>'sku_id',''))
  )
 )
 on conflict(merchant_id,order_id) do nothing;
