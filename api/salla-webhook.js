@@ -14,6 +14,11 @@ module.exports = async function handler(req, res) {
       try { const replay=await sync.processEvents(result.event_id); projection.records_pending=replay.skipped>0; }
       catch { projection.records_pending=true; }
     }
+    if(event.p_event_name.startsWith('order.')){
+      // Reservations have a durable queue created in the same transaction as order writes.
+      try { const data=await require('../lib/preorders').tick();projection.preorders_pending=data.errors>0; }
+      catch { projection.preorders_pending=true; }
+    }
     return json(res, 200, { ok: true, duplicate: result.duplicate, event_id: result.event_id, ...projection });
   } catch (e) { return errorResponse(res, e); }
 };
