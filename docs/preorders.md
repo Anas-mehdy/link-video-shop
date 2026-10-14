@@ -2,6 +2,14 @@
 
 Adds `/dashboard#preorders` to the existing Link dashboard. The feature tracks a dedicated Salla preorder product (optionally an exact SKU), confirmed incoming capacity, paid reservations, schedule changes and FIFO allocation after inspected receipt.
 
+## Live preparation — 14 October 2026
+
+The user reported successful schema/function upgrade and subsequently `order_tracking_active=true`. The feature branch has a successful Vercel Git check; direct preview inspection is blocked by Vercel SSO and the available connector lacks access to the project's team. No production release has been made.
+
+Created dedicated draft product **318533359**, SKU `LINK-PO-IP18PM-BURGUNDY`, price SAR 89. Readback after update confirmed `status=hidden`, quantity 0, shipping required. Its initial Salla default weight of 0.4 kg was converted to the equivalent 400 g to satisfy the shipping update validation; actual packaged weight must be checked before launch. The image upload did not succeed. No incoming quantity, arrival date, shipping promise, campaign or open batch has been configured.
+
+**Launch blocker:** a real Salla order detail read had no `payment_status` or `items`. Current official documentation (`https://docs.salla.dev/5394147e0`) says expanded order details expired on 1 September 2026; line items have a separate endpoint (`https://docs.salla.dev/api-5565737`). The existing preorder tests assume complete identifiable lines and explicit paid status. We have not yet validated whether Link's signed webhook snapshots provide those fields. Do not treat the branch as public-launch ready or infer payment from an order status/payment method. Run `docs/preorder-source-check.sql` in Link's project to inspect whitelisted source shapes before implementing the actual adapter. The check is read-only and tested to suppress customer data and transaction references.
+
 ## Activation
 
 Run [preorder-preflight.sql](./preorder-preflight.sql) first and review its live metadata report before installing the migration. It runs in a read-only transaction and reads no customer/order rows, function bodies or trigger arguments. Inspect current order writers: the optional invoker queue trigger requires the writer to have access to preorder tables. Setup and activation are separate. Passing local tests is not a guarantee of compatibility with every live operation.
