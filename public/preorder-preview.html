@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>معاينة الحجز المسبق | لنك</title>
+<style>body{margin:0;background:#f6f3f8;color:#30223b;font:16px/1.8 system-ui,sans-serif}main{max-width:680px;margin:30px auto;padding:0 18px}header{border-bottom:1px solid #dfd5e7;padding-bottom:15px}h1{font-size:24px;margin:0}button{font:inherit;border:0;border-radius:10px;padding:9px 16px;cursor:pointer;background:#51007a;color:white;margin:5px 0}nav{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}nav button{background:white;color:#51007a;border:1px solid #cdbbd9}.sample{padding:16px;background:white;border-radius:16px}.muted{font-size:13px;color:#716179}#stage{margin-top:20px}</style></head><body><main>
+<header><p class="muted">لنك · معاينة واجهة فقط</p><h1>حجز البرغندي بموعد واضح</h1><p>هذه محاكاة للتصميم، ولا تضيف منتجات إلى سلة حقيقية. جرّب الحالات التالية.</p></header>
+<nav><button data-demo="product">صفحة المنتج</button><button data-demo="preorder">سلة الحجز فقط</button><button data-demo="mixed">سلة مختلطة</button><button data-demo="ready">سلة منتجات جاهزة</button></nav>
+<div id="stage"></div><p class="muted">الموعد المعروض في هذه المحاكاة: شحن 4–6 نوفمبر 2026. على المتجر يُقرأ الموعد من الدفعة في لوحة الإدارة. مربع الإقرار تذكير في الواجهة؛ لا يمثل إثبات موافقة محفوظاً بالخادم.</p>
+</main><script>
+(()=>{
+ let mode='product';
+ const schedule={id:'318533359',name:'إطار Link المعدني iPhone 18 Pro Max',color:'بورغندي',status:'draft',ship_from:'2026-11-04',ship_by:'2026-11-06',revision:1};
+ // All API responses in this standalone demo are local fixtures.
+ window.fetch=async()=>({ok:true,json:async()=>({ok:true,preview:true,products:[schedule]})});
+ window.salla={cart:{details:async()=>({data:{items:mode==='ready'?[{product_id:981596666}]:mode==='mixed'?[{product_id:318533359},{product_id:981596666}]:[{product_id:318533359}]}})}};
+ function show(next){mode=next;document.getElementById('stage').innerHTML=mode==='product'?'<div class="sample"><b>إطار Link — بورغندي</b><p>iPhone 18 Pro Max · 89 ريال</p><div data-po-demo-product><button type="button" data-po-demo-add>احجز قطعتك — معاينة</button></div></div>':`<div class="sample"><h2>سلتك</h2><p>${mode==='mixed'?'كفر جاهز + إطار بورغندي حجز مسبق':mode==='ready'?'كفر جاهز للشحن':'إطار بورغندي حجز مسبق'}</p><div data-po-demo-cart><button type="button" data-cart-submit>متابعة الطلب — معاينة</button></div></div>`;}
+ document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>show(b.dataset.demo));show(mode);
+})();
+</script><script src="/preorder-widget.js" data-mode="preview"></script></body></html>

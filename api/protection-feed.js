@@ -8,6 +8,7 @@ module.exports = async function handler(req,res) {
   cors(req,res);
   if(req.method==='OPTIONS') return json(res,204,{});
   if(req.method!=='GET') return json(res,405,{ok:false,error:'Method not allowed'});
+  if(req.query?.mode==='preorders') return require('../lib/preorder-storefront').feed(req,res);
   const id=String(req.query?.id||'');
   if(!/^\d{1,15}$/.test(id)) return json(res,200,off);
   try {
