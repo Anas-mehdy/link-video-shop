@@ -25,6 +25,7 @@ module.exports = async function handler(req, res) {
       return json(res,400,{ok:false,error:'الإجراء غير صالح'});
     }
     await requireAdmin(req);
+    if(resource==='preorders')return await require('../lib/preorders').admin(req,res);
     if(resource==='postpurchase')return await require('../lib/postpurchase').admin(req,res);
     if(resource==='whatsapp-second')return require('../lib/cart-reminder-two').admin(req,res);
     if(resource==='whatsapp-delivery')return require('../lib/whatsapp-delivery').admin(req,res);

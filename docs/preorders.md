@@ -1,0 +1,68 @@
+# Preorder batches — stage 1
+
+Adds `/dashboard#preorders` to the existing Link dashboard. The feature tracks a dedicated Salla preorder product (optionally an exact SKU), confirmed incoming capacity, paid reservations, schedule changes and FIFO allocation after inspected receipt.
+
+## Live preparation — 14 October 2026
+
+The user reported successful schema/function upgrade and subsequently `order_tracking_active=true`. The feature branch has a successful Vercel Git check; direct preview inspection is blocked by Vercel SSO and the available connector lacks access to the project's team. No production release has been made.
+
+Created dedicated draft product **318533359**, SKU `LINK-PO-IP18PM-BURGUNDY`, price SAR 89. Readback after update confirmed `status=hidden`, quantity 0, shipping required. Its initial Salla default weight of 0.4 kg was converted to the equivalent 400 g to satisfy the shipping update validation; actual packaged weight must be checked before launch. The image upload did not succeed. No incoming quantity, arrival date, shipping promise, campaign or open batch has been configured.
+
+The user supplied the source check: signed creation/status webhooks contain complete identifiable lines (`product.id` or `product_id`), while `payment_status` is absent. They include `payment_actions.remaining_action.paid_amount`, total and refund indicators. The adapter now uses those monetary fields inside preorders only; it does not rewrite source order payment statuses. Full SAR payment requires exact positive total, zero/no remaining amount, explicit no-remaining/no-refund flags and no observed refund evidence. Partial payment/refunds and contradictory amounts cannot confirm a booking. Legacy explicit paid statuses remain supported when monetary evidence is absent. Actual `product_sku_id` is recognized; a textual `sku` is never treated as a numeric variant ID. Salla's `delivering` means shipped in this module; `completed` is not assumed to prove delivery.
+
+The user confirmed **400 pieces**, with expected warehouse arrival in 20 days: **3 November 2026**, based on 14 October in Riyadh. The prepared draft has booking limit 400 and a proposed carrier handoff window of **4–6 November 2026**, separate from carrier transit time. Run `crm-preorders-payment-update.sql` to install only the updated preorder functions and create/update this single draft. It neither opens sales nor enables/disables triggers; it refuses to overwrite a previously opened batch. It has no table/column/constraint changes and never updates source orders/customers. Repeating it preserves the same draft identity. Its generated source is `scripts/build-preorder-payment-update.py`. Local tests cover actual SQL, input evidence, no source changes, repeated draft preparation, permissions, and refusal to modify an open batch.
+
+Public-launch verification remains pending: test native checkout, ensure customer disclosure and mixed-cart policy, review packaged weight/image, and verify a real preorder payment transition. Light order API responses can omit items (`https://docs.salla.dev/5394147e0`); the current module intentionally requires complete line snapshots and keeps incomplete enrolled updates queued rather than removing items. Repair those from complete signed events or the documented item endpoint (`https://docs.salla.dev/api-5565737`) after verifying the actual response. Do not assume an API-only fallback is complete.
+
+## Activation
+
+Run [preorder-preflight.sql](./preorder-preflight.sql) first and review its live metadata report before installing the migration. It runs in a read-only transaction and reads no customer/order rows, function bodies or trigger arguments. Inspect current order writers: the optional invoker queue trigger requires the writer to have access to preorder tables. Setup and activation are separate. Passing local tests is not a guarantee of compatibility with every live operation.
+
+### Previously installed version
+
+If `external_order_id` is absent from `crm_preorder_reservations` and the existing `crm_queue_preorder_order` trigger is active, use **crm-preorders-upgrade.sql** instead of the initial setup file. It copies external order identities into reservation snapshots, replaces only the two preorder order-FK rules, updates module definitions and leaves its order trigger disabled. It preserves row counts for all five preorder tables and never updates/deletes source orders or customers. The FK replacement contains `DROP CONSTRAINT` statements, which can produce a destructive-operation warning; no tables or rows are dropped. Lock timeout is 5 seconds and statement timeout 30 seconds. Unexpected schemas or unresolvable order IDs fail instead of guessing, and all schema/data/trigger changes are in one transaction.
+
+Successful upgrade returns `updated_schema=true`, `updated_functions=true`, `order_tracking_active=false`. Review that result before explicitly running activation. Activation can re-enable the matching disabled queue trigger and queues any eligible stored orders missed during the pause, without changing source order rows. The self-contained upgrade file is generated by `python scripts/build-preorder-upgrade.py` from current setup definitions. Tests cover both preservation and failure rollback against the committed v1 fixture.
+
+### New installation
+
+1. Run the **updated** `crm-preorders.sql` in the existing Link Store CRM Supabase project, after `crm-salla-sync.sql`. It creates five private RLS-enabled tables and service-only RPCs; it does not activate the order-update queue trigger. No batches, customer records, storefront stock or sample data are seeded. If an old preorder schema already exists, it fails with `preorder_schema_version_mismatch` instead of rewriting it. There are no DROP statements.
+2. After checking live privileges, run `crm-preorders-activate.sql`. This adds or re-enables only `crm_queue_preorder_order` on orders without replacing the existing cart-followup/postpurchase triggers. Repeating activation does not duplicate queue entries. An incompatible existing trigger is rejected for review rather than overwritten. The dashboard reports tracking inactive before activation and SQL rejects opening a batch until activation.
+3. Deploy this branch's backend and static dashboard assets using the existing runtime. All routes reuse `/api/crm-admin` and `/api/crm-worker`; no additional Vercel Function or dependency is required. Without the migration, the dashboard displays setup pending and existing order ingress continues working.
+4. Create the separate preorder product and native campaign in Salla. For the burgundy frame, use its **new preorder product ID**, not the existing mixed ready-stock frame product ID `981596666`. Set the sellable reservation limit, dates and customer-facing disclosure in Salla, and verify checkout. The dashboard does not create/update a Salla campaign, inventory, shipping fees or checkout consent.
+5. Create a draft batch with confirmed quantities and dates. Enter expected warehouse arrival separately from the customer's shipping window. If tracking a variant, enter Salla's SKU ID, not the color option-value ID. Leave it empty for a dedicated single-color product.
+6. Set the batch to open immediately before opening the Salla campaign. Only orders with `ordered_at >= opened_at` can enroll. Draft/paused/closed batches do not enroll new reservations. Existing enrolled orders still update.
+7. Confirm the app subscribes to `order.created`, `order.updated`, `order.status.updated`, `order.payment.updated`, `order.products.updated`, `order.cancelled` and `order.refunded`. The app's existing normal projection stores trusted order snapshots first. PostgreSQL queues relevant changes atomically with that write. Webhook handling attempts a bounded reconcile after ingress; failed reconciliation remains queued.
+8. Configure the existing n8n worker to retry the queue on a regular interval using either its current `action=salla` call (now also reconciles preorders), or:
+
+```text
+POST https://YOUR-DASHBOARD/api/crm-worker?action=preorders
+Authorization: Bearer <existing CRM_WORKER_TOKEN>
+```
+
+The dashboard's “تحديث الحجوزات” processes one 20-order batch. It does not call Salla or send messages. Already enrolled orders older than the existing 30-day dashboard window are still projected, so 30–45 day reservations do not lose cancellation/shipping updates. Normal archive scope remains unchanged.
+
+## Operations
+
+- Pending payment never confirms or allocates stock. Payment proof comes from validated full monetary evidence, or legacy explicit `paid` / `completed` payment statuses when modern monetary evidence is absent. Order statuses and selected payment methods never prove payment. Priority is the timestamp of the first observed paid source snapshot, not inferred original order creation. Validate the actual preorder payment transition at activation.
+- Orders must have item IDs and full item arrays. Missing/ambiguous identifiers stay in the durable error queue; no fabricated lines are confirmed. Changes to item identity, quantity, partial payments/refunds and unexpected shipping states enter review.
+- Every reservation preserves the batch shipping window at its first observation. `promise_evidence=batch_at_first_observation` is **not** proof of customer acceptance or checkout text. Actual checkout disclosure/consent capture belongs to the storefront integration, still pending.
+- Schedule edits retain original windows and create review-only customer-update records. Internal schedule updates do not update Salla's campaign date. Both need to stay aligned.
+- A merchant-scoped advisory transaction lock serializes reservation capacity checks, receipt and FIFO allocation. Over-capacity paid orders enter review instead of getting an automatic confirmation. The dashboard cannot prevent overselling at Salla checkout; the native product's quantity is the source of selling capacity.
+- Deleting an order remains possible: queue rows cascade away, while reservations use `ON DELETE SET NULL`, preserve the external order ID/reference and enter `order_deleted` review. Their allocated units are retained pending reconciliation. They remain visible through a left join and are not automatically allocated. Reimporting the same external order reattaches its existing reservation and retains review; it does not duplicate the booking. The detach trigger operates only on the new reservation row and does not query other tables during order deletion.
+- “اعتماد الاستلام” requires an explicit inspection checkbox and a **cumulative** count of verified good pieces. Repeated same count is a no-op; later partial delivery uses a larger total. It cannot exceed the confirmed incoming count or decrease previously approved quantity. Pending order-sync failures block receipt.
+- Allocation fulfills the earliest confirmed paid reservation in full. If too few pieces remain for that reservation, later reservations are not allowed to jump the queue. Paid capacity-review orders are never allocated automatically.
+- Cancellation before shipping releases allocated units to the next confirmed reservation. A refund/cancellation after shipment does **not** release stock; physical return must be checked. Review states remain blocked rather than silently resetting after a replay.
+- Mixed orders are identified in the dashboard. Their shipping policy must be disclosed/configured in Salla; this module does not split orders or collect a second shipping fee.
+- Shipment/delivery states follow Salla order status only after the reservation has been allocated. Staff still update Salla and generate shipping labels normally. The module does not automatically change order status or mark an entire mixed order delivered.
+- Confirmation, changed-schedule and ready notices are persisted with unique reservation/kind/revision keys. They have only `review` / `dismissed` status: **no outbound sender is implemented or activated**. Cancellation and review dismiss obsolete notices.
+- No automatic refunds are performed. Refund reviews, shortages, changed lines, unknown payment status and missing snapshots require staff handling in Salla, followed by reconciliation.
+- The existing postpurchase message sender is unchanged. It already relies on an observed delivered transition; verify mixed-order policy before native status changes.
+
+## Access and validation
+
+All admin operations use the existing merchant-member authentication and mutation Origin protections. Worker calls require the independent worker secret. Merchant ID is supplied by server configuration, never by browser input. Tables/RPCs are revoked from PUBLIC, anon and authenticated; only server service_role has access. No raw order payloads or provider keys are returned by preorder endpoints.
+
+`node --test tests/preorders.test.js` executes the actual SQL in ephemeral PostgreSQL against the existing merchant schema and projection. It covers payment transitions, duplicate snapshots, stale events, merchant isolation, immutable original dates, oversubscription review, FIFO shortages, repeated/partial receipts, cancellation and return inventory, draft inactivity, durable malformed-snapshot errors, RLS and execution privileges. `npm test` also checks existing features. No production database or customer messages are used.
+
+Before launch: inspect the five new tables and RPC privileges in the target database, run Supabase security advisors, test one real Salla order snapshot and payment transition, and verify the storefront's date/consent/quantity behavior. This is the internal management phase, not a completed public preorder rollout.

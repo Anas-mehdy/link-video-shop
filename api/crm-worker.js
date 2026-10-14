@@ -5,6 +5,7 @@ module.exports = async function handler(req, res) {
   if (req.query?.action === 'whatsapp-events') return require('../lib/etisalna-webhook').handle(req, res);
   try {
     requireWorker(req);
+    if(req.query?.action==='preorders')return json(res,200,{ok:true,...await require('../lib/preorders').tick()});
     if(req.query?.action==='whatsapp-delivery'){
       if(!require('../lib/whatsapp-delivery').readiness().ready)return json(res,200,{ok:true,...await require('../lib/whatsapp-delivery').tick()});
       // Repair at most one local batch first; this path never fetches Salla.
@@ -23,7 +24,11 @@ module.exports = async function handler(req, res) {
     }
     if(req.query?.action==='whatsapp-test')return json(res,200,{ok:true,...await require('../lib/whatsapp-test-send').send(require('../lib/crm').bodyObject(req))});
     if(req.query?.action==='cart-followup')return json(res,200,{ok:true,mode:'dry_run',records:await require('../lib/cart-followup').refresh()});
-    if(req.query?.action==='salla')return json(res,200,{ok:true,...await require('../lib/salla-sync').processEvents()});
+    if(req.query?.action==='salla'){
+      const data=await require('../lib/salla-sync').processEvents();
+      try{data.preorders=await require('../lib/preorders').tick();}catch{data.preorders_pending=true;}
+      return json(res,200,{ok:true,...data});
+    }
     const processed = await sb('rpc/crm_process_events', { method: 'POST', body: JSON.stringify({ p_merchant_id: MERCHANT_ID, p_limit: 20 }) });
     return json(res, 200, { ok: true, mode: 'dry_run', processed });
   } catch (e) { return errorResponse(res, e); }

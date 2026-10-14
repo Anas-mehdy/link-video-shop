@@ -70,3 +70,7 @@ If `/api/protection-admin` reports that setup is missing, run the SQL in the cor
 ## CRM dashboard foundation
 
 The unified Arabic dashboard is available at `/dashboard`. Setup, VPS deployment, Salla ingress and the dry-run n8n worker contract are documented in [docs/crm-foundation.md](docs/crm-foundation.md). Run `crm-foundation.sql` in the existing Link Store CRM project, and use `docs/inspect-existing-schema.sql` to prepare the next entity mapping stage. Existing Video Shop and protection routes remain available.
+
+## Preorder management
+
+`/dashboard#preorders` manages incoming batches, paid reservations, original shipping windows and allocation after inspected receipt. Run `crm-preorders.sql` in the existing Link CRM database and follow [docs/preorders.md](docs/preorders.md). No Salla products/campaigns, stock, shipping charges, refunds or outbound messages are changed by this phase.
