@@ -4,6 +4,8 @@ Adds `/dashboard#preorders` to the existing Link dashboard. The feature tracks a
 
 ## Activation
 
+Run [preorder-preflight.sql](./preorder-preflight.sql) first and review its live metadata report before installing the migration. It runs in a read-only transaction and reads no customer/order rows, function bodies or trigger arguments. Inspect current order writers and delete/retention flows: the invoker trigger can block a writer without access to preorder tables, and default foreign keys can prevent deleting enrolled orders. Passing local tests is not a guarantee of compatibility with the live project's policies and triggers.
+
 1. Run `crm-preorders.sql` **in the existing Link Store CRM Supabase project**, after `crm-salla-sync.sql`. Do not run it in Massar/phone repair ERP. It creates five private RLS-enabled tables, service-only RPCs and one order-update queue trigger. It is transactional and repeatable. No batches, customer records, storefront stock or sample data are seeded.
 2. Deploy this branch's backend and static dashboard assets using the existing runtime. All routes reuse `/api/crm-admin` and `/api/crm-worker`; no additional Vercel Function or dependency is required. Without the migration, the dashboard displays setup pending and existing order ingress continues working.
 3. Create the separate preorder product and native campaign in Salla. For the burgundy frame, use its **new preorder product ID**, not the existing mixed ready-stock frame product ID `981596666`. Set the sellable reservation limit, dates and customer-facing disclosure in Salla, and verify checkout. The dashboard does not create/update a Salla campaign, inventory, shipping fees or checkout consent.
