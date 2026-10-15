@@ -114,7 +114,8 @@
       leaf('إطار لنك',catUrl(933487024,'إطار لنك'))
     ]},
     {title:'الإكسسوارات',desc:'شواحن · حوامل الجوال · باور بنك',icon:'plug',href:catUrl(1359428650,'الإكسسوارات'),children:[cat(470719684),cat(1406794263),cat(1048613060),cat(141410245),leaf('إكسسوارات آيفون 18',catUrl(1546866787,'اكسسوارات ايفون 18'))]},
-    {title:'تغليف لنك',desc:'اختَر جهازك وباقة التغليف',icon:'sparkles',href:page(1157532109),children:[leaf('خدمة تغليف Link',page(1157532109)),leaf('التغليف الحراري',catUrl(496766540,'التغليف الحراري'))]}
+    {title:'تغليف لنك',desc:'اختَر جهازك وباقة التغليف',icon:'sparkles',href:page(1157532109),children:[leaf('خدمة تغليف Link',page(1157532109)),leaf('التغليف الحراري',catUrl(496766540,'التغليف الحراري'))]},
+    {title:'الحجز المسبق',desc:'احجز منتجك قبل وصوله',icon:'clock',href:HOST+'/الحجز-المسبق/c12775313'}
   ];
   var extra = [leaf('جديد المتجر',catUrl(755663023,'جديد المتجر')),leaf('من نحن',HOST+'/redirect/pages/1910305404'),leaf('الاستبدال والاسترجاع',HOST+'/redirect/pages/1602767696'),leaf('الشروط والأحكام',HOST+'/redirect/pages/1868783487')];
   var ICONS = {
@@ -125,6 +126,7 @@
     shield:'<path d="m12 2 8 4v5c0 5-3.1 8.2-8 11-4.9-2.8-8-6-8-11V6l8-4Z"/><path d="m9 12 2 2 4-4"/>',
     plug:'<path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0V8ZM12 18v4"/>',
     sparkles:'<path d="m12 2 2.2 6.8L21 11l-6.8 2.2L12 20l-2.2-6.8L3 11l6.8-2.2L12 2ZM19 18l.7 1.3L21 20l-1.3.7L19 22l-.7-1.3L17 20l1.3-.7L19 18Z"/>',
+    clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     home:'<path d="m3 11 9-8 9 8v9H3v-9ZM9 20v-6h6v6"/>',tick:'<path d="m5 12 4 4 10-10"/>'
   };
   function svg(n, size) { return '<svg aria-hidden="true" width="'+(size||20)+'" height="'+(size||20)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+(ICONS[n]||ICONS.next)+'</svg>'; }
