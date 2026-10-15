@@ -40,9 +40,9 @@
       "id": "1980971091",
       "name": "مسكة لنك المغناطيسية الفاخرة",
       "color": "",
-      "expected_arrival": null,
-      "ship_from": null,
-      "ship_by": null,
+      "expected_arrival": "2026-11-13",
+      "ship_from": "2026-11-14",
+      "ship_by": "2026-11-16",
       "native_available_on": "2026-11-13"
     }
   ]
