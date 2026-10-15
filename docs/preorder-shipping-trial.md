@@ -1,3 +1,21 @@
+# Current multi-date preorder flow — 15 October 2026
+
+This section supersedes the single-product classifications in the implementation history below. Native Video Shop/accessory testing remains deferred by merchant until transition to the main theme; no main-theme publication is performed here.
+
+- `mode=preorders&catalog=1` returns a complete sanitized catalog of open/paused dedicated preorder products from the existing CRM batch table. Draft/received/closed records are excluded. No quantities, customers, reservations, credentials or internal batch IDs are public. More than 200 active records, duplicate active product IDs, unsupported variant-level batches or incomplete/malformed responses fail closed rather than silently treating missing preorder products as ready. Keep one standalone Salla product per preorder color/model for this implementation.
+- Live classification never uses a hardcoded preorder product ID. The historical constant remains solely for the existing original-product Burgundy bridge/demo compatibility. The product date card accepts the configured product ID from the loader and uses generic product copy.
+- A dispatch group is the tuple of expected arrival, ship-from and ship-by dates; all ready products form one ready group. One group needs no shipping-choice dialog. Adding across groups prompts in either order, including preorder + preorder with different dates. Several products with the same arrival/dispatch window can be grouped without an additional choice.
+- The dialog lists every affected preorder's arrival and dispatch window. Combined dispatch uses **maximum ship-from and maximum ship-by independently** across all included preorders, so overlapping windows never understate the latest bound. A ready item waits for that window. Separate fulfillment still requires separate native orders; no cart splitting or flat shipping fee.
+- The cart consent signature includes the complete catalog metadata/revisions as well as cart quantities/options. The fresh approval read invalidates consent if dates/status/revision/cart contents changed. Catalog failures cause an inline retry error, never an empty-cart shipping-choice dialog. This is a browser snapshot, not a backend consent record or an atomic cross-session checkout constraint.
+- The admin API reads all reservation lines for the orders on the visible page, regardless of batch filter/pagination, and calculates each order's current combined window. A late batch changes that window and adds a staff warning while preserving the original per-line promise. An early allocated reservation never implies all preorder lines are allocated. Missing metadata, failed/truncated reads and review states must not release an order for dispatch. These projections do not enforce a native Salla shipping lock and do not automatically notify customers.
+- Public and admin changes are read-only against existing tables; no SQL migration, reservation/state mutation, payment, shipment, order-status write or customer message was enabled.
+
+Validation: full automated suite passed (225 tests), including new catalog safety, same-window products, 20/30-day-equivalent fixture windows in both orders, combined-window maxima, schedule/revision change on approval, dynamic product disclosure and full-order readiness/delay projections. No second live preorder product or real order was created for testing. Native browser verification of the expanded flow is still required before launch.
+
+---
+
+## Earlier implementation notes
+
 # Current test-theme flow: choice before adding a mixed product
 
 The withdrawn cart-splitting experiment below is historical and remains disabled on native cart/checkout pages. The existing test-theme loader now delegates to `preorder-before-add.js` on other storefront routes. Do not install on the live theme until native verification is complete.

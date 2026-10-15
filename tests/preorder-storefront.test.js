@@ -47,3 +47,16 @@ test('public feed allows only sanitized schedule fields, hides drafts by default
 });
 
 test('delegated before-add mode keeps date card without a second checkbox or DOM guard',async()=>{const h=await harness({beforeAdd:true});assert.ok(h.document.querySelector('.link-preorder').textContent.includes('شحن طلبك المتوقع'));assert.equal(h.document.querySelector('[data-po-ack]'),null);const e=new h.window.Event('click',{bubbles:true,cancelable:true});h.document.querySelector('.product-form button').dispatchEvent(e);assert.equal(e.defaultPrevented,false);});
+test('catalog returns only complete active schedules, hides draft/closed, and fails on overflow, variants or duplicate active products',async()=>{
+ const queries=[];let response,rows=[{...product,product_id:product.id,product_name:'الإطار',variant_id:''}];
+ const context={module:{exports:{}},AbortSignal,Set,require:()=>({MERCHANT_ID:1829345766,sb:async p=>{queries.push(p);return rows;},json:(_r,status,data,headers)=>response={status,data,headers}})};
+ vm.createContext(context);vm.runInContext(fs.readFileSync(__dirname+'/../lib/preorder-storefront.js','utf8'),context);const feed=context.module.exports.feed;
+ await feed({query:{catalog:'1',preview:'1',ids:'inject&x'}},{});assert.equal(response.status,200);assert.equal(response.data.complete,true);assert.equal(response.data.preview,false);assert.equal(response.data.products.length,1);assert.ok(queries[0].includes('status=in.(open,paused)'));assert.ok(!JSON.stringify(response.data).includes('variant_id'));
+ const first=rows[0];rows=[{...first,status:'draft'},{...first,product_id:'999',status:'closed'}];await feed({query:{catalog:'1'}},{});assert.equal(response.data.products.length,0);
+ for(const invalid of [[first,{...first}],[{...first,variant_id:'123'}],Array.from({length:201},(_,i)=>({...first,product_id:String(i+1)}))]){rows=invalid;await feed({query:{catalog:'1'}},{});assert.equal(response.status,503);assert.equal(response.data.complete,undefined);}
+});
+test('date notice can target a newly configured dedicated preorder without editing its product ID in code',async()=>{
+ const {window:w,document:d}=parseHTML('<html><head></head><body><form class="product-form"></form></body></html>');
+ const s=d.createElement('script');s.src='https://link-video-shop.vercel.app/preorder-widget.js';s.dataset.beforeAdd='1';s.dataset.productId='777';Object.defineProperty(d,'currentScript',{value:s});delete w.__linkPreorderWidget;
+ const c={window:w,document:d,location:{pathname:'/p777',href:'https://linkstore-sa.com/p777'},URL,Intl,Date,fetch:async()=>({ok:true,json:async()=>({ok:true,products:[{...product,id:'777',name:'منتج مختلف',color:'أزرق'}]})}),MutationObserver:class{observe(){}disconnect(){}},setTimeout:()=>1,clearTimeout:()=>{}};vm.createContext(c);vm.runInContext(code,c);for(let i=0;i<10;i++)await Promise.resolve();assert.match(d.querySelector('.link-preorder').textContent,/منتج مختلف/);assert.doesNotMatch(d.querySelector('.link-preorder').textContent,/بسبب الإقبال على البورغندي/);
+});
