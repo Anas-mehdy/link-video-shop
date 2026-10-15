@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>تجربة شحن الحجز المسبق | لنك</title>
+<style>
+:root{color-scheme:light;--purple:#51007a}*{box-sizing:border-box}body{margin:0;background:#f5f2f7;color:#30223b;font:15px/1.8 system-ui,sans-serif}main{max-width:760px;margin:auto;padding:24px 16px 60px}header{padding:10px 0 18px}h1{font-size:28px;line-height:1.5;margin:4px 0}h2{font-size:19px;margin:0 0 12px}.muted{color:#76667e;font-size:13px}.tag{color:#6b1f91;font-weight:700;font-size:13px}.demo-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0 20px}button,select{font:inherit;border:1px solid #d8c6e2;border-radius:10px;background:white;color:#51007a;padding:9px 12px;cursor:pointer}.cart-summary{background:#fff;border:1px solid #e6dfe9;border-radius:16px;padding:18px}.item{display:flex;gap:12px;align-items:center;border-bottom:1px solid #eee6f1;padding:14px 0}.item:last-child{border:0}.item .icon{width:46px;height:58px;border:3px solid #6f253d;border-radius:10px;background:#fbf5f7;flex:none}.item.ready .icon{border-color:#272230;background:#ece8ef}.item .details{flex:1}.item b{display:block}.item input{width:62px;font:inherit;border:1px solid #d7c9dd;border-radius:7px;padding:4px;text-align:center}.item button{font-size:12px;border:0}.totals p{display:flex;justify-content:space-between;margin:9px 0}.checkout{width:100%;background:var(--purple);color:white;border:0;padding:13px}.result{padding:12px;background:#ede6f3;border-radius:10px;margin:12px 0}.empty{padding:20px;text-align:center;color:#76667e}.note{border-inline-start:3px solid #cbb2da;padding-inline-start:12px;margin-top:24px}.coupons{margin-top:12px;display:flex;gap:8px}.coupons input{width:100%;border:1px solid #ddd;border-radius:8px;padding:8px;font:inherit}@media(max-width:480px){h1{font-size:23px}.demo-tools button{flex:1}}
+</style></head><body><main>
+<header><span class="tag">لنك · تجربة تفاعلية معزولة</span><h1>طلبك، بالطريقة اللي تناسبك 💜</h1><p>جرّب الانتظار بشحنة واحدة، أو شراء المتوفر أولاً ثم استعادة الحجز لطلب مستقل.</p><p class="muted">هذه محاكاة فقط. لا اتصال بسلة حقيقية، ولا دفع، ولا حجز مخزون. أسعار الشحن هنا أمثلة للتوضيح.</p></header>
+<div class="demo-tools"><button data-case="mixed">ابدأ بسلة مختلطة</button><button data-case="preorder">حجز فقط</button><button data-case="ready">متوفر فقط</button><label>مثال الشحن: <select id="region"><option value="20">منطقة أ — 20 ريال</option><option value="30">منطقة ب — 30 ريال</option></select></label></div>
+<p id="demo-result" class="result" role="status" hidden></p>
+<div class="cart-summary"><h2>سلتك التجريبية</h2><div id="demo-items"></div><div id="demo-totals" class="totals"></div><button type="button" class="checkout" data-cart-submit>إتمام الطلب — محاكاة</button><form class="coupons" action="/coupon"><input placeholder="كوبون تجريبي" aria-label="كوبون تجريبي"><button>تطبيق</button></form></div>
+<p class="note muted">في المتجر الفعلي: تُحسب رسوم كل طلب داخل سلة حسب العنوان والشركة والعروض. عند الفصل، تُحفظ كمية الحجز على المتصفح نفسه ولا تثبّت السعر أو المخزون. استعادتها تحتاج طلب المتوفر أولاً أو إلغاء الفصل.</p>
+</main><script>
+(()=>{
+  let nextId=10,saved=null,rows=[ready(),preorder()];
+  function ready(){return {id:'ready-line',product_id:'981596666',quantity:1,options:[{id:719664310,value:'عنابي'}]};}
+  function preorder(q=3){return {id:'preorder-'+nextId++,product_id:'318533359',quantity:q,options:[]};}
+  const copy=x=>JSON.parse(JSON.stringify(x));
+  window.__poDemoStorage={get:()=>copy(saved),set:v=>{saved=copy(v);}};
+  const events={};
+  window.fetch=async()=>({ok:true,json:async()=>({ok:true,products:[{id:'318533359',status:'open',ship_from:'2026-11-04',ship_by:'2026-11-06'}]})});
+  function emit(name){(events[name]||[]).forEach(f=>f());}
+  window.salla={onReady:fn=>fn(),cart:{
+    details:async()=>({data:{items:copy(rows)}}),
+    deleteItem:async id=>{rows=rows.filter(i=>i.id!==id);draw();emit('deleted');return {success:true};},
+    addItem:async p=>{const line=rows.find(i=>String(i.product_id)===String(p.id));if(line)line.quantity+=p.quantity;else rows.push(preorder(p.quantity));draw();emit('added');return {success:true};},
+    event:{onItemAdded:fn=>(events.added||=[]).push(fn),onItemDeleted:fn=>(events.deleted||=[]).push(fn),onItemUpdated:fn=>(events.updated||=[]).push(fn)}
+  }};
+  function draw(){
+    document.getElementById('demo-items').innerHTML=rows.length?rows.map(i=>`<div class="item ${i.product_id==='318533359'?'':'ready'}"><span class="icon" aria-hidden="true"></span><div class="details"><b>${i.product_id==='318533359'?'إطار البرغندي — حجز مسبق':'كفر عنابي — متوفر'}</b><small class="muted">${i.product_id==='318533359'?'الشحن المتوقع 4–6 نوفمبر':'الشحن حسب مدة التجهيز المعتادة'}</small></div><label>الكمية <input aria-label="كمية ${i.product_id==='318533359'?'الحجز':'المتوفر'}" type="number" min="1" max="400" data-line="${i.id}" value="${i.quantity}"></label><button data-remove="${i.id}">حذف</button></div>`).join(''):'<p class="empty">السلة فارغة</p>';
+    const subtotal=rows.reduce((sum,i)=>sum+i.quantity*(i.product_id==='318533359'?89:149),0),shipping=rows.length?Number(document.getElementById('region').value):0;
+    document.getElementById('demo-totals').innerHTML=`<p><span>المنتجات</span><b>${subtotal} ريال</b></p><p><span>الشحن — مثال فقط</span><b>${shipping} ريال</b></p><p><span>الإجمالي التجريبي</span><b>${subtotal+shipping} ريال</b></p>`;
+    document.querySelector('[data-cart-submit]').hidden=!rows.length;
+  }
+  document.querySelectorAll('[data-case]').forEach(b=>b.onclick=()=>{saved=null;rows=b.dataset.case==='mixed'?[ready(),preorder()]:b.dataset.case==='preorder'?[preorder()]:[ready()];document.getElementById('demo-result').hidden=true;draw();emit('updated');});
+  document.getElementById('region').onchange=draw;
+  document.getElementById('demo-items').addEventListener('change',e=>{if(!e.target.dataset.line)return;const q=Number(e.target.value);if(Number.isInteger(q)&&q>0&&q<=400){rows.find(i=>i.id===e.target.dataset.line).quantity=q;draw();emit('updated');}});
+  document.getElementById('demo-items').addEventListener('click',e=>{if(!e.target.dataset.remove)return;rows=rows.filter(i=>i.id!==e.target.dataset.remove);draw();emit('deleted');});
+  document.querySelector('[data-cart-submit]').onclick=()=>{const mixed=rows.some(i=>i.product_id==='318533359')&&rows.some(i=>i.product_id!=='318533359'),result=document.getElementById('demo-result');result.textContent=mixed?'تمت محاكاة طلب واحد؛ جميع المنتجات تنتظر وصول الحجز، برسوم شحنة واحدة.':'تمت محاكاة إتمام هذا الطلب فقط. إذا عندك حجز محفوظ، تقدر تستعيده الآن وتكمل طلبه المستقل.';result.hidden=false;rows=[];draw();emit('deleted');};
+  document.querySelector('.coupons').onsubmit=e=>{e.preventDefault();const r=document.getElementById('demo-result');r.hidden=false;r.textContent='زر الكوبون يعمل دون تدخل خيار الشحن. هذه محاكاة ولا يوجد خصم حقيقي.';};
+  draw();
+})();
+</script><script src="/preorder-shipping-trial.js" data-shipping-trial="1" data-demo="1"></script></body></html>
