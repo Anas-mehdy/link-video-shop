@@ -393,7 +393,9 @@
       if(before!==amount()||!product.available||selectedProducts().some((p,i)=>state.picks[i]&&!p.available)||!validOptions()){
         state.busy=false;status.textContent='تغير السعر أو التوفر. راجع اختياراتك ثم اضغط الإضافة مجددًا.';update();return;
       }
-      const queue=state.remaining||payloads();state.remaining=null;let added=0;
+      const queue=state.remaining||payloads();
+      try{if(window.LinkPreorderCheckItems&&!await window.LinkPreorderCheckItems(queue)){state.busy=false;status.textContent='أُلغيت الإضافة. اختياراتك محفوظة في الصفحة.';update();return;}}catch{state.busy=false;status.textContent='تعذر التحقق من السلة؛ حاول مجدداً.';update();return;}
+      state.remaining=null;let added=0;
       for(let i=0;i<queue.length;i++){
         status.textContent='تتم إضافة '+(i+1)+' من '+queue.length+'...';
         try{
@@ -608,7 +610,9 @@
       if(before!==amount()||!product.available||selectedProducts().some((p,i)=>state.picks[i]&&!p.available)||!validOptions()){
         state.busy=false;status.textContent='تغير السعر أو التوفر. راجع اختياراتك ثم اضغط الإضافة مجددًا.';update();return;
       }
-      const queue=state.remaining||payloads();state.remaining=null;let added=0;
+      const queue=state.remaining||payloads();
+      try{if(window.LinkPreorderCheckItems&&!await window.LinkPreorderCheckItems(queue)){state.busy=false;status.textContent='أُلغيت الإضافة. اختياراتك محفوظة في الصفحة.';update();return;}}catch{state.busy=false;status.textContent='تعذر التحقق من السلة؛ حاول مجدداً.';update();return;}
+      state.remaining=null;let added=0;
       for(let i=0;i<queue.length;i++){
         status.textContent='تتم إضافة '+(i+1)+' من '+queue.length+'...';
         try{
@@ -826,7 +830,9 @@
       if(before!==amount()||!product.available||selectedProducts().some((p,i)=>state.picks[i]&&!p.available)||!validOptions()){
         state.busy=false;status.textContent='تغير السعر أو التوفر. راجع اختياراتك ثم اضغط الإضافة مجددًا.';update();return;
       }
-      const queue=state.remaining||payloads();state.remaining=null;let added=0;
+      const queue=state.remaining||payloads();
+      try{if(window.LinkPreorderCheckItems&&!await window.LinkPreorderCheckItems(queue)){state.busy=false;status.textContent='أُلغيت الإضافة. اختياراتك محفوظة في الصفحة.';update();return;}}catch{state.busy=false;status.textContent='تعذر التحقق من السلة؛ حاول مجدداً.';update();return;}
+      state.remaining=null;let added=0;
       for(let i=0;i<queue.length;i++){
         status.textContent='تتم إضافة '+(i+1)+' من '+queue.length+'...';
         try{
@@ -1033,7 +1039,9 @@
       if(before!==amount()||!product.available||selectedProducts().some((p,i)=>state.picks[i]&&!p.available)||!validOptions()){
         state.busy=false;status.textContent='تغير السعر أو التوفر. راجع اختياراتك ثم اضغط الإضافة مجددًا.';update();return;
       }
-      const queue=state.remaining||payloads();state.remaining=null;let added=0;
+      const queue=state.remaining||payloads();
+      try{if(window.LinkPreorderCheckItems&&!await window.LinkPreorderCheckItems(queue)){state.busy=false;status.textContent='أُلغيت الإضافة. اختياراتك محفوظة في الصفحة.';update();return;}}catch{state.busy=false;status.textContent='تعذر التحقق من السلة؛ حاول مجدداً.';update();return;}
+      state.remaining=null;let added=0;
       for(let i=0;i<queue.length;i++){
         status.textContent='تتم إضافة '+(i+1)+' من '+queue.length+'...';
         try{

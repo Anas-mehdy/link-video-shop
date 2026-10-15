@@ -71,3 +71,33 @@ test('failed unknown cart read gives an inline error without shipping options or
 test('repeat presses during deferred initial gesture never add twice after cart snapshot arrives',async()=>{
  const h=await harness([],'/p318533359',{delayCart:true,delayFeed:true});h.validate(P);h.releaseCart();await h.settle();h.validate(P);await h.settle();assert.equal(h.native(),0);h.releaseFeed();await h.settle();assert.equal(h.native(),1);assert.equal(h.d.querySelector('#po-before-add'),null);
 });
+test('bulk preflight leaves homogeneous selections alone and asks before either mixed direction',async()=>{
+ const homogeneous=await harness([]);assert.equal(await homogeneous.w.LinkPreorderCheckItems([{id:P}]),true);assert.equal(homogeneous.d.querySelector('#po-before-add'),null);
+ for(const [ids,incoming] of [[[R],[P]],[[P],[R]],[[],[P,R]]]){
+  const h=await harness(ids);const pending=h.w.LinkPreorderCheckItems(incoming.map(id=>({id})));await h.settle();assert.ok(h.d.querySelector('[data-po-together]'));await h.approve();assert.equal(await pending,true);assert.equal(h.mutations(),0);assert.equal(h.d.querySelector('#po-before-add').hasAttribute('open'),false);
+ }
+});
+test('cancelling an accessory group resolves false without adding and permits a fresh attempt',async()=>{
+ const h=await harness([P]);const first=h.w.LinkPreorderCheckItems([{id:R}]);await h.settle();await h.click('[data-po-close]');assert.equal(await first,false);const second=h.w.LinkPreorderCheckItems([{id:R}]);await h.settle();await h.approve();assert.equal(await second,true);assert.equal(h.mutations(),0);
+});
+test('separate-purchase link cancels bulk preflight without clearing native cart',async()=>{
+ const h=await harness([P]);const pending=h.w.LinkPreorderCheckItems([{id:R}]);await h.settle();await h.click('a.po-link');assert.equal(await pending,false);assert.equal(h.mutations(),0);assert.equal(h.native(),0);
+});
+test('bulk approval resets after cart changes and cancellation still resolves pending caller',async()=>{
+ const h=await harness([P]);const pending=h.w.LinkPreorderCheckItems([{id:R}]);await h.settle();h.setRows([P,P]);await h.approve();assert.match(h.d.querySelector('.po-error').textContent,/تغيّرت/);await h.click('[data-po-close]');assert.equal(await pending,false);
+});
+test('quick purchase is restricted only for preorder context and normal checkout is untouched',async()=>{
+ const ready=await harness([R],'/p999');assert.equal(ready.d.documentElement.hasAttribute('data-link-po-cart-flow'),false);
+ const po=await harness([P],'/p999');assert.equal(po.d.documentElement.hasAttribute('data-link-po-cart-flow'),true);
+ const quick=po.d.createElement('salla-quick-buy');po.d.body.appendChild(quick);const e=new po.w.document.defaultView.Event('click',{bubbles:true,cancelable:true});quick.dispatchEvent(e);assert.equal(e.defaultPrevented,true);assert.equal(po.d.querySelector('#po-before-add'),null);
+ po.setRows([R]);po.events.update();await po.settle();assert.equal(po.d.documentElement.hasAttribute('data-link-po-cart-flow'),false);
+ const page=await harness([],'/p318533359');assert.equal(page.d.documentElement.hasAttribute('data-link-po-cart-flow'),true);
+ const checkout=await harness([P],'/checkout');assert.equal(checkout.d.querySelector('#po-shortcuts-style'),null);
+});
+test('video form cancels before SDK and does not submit twice while waiting for mixed approval',async()=>{
+ const code=fs.readFileSync(__dirname+'/../docs/preorder-video-submit.js','utf8');const form={dataset:{}};let sdk=0,tracked=0,finish;
+ const wait=new Promise(r=>finish=r);const w={LinkPreorderCheckItems:()=>wait,lvsTrack:()=>tracked++};
+ vm.runInNewContext(code,{form,pr:{id:R},window:w,document:{getElementById:()=>({dataset:{videoid:1}})},salla:{form:{onSubmit:async()=>sdk++}}});
+ let prevented=0;const e={preventDefault:()=>prevented++};const p=form.onsubmit(e);await form.onsubmit(e);assert.equal(sdk,0);finish(false);await p;assert.equal(sdk,0);assert.equal(tracked,0);
+ w.LinkPreorderCheckItems=async()=>true;await form.onsubmit(e);assert.equal(sdk,1);assert.equal(tracked,1);assert.equal(form.dataset.linkPoSubmitting,undefined);
+});

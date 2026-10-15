@@ -48,7 +48,7 @@
       const quantity=quantityPicker(p.name,p.available),actions=el('div','','ld-actions');actions.append(quantity.box,add);
       add.addEventListener('click',async()=>{
         if(add.disabled)return;const count=quantity.value();add.disabled=true;quantity.disable(true);notice.textContent='تتم الإضافة...';
-        try{const result=await cart.addItem({id:p.id,quantity:count,...(p.options ? {options:p.options} : {})});if(result?.success===false||Number(result?.status)>=400)throw new Error('add failed');notice.textContent='تمت الإضافة ✓';}
+        try{if(window.LinkPreorderCheckItems&&!await window.LinkPreorderCheckItems([{id:p.id}])){notice.textContent='أُلغيت الإضافة.';return;}const result=await cart.addItem({id:p.id,quantity:count,...(p.options ? {options:p.options} : {})});if(result?.success===false||Number(result?.status)>=400)throw new Error('add failed');notice.textContent='تمت الإضافة ✓';}
         catch(_){notice.textContent='تعذرت الإضافة؛ تحقق من التوفر.';}finally{add.disabled=!p.available;quantity.disable(!p.available);}
       });
       row.append(image,copy,actions);accessories.append(row);
@@ -117,6 +117,7 @@
     }
     async function addExtras(items){
       setBusy(true);failed=[];retry.hidden=true;status.textContent='تتم إضافة منتجات الحماية...';
+      try{if(window.LinkPreorderCheckItems&&!await window.LinkPreorderCheckItems(items)){status.textContent='لم تُضف منتجات الحماية؛ أكمل اختيار طريقة الاستلام أولاً.';setBusy(false);return;}}catch{status.textContent='تعذر التحقق من السلة؛ حاول مجدداً.';setBusy(false);return;}
       for(const p of items){
         try{
           const response=await cart.addItem({id:p.id,quantity:p.quantity,options:p.options});

@@ -37,6 +37,7 @@
     items.push({...x,options});
    }
    if(!window.LinkCompleteCart)throw Error('الإضافة ليست جاهزة؛ حاول لاحقًا');
+   if(window.LinkPreorderCheckItems&&!await window.LinkPreorderCheckItems(items)){status.textContent='أُلغيت الإضافة. تقدر تعدّل اختياراتك.';return;}
    status.textContent='جارٍ إضافة اختياراتك للسلة…';
    const result=await window.LinkCompleteCart.add(items,{addItem:x=>window.salla.cart.addItem(x),getState,setState});requests.set(job.id,result);send(job.id,result);pending=null;dialog.close();
    if(result.complete)location.assign('/cart');

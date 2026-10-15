@@ -60,6 +60,7 @@
     async function addScreen(item) {
       setBusy(true); status.textContent = 'تتم إضافة الاستيكر...'; retry.hidden = true;
       try {
+        if(window.LinkPreorderCheckItems&&!await window.LinkPreorderCheckItems([{id:item.product.id}])){status.textContent='لم تُضف الإضافة؛ أكمل اختيار طريقة الاستلام أولاً.';return;}
         const response = await cart.addItem({id: item.product.id, quantity: item.quantity, options: item.product.options});
         if (response?.success === false || Number(response?.status) >= 400) throw new Error('screen add failed');
         retryItem = null; status.textContent = 'تمت إضافة الباكج والاستيكر للسلة ✓';
@@ -96,6 +97,7 @@
         if (add.disabled) return;
         add.disabled = true; notice.textContent = 'تتم الإضافة...';
         try {
+          if(window.LinkPreorderCheckItems&&!await window.LinkPreorderCheckItems([{id:p.id}])){notice.textContent='أُلغيت الإضافة.';return;}
           const res = await cart.addItem({id:p.id, quantity:1});
           if (res?.success === false || Number(res?.status) >= 400) throw new Error('add failed');
           notice.textContent = 'تمت الإضافة ✓';
