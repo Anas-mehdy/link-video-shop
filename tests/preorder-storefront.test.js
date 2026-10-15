@@ -91,3 +91,13 @@ test('observed Salla page options render cards even when SDK stock lookup fails'
  assert.equal(unknown.document.querySelectorAll('a.po-color-action').length,0);
  assert.match(unknown.document.querySelector('.link-preorder').textContent,/تعذر التحقق/);
 });
+
+test('all mapped booking colors become actionable only after their CRM batches are open',async()=>{
+ const config=JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'));
+ const products=config.colors.map(c=>({...product,id:c.booking_id,color:c.name}));
+ const h=await harness({path:'/p981596666',nativeOptions:JSON.parse(fs.readFileSync(__dirname+'/fixtures/frame-native-options.json')),products});
+ assert.equal(h.document.querySelectorAll('a.po-color-action').length,4);
+ for(const c of config.colors)assert.ok(h.document.querySelector('a[href="https://linkstore-sa.com/p'+c.booking_id+'"]'));
+ const paused=await harness({path:'/p981596666',products:products.map(p=>p.id==='1962143002'?{...p,status:'paused'}:p)});
+ assert.equal(paused.document.querySelectorAll('a.po-color-action').length,3);
+});
