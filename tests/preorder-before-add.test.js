@@ -185,3 +185,12 @@ test('an owned video form consumes one fresh native approval without a duplicate
  const repeat=h.w.LinkPreorderCheckItems([{id:P}],{nativeForm:form});await h.settle();assert.equal(h.d.querySelector('dialog').hasAttribute('open'),true);await h.click('[data-po-close]');assert.equal(await repeat,false);
  h.validate(P);await h.approve();quantity.value='2';const changed=h.w.LinkPreorderCheckItems([{id:P}],{nativeForm:form});await h.settle();assert.equal(h.d.querySelector('dialog').hasAttribute('open'),true);await h.click('[data-po-close]');assert.equal(await changed,false);
 });
+
+test('magnetic grip remains a pending preorder until its own dated CRM batch is opened',async()=>{
+ const id='1980971091',h=await harness([],'/category');assert.equal(h.validate(id).isValid,false);
+ assert.match(h.d.querySelector('#po-before-add').textContent,/مسكة لنك/);assert.equal(h.d.querySelector('[data-po-approve]'),null);
+ const config=JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'));
+ const pending=api.pendingCatalog(api.catalogOf([fixture]),config)[id];assert.equal(pending.expected_arrival,null);assert.equal(pending.ship_from,null);assert.equal(pending.ship_by,null);
+ const opened=await harness([],'/category',{products:[fixture,{...later,id,name:'مسكة لنك المغناطيسية الفاخرة',color:''}]});
+ assert.equal(opened.validate(id).isValid,false);assert.match(opened.d.querySelector('#po-before-add').textContent,/13 نوفمبر 2099/);await opened.approve();assert.equal(opened.native(),1);
+});

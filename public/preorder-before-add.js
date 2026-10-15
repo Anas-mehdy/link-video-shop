@@ -31,6 +31,12 @@
    if(!/^\d+$/.test(id)||seen.has(id)||typeof c.name!=='string'||!c.name.trim())throw error('catalog_unavailable');seen.add(id);
    if(!result[id])result[id]={id,name:'إطار Link المعدني iPhone 18 Pro Max',color:c.name,status:'pending',expected_arrival:source?.expected_arrival||null,ship_from:source?.ship_from||null,ship_by:source?.ship_by||null,revision:0};
   }
+  if(config.pending_products!==undefined&&(!Array.isArray(config.pending_products)||config.pending_products.length>100))throw error('catalog_unavailable');
+  for(const p of config.pending_products||[]){
+   const id=String(p.id??'');
+   if(!/^\d+$/.test(id)||seen.has(id)||typeof p.name!=='string'||!p.name.trim()||['expected_arrival','ship_from','ship_by'].some(k=>p[k]!=null&&!realDate(p[k])))throw error('catalog_unavailable');seen.add(id);
+   if(!result[id])result[id]={id,name:p.name,color:String(p.color||''),status:'pending',expected_arrival:p.expected_arrival||null,ship_from:p.ship_from||null,ship_by:p.ship_by||null,revision:0};
+  }
   return result;
  }
  function inspect(response,catalog={}){
@@ -97,8 +103,9 @@
   // Date card is loaded only for catalog-recognized preorder products.
   function disclose(){
    const pageId=(w.location.pathname.match(/\/p(\d+)(?:\/|$)/)||[])[1];
-   if(!demo&&(model.current()?.catalog[pageId]||pageId==='981596666')&&!w.__linkPreorderWidget&&!d.getElementById('link-po-disclosure-loader')){
-    const s=d.createElement('script');s.id='link-po-disclosure-loader';s.src=origin+'/preorder-widget.js?v=20261015-7';s.dataset.beforeAdd='1';s.dataset.productId=pageId==='981596666'?PRODUCT:pageId;s.async=true;d.head.appendChild(s);
+   const entry=model.current()?.catalog[pageId];
+   if(!demo&&(entry&&entry.status!=='pending'||pageId==='981596666')&&!w.__linkPreorderWidget&&!d.getElementById('link-po-disclosure-loader')){
+    const s=d.createElement('script');s.id='link-po-disclosure-loader';s.src=origin+'/preorder-widget.js?v=20261015-10';s.dataset.beforeAdd='1';s.dataset.productId=pageId==='981596666'?PRODUCT:pageId;s.async=true;d.head.appendChild(s);
    }
   }
   function styles(){if(d.getElementById('po-before-add-style'))return;const s=d.createElement('style');s.id='po-before-add-style';s.textContent=`
@@ -195,7 +202,7 @@
     const [response,json,config]=await Promise.all([
      bounded(()=>w.salla.cart.details()),
      bounded(async()=>{const r=await w.fetch(origin+'/api/protection-feed?mode=preorders&catalog=1',{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('catalog_unavailable');return r.json();}),
-     bounded(async()=>{const r=await w.fetch(origin+'/preorder-frame-colors.json?v=20261015-8',{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('catalog_unavailable');return r.json();})
+     bounded(async()=>{const r=await w.fetch(origin+'/preorder-frame-colors.json?v=20261015-10',{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('catalog_unavailable');return r.json();})
     ]);
     if(expectedVersion!==version||stopped)throw error('cart_changed');
     if(!json?.ok||json.catalog!==true||json.complete!==true)throw error('catalog_unavailable');

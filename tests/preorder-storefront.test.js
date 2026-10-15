@@ -2,13 +2,13 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const {parseHTML}=require('linkedom');
 const product={id:'318533359',name:'إطار Link',color:'بورغندي',status:'open',expected_arrival:'2026-11-03',ship_from:'2026-11-04',ship_by:'2026-11-06',revision:1};
 const code=fs.readFileSync(__dirname+'/../public/preorder-widget.js','utf8');
-async function harness({path='/p318533359',mode='',beforeAdd=false,items=[],fail=false,products=[{...product}],stockFail=false,nativeOptions=null}={}){
+async function harness({path='/p318533359',mode='',beforeAdd=false,items=[],fail=false,products=[{...product}],stockFail=false,nativeOptions=null,configOverride=null}={}){
  const {window}=parseHTML('<html><head></head><body><main><form class="product-form"><button type="submit">إضافة</button></form><div class="cart-summary"><a href="/checkout">متابعة</a><form action="/coupon"><button type="submit">كوبون</button></form></div></main></body></html>');
  const document=window.document,script=document.createElement('script');script.src='https://link-video-shop.vercel.app/preorder-widget.js';if(mode)script.dataset.mode=mode;if(beforeAdd)script.dataset.beforeAdd='1';
  if(nativeOptions){const el=document.createElement('salla-product-options');el.setAttribute('product-id','981596666');el.setAttribute('options',JSON.stringify(nativeOptions));document.querySelector('.product-form').appendChild(el);}
  delete window.__linkPreorderWidget;
  Object.defineProperty(document,'currentScript',{value:script});
- const timers=new Map(),events={},observers=[];let serial=0,calls=0,currentItems=items,data={ok:true,products};const colors=JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json','utf8'));let stock=Object.fromEntries(colors.colors.map(c=>[c.option_id,true]));
+ const timers=new Map(),events={},observers=[];let serial=0,calls=0,currentItems=items,data={ok:true,products};const colors=configOverride||JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json','utf8'));let stock=Object.fromEntries(colors.colors.map(c=>[c.option_id,true]));
  window.salla={onReady:fn=>fn(),product:{getDetails:async()=>{if(stockFail)throw Error('offline');return {data:{id:981596666,options:[{values:Object.entries(stock).map(([id,out])=>({id,is_out_of_stock:out}))}]}};}},cart:{details:async()=>({data:{items:currentItems}}),event:{onItemAdded:fn=>events.add=fn,onItemRemoved:fn=>events.remove=fn}}};
  window.HTMLElement.prototype.scrollIntoView=function(){};
  const context={window,document,location:{pathname:path,href:'https://linkstore-sa.com'+path},URL,Intl,Date,matchMedia:()=>({matches:true}),fetch:async url=>{if(url.includes('/preorder-frame-colors.json'))return {ok:true,json:async()=>colors};calls++;if(fail)throw Error('offline');return {ok:true,json:async()=>data};},setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),MutationObserver:class{constructor(fn){observers.push(fn)}observe(){}disconnect(){}}};
@@ -97,7 +97,17 @@ test('all mapped booking colors become actionable only after their CRM batches a
  const products=config.colors.map(c=>({...product,id:c.booking_id,color:c.name}));
  const h=await harness({path:'/p981596666',nativeOptions:JSON.parse(fs.readFileSync(__dirname+'/fixtures/frame-native-options.json')),products});
  assert.equal(h.document.querySelectorAll('a.po-color-action').length,4);
- for(const c of config.colors)assert.ok(h.document.querySelector('a[href="https://linkstore-sa.com/p'+c.booking_id+'"]'));
+ for(const c of config.colors)assert.ok([...h.document.querySelectorAll('a.po-color-action')].some(a=>a.getAttribute('href')===new URL(c.booking_url).href));
  const paused=await harness({path:'/p981596666',products:products.map(p=>p.id==='1962143002'?{...p,status:'paused'}:p)});
  assert.equal(paused.document.querySelectorAll('a.po-color-action').length,3);
+});
+
+test('frame booking links require real store canonical URLs rather than bare product-id paths',async()=>{
+ const config=JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'));
+ const h=await harness({path:'/p981596666'});const href=h.document.querySelector('a.po-color-action').getAttribute('href');
+ assert.equal(href,new URL(config.colors[0].booking_url).href);assert.notEqual(new URL(href).pathname,'/p318533359');
+ for(const url of ['https://example.com/p318533359','javascript:alert(1)','https://linkstore-sa.com/wrong/p999']){
+  const bad=structuredClone(config);bad.colors[0].booking_url=url;
+  const blocked=await harness({path:'/p981596666',configOverride:bad});assert.equal(blocked.document.querySelectorAll('a.po-color-action').length,0);
+ }
 });
