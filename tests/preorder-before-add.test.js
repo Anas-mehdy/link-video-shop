@@ -17,20 +17,20 @@ test('malformed cart never passes; cart URLs preserve store prefix',()=>{
 async function harness(ids=[],path='/frame/p318533359'){
  const {document:d,window:dom}=parseHTML('<html><head></head><body><button id="native">أضف</button></body></html>');
  const s=d.createElement('script');s.src='https://link-video-shop.vercel.app/preorder-before-add.js';s.dataset.beforeAdd='1';Object.defineProperty(d,'currentScript',{value:s});
- let rows=ids.map(row),callback,reads=0,notice='',mutations=0;const events={},timers=new Map();let serial=0;
+ let rows=ids.map(row),reads=0,notice='',mutations=0;const events={},timers=new Map();let serial=0;
  const w={document:d,location:{pathname:path,href:'https://salla.sa/linkstore122'+path},addEventListener:dom.addEventListener.bind(dom),setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),fetch:async()=>({ok:true,json:async()=>({ok:true,products:[{id:P,status:'open',ship_from:'2099-11-04',ship_by:'2099-11-06'}]})})};
- w.salla={onReady:fn=>fn(),hooks:{registerHook:(name,event,fn)=>{assert.equal(name,'salla-add-product-button');assert.equal(event,'validate');callback=fn;return()=>{};}},notify:{success:x=>notice=x},cart:{details:async()=>{reads++;return response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
+ w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{details:async()=>{reads++;return response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
  const settle=async()=>{for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r));};
  api.start(w);await settle();
- const validate=(id,isValid=true)=>{const ctx={productId:id,isValid,component:d.querySelector('#native')};callback(ctx);return ctx;};
+ const validate=(id,isValid=true)=>{let button=d.querySelector('salla-add-product-button');if(!button){button=d.createElement('salla-add-product-button');d.body.appendChild(button);}button.setAttribute('product-id',id);const e=new dom.Event('click',{bubbles:true,cancelable:true});if(!isValid)e.preventDefault();button.dispatchEvent(e);return {isValid:!e.defaultPrevented};};
  const click=async selector=>{d.querySelector(selector).dispatchEvent(new dom.Event('click',{bubbles:true}));await settle();};
  const approve=async()=>{const box=d.querySelector('[data-po-together]');box.checked=true;box.dispatchEvent(new dom.Event('change',{bubbles:true}));await click('[data-po-approve]');};
- return {w,d,validate,approve,click,settle,events,setRows:ids=>rows=ids.map(row),reads:()=>reads,notice:()=>notice,mutations:()=>mutations,hook:()=>callback};
+ return {w,d,validate,approve,click,settle,events,setRows:ids=>rows=ids.map(row),reads:()=>reads,notice:()=>notice,mutations:()=>mutations,hook:()=>w.LinkPreorderBeforeAddStatus?.ready};
 }
 test('native product-only carts never show shipping choices',async()=>{
  for(const [ids,id,path] of [[[],P,'/p318533359'],[[P],P,'/p318533359'],[[R],R,'/p999']]){const h=await harness(ids,path);assert.equal(h.validate(id).isValid,true);assert.equal(h.d.querySelector('#po-before-add'),null);assert.equal(h.mutations(),0);}
 });
-test('both addition orders block synchronously; approval needs a new native press and never mutates cart',async()=>{
+test('both native button orders block synchronously without relying on component hooks; approval needs a new native press and never mutates cart',async()=>{
  for(const [ids,id,path] of [[[R],P,'/p318533359'],[[P],R,'/p999']]){const h=await harness(ids,path);assert.equal(h.validate(id).isValid,false);assert.ok(h.d.querySelector('[data-po-together]'));const link=h.d.querySelector('.po-link');assert.equal(link.getAttribute('href'),'https://salla.sa/linkstore122/cart');assert.equal(link.getAttribute('target'),'_blank');await h.approve();assert.match(h.notice(),/زر الإضافة الأصلي/);assert.equal(h.mutations(),0);assert.equal(h.validate(id).isValid,true);assert.equal(h.validate(id).isValid,false);}
 });
 test('cancel and changed cart discard consent; native validation failures stay failed',async()=>{

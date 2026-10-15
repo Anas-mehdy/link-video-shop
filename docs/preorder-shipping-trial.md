@@ -4,7 +4,7 @@ The withdrawn cart-splitting experiment below is historical and remains disabled
 
 ## Current behavior
 
-Uses Salla's official `salla-add-product-button` `validate` hook synchronously. Reads cart through `salla.cart.details()`. Product `318533359` is the only configured preorder; every other catalog product is classified as ready for this pilot. Update this classification before adding any other preorder SKU.
+Captures native `salla-add-product-button` clicks before native handlers. Actual Twilight 2.14.600 only calls its documented validate hook when product options exist, and omits ctx.productId; the initial hook-only implementation did not cover simple products and was replaced. No hook-only enforcement is claimed. Reads cart through `salla.cart.details()`. Product `318533359` is the only configured preorder; every other catalog product is classified as ready for this pilot. Update this classification before adding any other preorder SKU.
 
 - Empty cart, ready + ready, preorder + preorder: no shipping choice.
 - Ready cart + adding preorder OR preorder cart + adding ready: block that addition and show an unselected choice dialog.
@@ -16,9 +16,9 @@ Uses Salla's official `salla-add-product-button` `validate` hook synchronously. 
 
 ## Limits and launch checks
 
-This is a test-theme frontend guard, not a backend checkout rule. Direct SDK additions, quick buy, other storefront channels, JS disabled, and stale changes from another session may bypass the component hook. Consent is not persisted server-side; backend and Supabase are unchanged. Before launch verify the actual Malak component invokes this hook, both addition orders, quantities, cancellation, existing mixed carts, two regional shipping addresses and both native checkouts. Confirm the native preorder campaign holds the complete combined order and operations do not dispatch ready stock early. No real payment or dispatch has been tested automatically.
+This is a test-theme frontend guard, not a backend checkout rule. Direct SDK additions, quick buy, other storefront channels, JS disabled, and stale changes from another session may bypass native-button click capture. Consent is not persisted server-side; backend and Supabase are unchanged. Before launch verify actual Malak native-button clicks are captured, both addition orders, quantities, cancellation, existing mixed carts, two regional shipping addresses and both native checkouts. Confirm the native preorder campaign holds the complete combined order and operations do not dispatch ready stock early. No real payment or dispatch has been tested automatically.
 
-If `window.LinkPreorderBeforeAddStatus.ready` is false, the hook is unavailable and the guard must not be represented as active. The retired cart experiment stays disabled independently.
+If `window.LinkPreorderBeforeAddStatus.ready` is false, the SDK has not initialized and the guard must not be represented as active. The retired cart experiment stays disabled independently.
 
 Official hook documentation: https://docs.salla.dev/twilight-engine/component-hooks
 

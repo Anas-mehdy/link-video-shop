@@ -1,4 +1,4 @@
-/* Opt-in product/add-button choice via Salla's official validate hook.
+/* Opt-in choice before native Salla product button clicks.
    Cart is read-only: no add/delete, checkout interception, storage or click replay. */
 (function(scope,factory){
  'use strict';const api=factory();
@@ -132,20 +132,32 @@
   }
   function validation(ctx){
    if(ctx.isValid===false||stopped)return;
-   const id=String(ctx.productId??'');if(!/^\d+$/.test(id))return;
+   const id=String(ctx.productId??ctx.component?.productId??ctx.component?.getAttribute?.('product-id')??'');if(!/^\d+$/.test(id))return;
    const result=model.validate(id);
    if(result.allowed&&(id!==PRODUCT||scheduleValid()))return;
-   ctx.isValid=false; // Synchronous official validation hook; do not rely on async hooks.
+   ctx.isValid=false; // Block this native gesture; approval never replays it.
    context={id,component:ctx.component};ack=false;
    show(id===PRODUCT&&!scheduleValid()?'نتحقق من موعد الحجز قبل الإضافة.':'');
    if(result.reason==='loading'||id===PRODUCT&&!scheduleValid())read().then(()=>{if(context)show();}).catch(()=>show('تعذر التحقق من السلة أو موعد الحجز. حاول مجدداً.'));
   }
   function install(){
    if(ready||stopped)return;
-   const hooks=w.Salla?.hooks??w.salla?.hooks;
-   if(typeof hooks?.registerHook!=='function'||typeof w.salla?.cart?.details!=='function')return;
+   if(typeof w.salla?.cart?.details!=='function')return;
    ready=true;status.ready=true;status.reason='reading_cart';
-   const unsubscribe=hooks.registerHook('salla-add-product-button','validate',validation,{priority:-100});
+   // Actual Twilight 2.14.600 calls its validate hook only with a product-options
+   // component, and omits productId. Capture the native button gesture instead.
+   // Native validation and cart addition still execute normally after approval.
+   function capture(e){
+    if(e.defaultPrevented||stopped)return;
+    const nodes=e.composedPath?.()||[e.target];
+    const button=nodes.find(n=>n?.matches?.('salla-add-product-button'))||e.target?.closest?.('salla-add-product-button');
+    if(!button)return;
+    const id=button.productId??button.getAttribute('product-id');
+    const ctx={productId:id,component:button,isValid:true};validation(ctx);
+    if(ctx.isValid===false){e.preventDefault();e.stopImmediatePropagation();}
+   }
+   d.addEventListener('click',capture,true);
+   const unsubscribe=()=>d.removeEventListener('click',capture,true);
    read().catch(()=>{});
    w.__linkBeforeAddUnsubscribe=unsubscribe;
    if(!watching){watching=true;
@@ -159,7 +171,7 @@
   }
   function boot(){
    if(stopped||ready)return;install();if(ready)return;
-   if(++bootTries<80)bootTimer=w.setTimeout(boot,150);else status.reason='hooks_unavailable';
+   if(++bootTries<80)bootTimer=w.setTimeout(boot,150);else status.reason='sdk_unavailable';
   }
   if(d.body){if(w.salla?.onReady)try{const r=w.salla.onReady(install);r?.then?.(install,()=>{});}catch{}boot();}
   else d.addEventListener('DOMContentLoaded',boot,{once:true});
