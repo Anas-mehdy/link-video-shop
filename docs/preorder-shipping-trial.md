@@ -50,3 +50,7 @@ Before saving any native "order option", confirm that no required unconfigured s
 * https://help.salla.sa/article/إعداد-خيارات-الطلب-في-السلة/pxpzpi5ujxdglq2ex62sk2qa — native order-option availability and channel limits.
 
 Automated checks: core mutation/recovery tests plus DOM interaction tests, including a local simulation execution check. These do not replace native Salla browser/payment testing.
+
+## Native startup follow-up
+
+The first native screenshot showed no trial card. Exact cause is not established from a screenshot alone. Startup now supports store-prefixed `/cart` paths, callback/Promise SDK readiness, late SDK availability, and a bounded fallback for an already-fired readiness callback. A loading card appears immediately on recognized cart routes. Cart reads time out without retry; a visible `PO-SDK` or `PO-MAP` code distinguishes missing SDK from a native preorder link whose API product ID could not be matched. No deletion is inferred from product names or diagnostic DOM links.

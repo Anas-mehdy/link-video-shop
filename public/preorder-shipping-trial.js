@@ -142,7 +142,8 @@
     if (script?.dataset.shippingTrial !== '1' || w.__linkShippingTrial) return;
     w.__linkShippingTrial = true;
     const origin = new URL(script.src).origin;
-    const demo = script.dataset.demo === '1', isCart = demo || /^\/(?:ar\/|en\/)?cart\/?$/.test(w.location.pathname);
+    // Theme previews can prefix the cart route with the store/language path.
+    const demo = script.dataset.demo === '1', isCart = demo || /(?:^|\/)cart\/?$/.test(w.location.pathname);
     if (!isCart) {
       if (/\/p(?:318533359|981596666)(?:\/|$)/.test(w.location.pathname) && !w.__linkPreorderWidget) {
         const productScript = d.createElement('script'); productScript.src = origin + '/preorder-widget.js'; productScript.async = true; d.head.appendChild(productScript);
@@ -169,7 +170,9 @@
       preorder_already_present:'الحجز موجود بالفعل في السلة. راجع كميته؛ لن نضيفه مرة ثانية.', confirm_first_order:'أكد إتمام طلب المنتجات المتوفرة أولاً.',
       busy:'توجد عملية أخرى جارية. انتظر اكتمالها.', lock_unavailable:'هذا المتصفح لا يدعم الفصل الآمن بين الصفحات. استخدم متصفحاً حديثاً أو تواصل معنا.',
       checkout_missing:'تم تجهيز السلة. استخدم زر إتمام الطلب الخاص بسلة أدناه.', schedule_unavailable:'تعذر التحقق من موعد الحجز. حدّث الصفحة قبل المتابعة.',
-      not_mixed:'تغيّرت المنتجات؛ راجع السلة قبل المتابعة.', nothing_saved:'لا يوجد حجز محفوظ للاستعادة.'
+      not_mixed:'تغيّرت المنتجات؛ راجع السلة قبل المتابعة.', nothing_saved:'لا يوجد حجز محفوظ للاستعادة.',
+      sdk_unavailable:'لم تكتمل تهيئة السلة. حدّث الصفحة ثم اضغط التحقق من السلة. رمز الفحص: PO-SDK.',
+      product_mismatch:'ظهر الحجز في الصفحة لكن لم تتطابق بياناته مع السلة. لم نغيّر أي منتج. رمز الفحص: PO-MAP.'
     };
     const style = d.createElement('style'); style.textContent = `
       #link-po-shipping{direction:rtl;text-align:right;font-family:inherit;background:#fbf8fd;border:1px solid #dccbe7;border-radius:18px;padding:20px;margin:18px 0;color:#30223b;line-height:1.8;scroll-margin-top:90px}
@@ -182,6 +185,7 @@
       @media(max-width:480px){#link-po-shipping{padding:15px}#link-po-shipping h2{font-size:19px}#link-po-shipping button{width:100%}#link-po-shipping button.secondary{margin-inline-start:0}}
     `; d.head.appendChild(style);
     let root, state, choice = '', ack = false, busy = false, error = '', revision = '', bypass = null, schedule = null, feedTime = 0, timer, disposed = false;
+    let loading = true, initialized = false, bootTimer, bootTries = 0;
     let frozen = [];
     function freezeCart() {
       if (frozen.length || !root) return;
@@ -220,7 +224,7 @@
       root.addEventListener('click', async e => {
         const button = e.target.closest('[data-action]'); if (!button || busy) return;
         const action = button.dataset.action;
-        if (action === 'refresh') { error = ''; await refresh(); return; }
+        if (action === 'refresh') { error = ''; if(!ctl)waitForSDK();else await refresh(); return; }
         await perform(async () => {
           if (action === 'split') { if (choice !== 'separate') throw fail('cart_changed'); await checkSchedule(); state = await ctl.split(revision); choice = ''; ack = false; }
           if (action === 'restore') state = await ctl.restore({confirmedFirstOrder:ack});
@@ -234,11 +238,11 @@
       return p ? `${day(p.ship_from)} إلى ${day(p.ship_by)}` : '';
     };
     function render() {
-      if (!state && !error) return;
-      if (state && !state.cart.preorder.length && !state.saved && !error) { root?.remove(); return; }
+      if (!state && !error && !loading) return;
+      if (state && !state.cart.preorder.length && !state.saved && !error && !loading) { root?.remove(); return; }
       mount();
       const cart = state?.cart, saved = state?.saved;
-      let body = '';
+      let body = loading ? '<span class="po-tag">خيارات شحن الحجز</span><p role="status">جارٍ التحقق من محتويات السلة…</p>' : '';
       if (saved) {
         body = `<span class="po-tag">حجزك محفوظ على هذا المتصفح</span><h2>إطار البرغندي بانتظارك 💜</h2><p>حفظنا ${saved.quantity} قطعة من الحجز. الحفظ لا يحجز المخزون؛ يتأكد التوفر والسعر عند إتمام الشراء.</p>`;
         if (saved.stage !== 'ready') body += '<p>نحتاج مراجعة السلة قبل أي إضافة جديدة حتى لا تتكرر الكمية.</p><button class="secondary" data-action="refresh">تحقق من السلة</button><p><a href="https://linkstore-sa.com/p318533359">راجع منتج الحجز أو تواصل معنا للمساعدة</a></p>';
@@ -253,7 +257,7 @@
       } else if (cart?.preorder.length) {
         body = `<span class="po-tag">طلب حجز مسبق</span><h2>قطعتك الجاية بالطريق 💜</h2><p>هذه السلة تحتوي منتجات الحجز فقط.${schedule?` الشحن المتوقع: ${esc(dateText(schedule))}.`:''} تُضاف مدة التوصيل حسب مدينتك.</p><label class="po-ack"><input type="checkbox" data-ack ${ack?'checked':''}><span>اطّلعت على الموعد المتوقع وأوافق أن المنتج غير جاهز للشحن الآن.</span></label>`;
       }
-      root.innerHTML = `${demo?'<p class="po-tag">محاكاة فقط — لا شراء ولا سلة حقيقية</p>':''}${body}<p class="po-error" role="alert">${esc(error)}</p><p class="po-busy" role="status">${busy?'جارٍ التحقق من السلة…':''}</p>`;
+      root.innerHTML = `${demo?'<p class="po-tag">محاكاة فقط — لا شراء ولا سلة حقيقية</p>':''}${body}<p class="po-error" role="alert">${esc(error)}</p>${error?'<button class="secondary" data-action="refresh">تحقق من السلة</button>':''}<p class="po-busy" role="status">${busy?'جارٍ التحقق من السلة…':''}</p>`;
       root.querySelectorAll('button,input').forEach(el=>el.disabled=busy);
     }
     async function checkSchedule() {
@@ -271,12 +275,16 @@
     }
     async function refresh() {
       if (busy || disposed) return;
+      error = '';
       try {
         state = await ctl.recover();
+        const nativePreorder = !demo && d.querySelector('a[href*="/p318533359"]');
+        if (nativePreorder && !state.cart.preorder.length && !state.saved) throw fail('product_mismatch');
         const next = fingerprint(state.cart.items);
         if (next !== revision) { revision = next; choice = ''; ack = false; }
         if (state.cart.preorder.length) await checkSchedule();
       } catch (e) { error = messages[e.code] || messages.cart_unavailable; }
+      finally { loading = false; }
       render();
     }
     async function perform(fn) {
@@ -329,7 +337,11 @@
     messages.choose_shipping = 'اختر طريقة استلام طلبك أولاً. إذا اخترت الشحن المنفصل، استخدم زر حفظ الحجز وتجهيز السلة.';
     messages.ack_required = 'فضلاً وافق على موعد شحن الحجز قبل المتابعة.';
     async function init() {
-      ctl = controller({cart:{read:()=>w.salla.cart.details(), remove:id=>w.salla.cart.deleteItem(id), add:payload=>w.salla.cart.addItem(payload)},storage,lock,digest});
+      const readCart = () => new Promise((resolve,reject) => {
+        const timeout = w.setTimeout(()=>reject(fail('cart_unavailable')),12000);
+        Promise.resolve().then(()=>w.salla.cart.details()).then(resolve,reject).finally(()=>w.clearTimeout(timeout));
+      });
+      ctl = controller({cart:{read:readCart, remove:id=>w.salla.cart.deleteItem(id), add:payload=>w.salla.cart.addItem(payload)},storage,lock,digest});
       d.addEventListener('click',guard,true); d.addEventListener('submit',guard,true);
       await refresh();
       const scheduleRefresh = () => { if (busy) return; w.clearTimeout(timer); timer = w.setTimeout(refresh,400); };
@@ -344,8 +356,28 @@
       w.addEventListener('pagehide',()=>{disposed=true;observer.disconnect();w.clearTimeout(timer);});
       w.addEventListener('pageshow',e=>{if(e.persisted){disposed=false;observer.observe(d.body,{childList:true,subtree:true});refresh();}});
     }
-    if (w.salla?.onReady) w.salla.onReady(init);
-    else if (w.salla?.cart) init();
+    function begin() {
+      if (!d.body || typeof w.salla?.cart?.details !== 'function') return;
+      w.clearTimeout(bootTimer);
+      if (initialized) { if(error && !busy) {error='';refresh();} return; }
+      initialized = true; error = ''; loading = true; render();
+      init().catch(()=>{loading=false;error=messages.sdk_unavailable;render();});
+    }
+    function waitForSDK() {
+      if (initialized) return;
+      w.clearTimeout(bootTimer);
+      if (!d.body || typeof w.salla?.cart?.details !== 'function') {
+        if (++bootTries <= 100) {bootTimer=w.setTimeout(waitForSDK,100);return;}
+        loading=false;error=messages.sdk_unavailable;render();return;
+      }
+      // SDK versions expose callback and/or Promise readiness. Async theme loaders
+      // can arrive after that event; the bounded fallback avoids a silent no-op.
+      if (typeof w.salla.onReady === 'function') {
+        try { const ready=w.salla.onReady(begin);if(ready?.then)ready.then(begin,()=>{}); } catch { /* Fallback below. */ }
+        if (!initialized) bootTimer=w.setTimeout(begin,1200);
+      } else begin();
+    }
+    if(d.body){render();waitForSDK();}else d.addEventListener('DOMContentLoaded',()=>{render();waitForSDK();},{once:true});
   }
   return {PRODUCT, KEY, snapshot, fingerprint, controller, start};
 });
