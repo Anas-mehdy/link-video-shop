@@ -140,6 +140,17 @@
     const d = w.document, script = d.currentScript;
     // Explicit opt-in; loading this asset alone never activates it in the production theme.
     if (script?.dataset.shippingTrial !== '1' || w.__linkShippingTrial) return;
+    // Native cart trial withdrawn after merchant feedback. Keep the isolated demo,
+    // but no native cart reads, mutations, checkout guards, saved-cart banner or redirects.
+    if (script.dataset.demo !== '1') {
+      w.LinkPreorderShippingTrialPaused = true;
+      if (/\/p(?:318533359|981596666)(?:\/|$)/.test(w.location.pathname) && !w.__linkPreorderWidget) {
+        const productScript = d.createElement('script');
+        productScript.src = new URL(script.src).origin + '/preorder-widget.js';
+        productScript.async = true; d.head.appendChild(productScript);
+      }
+      return;
+    }
     w.__linkShippingTrial = true;
     const origin = new URL(script.src).origin;
     // Theme previews can prefix the cart route with the store/language path.

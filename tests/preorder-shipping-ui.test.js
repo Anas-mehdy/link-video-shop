@@ -89,9 +89,11 @@ test('native cart redraws remount cached UI without a cart-read request loop',as
   h.d.querySelector('#link-po-shipping').remove();h.observers[0]([{target:h.d.querySelector('main')}]);await h.flush();
   assert.ok(h.d.querySelector('#link-po-shipping'));assert.equal(h.reads(),reads);
 });
-test('native preview store-prefixed cart route initializes, including Promise-only readiness',async()=>{
+test('withdrawn native trial performs no cart IO or checkout interception on preview routes',async()=>{
   const h=await harness({demo:false,path:'/Zpqzp/ar/cart',readiness:'promise'});
-  assert.match(h.d.querySelector('#link-po-shipping').textContent,/كيف تحب/);assert.equal(h.reads(),1);
+  assert.equal(h.d.querySelector('#link-po-shipping'),null);assert.equal(h.reads(),0);assert.equal(h.feed(),0);
+  assert.equal(h.w.LinkPreorderShippingTrialPaused,true);assert.equal(h.d.querySelector('.po-saved-link'),null);
+  await h.click(h.d.querySelector('[data-cart-submit]'));assert.equal(h.native(),1);assert.equal(h.removes(),0);assert.equal(h.adds(),0);
 });
 test('a missed SDK ready callback uses a bounded fallback rather than silently doing nothing',async()=>{
   const h=await harness({readiness:'missed'});assert.match(h.d.querySelector('#link-po-shipping').textContent,/جارٍ/);assert.equal(h.reads(),0);
@@ -102,9 +104,9 @@ test('late SDK displays loading, initializes once, and never polls the cart API'
   await h.flush();assert.equal(h.reads(),0);h.mountSDK();await h.flush();assert.equal(h.reads(),1);assert.match(h.d.querySelector('#link-po-shipping').textContent,/كيف تحب/);
   await h.flush();assert.equal(h.reads(),1);
 });
-test('native preorder link with unmatched API product IDs produces a visible read-only diagnostic',async()=>{
+test('withdrawn trial remains disabled even when native preorder DOM changes',async()=>{
   const h=await harness({rows:[items()[0]],demo:false});const a=h.d.createElement('a');a.href='/p318533359';h.d.querySelector('main').appendChild(a);
-  h.events.update();await h.flush();assert.match(h.d.querySelector('.po-error').textContent,/PO-MAP/);assert.equal(h.removes(),0);assert.equal(h.adds(),0);
+  await h.flush();assert.equal(h.d.querySelector('#link-po-shipping'),null);assert.equal(h.reads(),0);assert.equal(h.removes(),0);assert.equal(h.adds(),0);
 });
 test('Malak-like cart grid keeps its two columns and header order; card is a child of the native summary',async()=>{
   const h=await harness({body:'<header id="store-header">لنك</header><div id="breadcrumb">سلة المشتريات</div><div id="cart-grid"><aside id="left-column"><div id="coupon">كوبون</div><div class="cart-summary"><h3>ملخص الطلب</h3><button data-cart-submit>إتمام الطلب</button></div></aside><div id="cart-products">المنتجات</div></div>'});

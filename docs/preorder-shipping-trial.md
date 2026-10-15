@@ -1,5 +1,9 @@
 # Preorder shipping choice — isolated trial, 15 October 2026
 
+**WITHDRAWN FROM NATIVE STOREFRONT at merchant request.** `start()` now returns before native cart initialization. The installed trial loader no longer reads or changes native cart contents, guards checkout, or inserts the recovery banner. The isolated demo still runs local fixtures. Existing browser recovery journals are retained; nothing is automatically re-added or deleted. Product-page marketing disclosure continues through the legacy product widget.
+
+The native recovery link incorrectly used `/cart` on the path-based `salla.sa/linkstore122` preview, landing at `salla.sa/cart` and its unrelated closed-store page. This did not demonstrate that Link Store itself was closed. Rather than extend the rejected custom cart flow, native behavior has been disabled. Do not install the trial loader on the live theme.
+
 Scope: dedicated preorder product `318533359` only. The user chose to support both one combined delayed shipment and separate ready/preorder purchases. No fixed shipping surcharge: native Salla checkout calculates each order's regional shipping, discounts, carrier charges and taxes.
 
 ## Delivered flow
