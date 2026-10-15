@@ -20,6 +20,19 @@
   return catalog;
  }
  const group=p=>p?'preorder:'+p.expected_arrival+':'+p.ship_from+':'+p.ship_by:'ready';
+ // Dedicated booking products stay recognizable while their CRM batches are pending.
+ // The manifest never grants selling permission; only an open dated CRM batch does.
+ function pendingCatalog(catalog,config){
+  if(config?.product_id!=='981596666'||!/^\d+$/.test(config.schedule_source_id||'')||!Array.isArray(config.colors)||config.colors.length>20)throw error('catalog_unavailable');
+  const result={...catalog},seen=new Set(),source=catalog[config.schedule_source_id];
+  for(const c of config.colors){
+   if(c.booking_id===null)continue;
+   const id=String(c.booking_id??'');
+   if(!/^\d+$/.test(id)||seen.has(id)||typeof c.name!=='string'||!c.name.trim())throw error('catalog_unavailable');seen.add(id);
+   if(!result[id])result[id]={id,name:'إطار Link المعدني iPhone 18 Pro Max',color:c.name,status:'pending',expected_arrival:source?.expected_arrival||null,ship_from:source?.ship_from||null,ship_by:source?.ship_by||null,revision:0};
+  }
+  return result;
+ }
  function inspect(response,catalog={}){
   if(response?.success===false||Number(response?.status)>=400)throw error('cart_unavailable');
   const data=response?.data??response,rows=[data?.items,data?.cart?.items,data?.data?.items].find(Array.isArray);
@@ -67,7 +80,7 @@
   if(/(?:^|\/)(?:cart|checkout)(?:\/|$)/.test(w.location.pathname))return;
   w.__linkBeforeAddStarted=true;
   const origin=new URL(script.src).origin,demo=script.dataset.demo==='1';
-  const model=gate();let dialog,context=null,ack=false,ready=false,reading=null,version=0,bootTimer,stopped=false,bootTries=0,watching=false;
+  const model=gate();let dialog,context=null,ack=false,ready=false,reading=null,version=0,bootTimer,stopped=false,bootTries=0,watching=false,noticePermission=null,approving=false;
   const status={ready:false,reason:'waiting_for_sdk'};w.LinkPreorderBeforeAddStatus=status;
   const quickSelector='salla-quick-buy,salla-mini-checkout-widget,.s-add-product-button-buy-now,.s-fast-checkout-button';
   function syncShortcuts(){
@@ -76,7 +89,8 @@
   }
   const quickStyle=d.createElement('style');quickStyle.id='po-shortcuts-style';quickStyle.textContent=quickSelector.split(',').map(x=>'html[data-link-po-cart-flow] '+x).join(',')+'{display:none!important}';d.head.appendChild(quickStyle);syncShortcuts();
   const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const fmt=x=>new Intl.DateTimeFormat('ar-SA-u-nu-latn',{day:'numeric',month:'long',year:'numeric',calendar:'gregory',timeZone:'Asia/Riyadh'}).format(new Date(x+'T12:00:00Z'));
+  const fmt=x=>realDate(x)?new Intl.DateTimeFormat('ar-SA-u-nu-latn',{day:'numeric',month:'long',year:'numeric',calendar:'gregory',timeZone:'Asia/Riyadh'}).format(new Date(x+'T12:00:00Z')):'قيد التأكيد';
+  const available=p=>p.status==='open'&&[p.expected_arrival,p.ship_from,p.ship_by].every(realDate)&&p.ship_by>=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Riyadh'}).format(new Date());
   const bounded=fn=>new Promise((resolve,reject)=>{const timer=w.setTimeout(()=>reject(error('read_timeout')),10000);Promise.resolve().then(fn).then(resolve,reject).finally(()=>w.clearTimeout(timer));});
   // Date card is loaded only for catalog-recognized preorder products.
   function disclose(){
@@ -97,44 +111,58 @@
   function show(message=''){
    const known=model.current();
    // Shipping choices are meaningful only when this addition mixes stock types.
-   if(!context||!known||!decisionFor(known,context).mixes){model.cancel();close();return;}
+   if(!context||!known){model.cancel();close();return;}
+   const decision=decisionFor(known,context),unavailable=decision.products.some(p=>!available(p)),pending=decision.products.some(p=>p.status==='pending');
+   if(!decision.mixes&&!context.external&&!unavailable){model.cancel();close();return;}
    if(!d.body)return;styles();
    if(!dialog){dialog=d.createElement('dialog');dialog.id='po-before-add';dialog.setAttribute('aria-labelledby','po-before-title');d.body.appendChild(dialog);
     dialog.addEventListener('cancel',()=>{model.cancel();close();});
     dialog.addEventListener('change',e=>{if(e.target.matches('[data-po-together]')){ack=e.target.checked;const b=dialog.querySelector('[data-po-approve]');if(b)b.disabled=!ack;}});
     dialog.addEventListener('click',async e=>{
-     if(e.target.closest('[data-po-close],a.po-link')){model.cancel();close();return;}
+     if(e.target.closest('[data-po-close],a.po-link')){model.cancel();noticePermission=null;close();return;}
      if(e.target.closest('[data-po-retry]')){try{await read();show();}catch{show('تعذر التحقق من السلة. حاول مجدداً قبل الإضافة.');}return;}
-     const approval=e.target.closest('[data-po-approve]');if(!approval||!ack||!context)return;
-     approval.disabled=true;const expected=model.current()?.key,candidate=context.id,component=context.component;
+     const approval=e.target.closest('[data-po-approve]');if(!approval||!ack||!context||approving)return;
+     approving=true;approval.disabled=true;const expected=model.current()?.key,request=context,candidate=context.id,component=context.component;
      try{
-      await read();if(!context||context.id!==candidate)return;
+      await read();if(context!==request)return;
       if(model.current()?.key!==expected){model.cancel();ack=false;show('تغيّرت السلة أو مواعيد الدفعات. راجع التفاصيل ووافق من جديد.');return;}
       if(!scheduleValid()){show('تعذر التحقق من موعد الحجز. حاول مجدداً قبل الإضافة.');return;}
       if(context.resolve){close(true);return;}
+      if(context.external){
+       const resume=context.resume;
+       if(typeof resume!=='function'||!component?.isConnected){close();return;}
+       noticePermission={id:candidate,key:model.current().key,component};model.grant(candidate);close();
+       // Resume the original, unprocessed native button once after explicit consent.
+       // Capture runs again, consumes both approvals, then leaves Salla validation in charge.
+       resume();return;
+      }
       model.grant(candidate);close();
       // Customer presses the original native add button. Never replay a click or submit.
       const target=component?.el??component;target?.focus?.({preventScroll:true});
       w.salla?.notify?.success?.('تم اعتماد الشحنة الواحدة. اضغط زر الإضافة الأصلي لإكمال الإضافة.');
-     }catch{show('تعذر التحقق من السلة. لم نضف أو نحذف أي منتج.');}
+     }catch{show('تعذر التحقق من السلة. لم نضف أو نحذف أي منتج.');}finally{approving=false;}
     });
    }
-   const cart=model.current(),decision=cart&&context?decisionFor(cart,context):null;
+   const cart=model.current();
    const url=demo?'#demo-cart':cartURL(w.location);
    let body;
-   {
+   if(unavailable){
+    body=`<p>${pending?'نعمل على تجهيز الحجز لهذا المنتج. الإضافة غير متاحة حالياً حتى تأكيد جاهزية الحجز.':'الحجز غير متاح حالياً. نراجع حالة الدفعة ومواعيدها قبل إتاحة الإضافة مجدداً.'}</p>${decision.products.filter(p=>!available(p)).map(p=>`<div class="po-date"><b>${esc(p.name)}${p.color?' · '+esc(p.color):''}</b><small>وصول الدفعة المتوقع: ${esc(fmt(p.expected_arrival))}</small><small>الشحن المتوقع: ${esc(fmt(p.ship_from))} إلى ${esc(fmt(p.ship_by))}</small><small>هذه مواعيد متوقعة للدفعة؛ الحجز غير متاح الآن.</small></div>`).join('')}<button data-po-retry>تحقق من إتاحة الحجز</button>`;
+   }else if(context.external&&!decision.mixes){
+    body=`<p>قطعتك من الدفعة القادمة 💜 هذا المنتج <b>حجز مسبق</b> وغير جاهز للشحن الآن.</p>${decision.products.filter(p=>(context.ids||[context.id]).includes(p.id)).map(p=>`<div class="po-date"><b>${esc(p.name)}${p.color?' · '+esc(p.color):''}</b><small>وصول الدفعة المتوقع: ${esc(fmt(p.expected_arrival))}</small><small>شحن طلبك المتوقع: ${esc(fmt(p.ship_from))} إلى ${esc(fmt(p.ship_by))}</small></div>`).join('')}<p>بمجرد وصول الدفعة وفحصها، نجهّز طلبك ونشحنه لك ضمن الموعد الموضّح. وتُضاف مدة التوصيل حسب مدينتك.</p><label><input type="checkbox" data-po-together ${ack?'checked':''}><span>اطّلعت على المواعيد المتوقعة، وأوافق على انتظار المنتج حتى وصوله وتجهيزه للشحن.</span></label><button class="po-primary" data-po-approve ${!ack?'disabled':''}>أوافق، أضف للحجز</button>`;
+   }else{
     const first='المنتجات الموجودة بالسلة',next='الاختيارات الجديدة';
     body=`<p>${decision.differentDates?'طلبك فيه حجوزات بمواعيد وصول مختلفة. باختيار شحنة واحدة، نجهّز طلبك كامل بعد وصول آخر قطعة وفحصها.':decision.bothIncoming?'اختياراتك تجمع منتجات جاهزة وحجزاً مسبقاً.':decision.addingPreorder?'عندك منتجات بموعد مختلف بالسلة، والمنتج اللي بتضيفه حجز مسبق.':'عندك حجز مسبق بالسلة، والمنتج اللي بتضيفه متوفر للشحن.'}</p>
      ${decision.products.map(p=>`<div class="po-date"><b>${esc(p.name)}${p.color?' · '+esc(p.color):''}</b><small>الوصول المتوقع: ${esc(fmt(p.expected_arrival))}</small><small>الشحن المتوقع: ${esc(fmt(p.ship_from))} إلى ${esc(fmt(p.ship_by))}</small></div>`).join('')}
      ${decision.combined?`<div class="po-date" data-po-combined>شحن الطلب كامل في شحنة واحدة متوقع: <b>${esc(fmt(decision.combined.ship_from))} إلى ${esc(fmt(decision.combined.ship_by))}</b><small>تُضاف مدة توصيل الناقل حسب مدينتك. الموعد مرتبط بجاهزية آخر دفعة.</small></div>`:''}
      <label><input type="checkbox" data-po-together ${ack?'checked':''}><span><b>أوفّر الشحن وأستلم الطلب كامل مع بعض</b><small>أوافق على انتظار جميع منتجات الطلب حتى وصول آخر دفعة وفحصها. شحنة واحدة، ورسومها تظهر حسب عنواني قبل الدفع.</small></span></label>
-     <button class="po-primary" data-po-approve ${!ack||!scheduleValid()?'disabled':''}>اعتمد الشحنة الواحدة</button><small>${context.resolve?'بعد الاعتماد نكمل إضافة اختياراتك.':'بعد الاعتماد، اضغط زر الإضافة الأصلي مرة ثانية. لن تُضاف منتجات تلقائياً.'}</small>
+     <button class="po-primary" data-po-approve ${!ack||!scheduleValid()?'disabled':''}>${context.external?'أوافق، أضف للحجز بشحنة واحدة':'اعتمد الشحنة الواحدة'}</button><small>${context.resolve||context.external?'بعد الاعتماد نكمل إضافة اختياراتك.':'بعد الاعتماد، اضغط زر الإضافة الأصلي مرة ثانية. لن تُضاف منتجات تلقائياً.'}</small>
      ${!scheduleValid()?'<button data-po-retry>أعد التحقق من الموعد</button>':''}<hr><p><b>أفضل أستلم كل دفعة بطلب مستقل</b></p>
      <p>${decision.bothIncoming?'للشحن على دفعات، ارجع لاختياراتك وأضف كل مجموعة بموعد واحد بطلب مستقل. لن تُضاف المجموعة الحالية.':decision.existingMixed?'سلتك تجمع مجموعات بمواعيد مختلفة بالفعل. عدّل محتوياتها من سلة الأصلية لإكمال كل مجموعة بطلب مستقل. لن نفصلها تلقائياً.':`أكمل شراء ${first} الموجودة بالسلة أولاً، ثم ارجع لهذه الصفحة لشراء ${next} بطلب مستقل. لكل طلب رسوم شحن تظهر حسب عنوانك قبل الدفع.`}</p>
      ${url&&!decision.bothIncoming?`<a class="po-link" href="${esc(url)}" ${demo?'':'target="_blank" rel="noopener"'}>${decision.existingMixed?'افتح سلة المتجر للمراجعة':`أكمل طلب ${first} أولاً`}</a>`:decision.bothIncoming?'':'<p>افتح سلة المتجر من أيقونة السلة لإكمال الطلب الأول.</p>'}
      <small>المنتج الجديد لم يُضف بعد. تبقى صفحة المنتج مفتوحة للعودة إليها.</small>`;
    }
-   dialog.innerHTML=`<span class="po-label">${demo?'محاكاة فقط · ':''}قبل إضافة المنتج</span><h2 id="po-before-title">كيف تحب تستلم طلبك؟</h2>${body}<p class="po-error" role="alert">${esc(message)}</p><button data-po-close>رجوع للمنتج</button>`;
+   dialog.innerHTML=`<span class="po-label">${demo?'محاكاة فقط · ':''}قبل إضافة المنتج</span><h2 id="po-before-title">${unavailable?pending?'الحجز قيد التجهيز':'الحجز غير متاح حالياً':context.external&&!decision.mixes?'موعد قطعتك قبل الحجز':'كيف تحب تستلم طلبك؟'}</h2>${body}<p class="po-error" role="alert">${esc(message)}</p><button data-po-close>رجوع</button>`;
    if(!dialog.open){if(typeof dialog.showModal==='function')dialog.showModal();else dialog.setAttribute('open','');}
   }
   // Explicit opt-in integration for our own bulk/video/accessory add flows.
@@ -146,26 +174,28 @@
    await read();
    if(context)return false;
    const ids=items.map(x=>String(x.id)),candidate={ids,id:ids[0]};
-   if(!decisionFor(model.current(),candidate).mixes)return true;
-   return new Promise(resolve=>{context={...candidate,resolve};ack=false;show();if(!scheduleValid())read().then(()=>{if(context)show();}).catch(()=>{if(context)show('تعذر التحقق من موعد الحجز. حاول مجدداً.');});});
+   const decision=decisionFor(model.current(),candidate),pageId=(w.location.pathname.match(/\/p(\d+)(?:\/|$)/)||[])[1];
+   const external=decision.products.some(p=>ids.includes(p.id)&&pageId!==p.id);
+   if(!decision.mixes&&!external&&decision.products.every(available))return true;
+   return new Promise(resolve=>{context={...candidate,external,resolve};ack=false;show();});
   };
   function scheduleValid(){
    const cart=model.current();if(!cart||!context)return false;
    const products=decisionFor(cart,context).products;
-   const today=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',timeZone:'Asia/Riyadh'}).format(new Date());
-   return products.length>0&&products.every(p=>p.status==='open'&&p.ship_by>=today);
+   return products.length>0&&products.every(available);
   }
   async function read(){
    if(reading)return reading;
    const expectedVersion=version;
    reading=(async()=>{
-    const [response,json]=await Promise.all([
+    const [response,json,config]=await Promise.all([
      bounded(()=>w.salla.cart.details()),
-     bounded(async()=>{const r=await w.fetch(origin+'/api/protection-feed?mode=preorders&catalog=1',{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('catalog_unavailable');return r.json();})
+     bounded(async()=>{const r=await w.fetch(origin+'/api/protection-feed?mode=preorders&catalog=1',{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('catalog_unavailable');return r.json();}),
+     bounded(async()=>{const r=await w.fetch(origin+'/preorder-frame-colors.json?v=20261015-8',{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('catalog_unavailable');return r.json();})
     ]);
     if(expectedVersion!==version||stopped)throw error('cart_changed');
     if(!json?.ok||json.catalog!==true||json.complete!==true)throw error('catalog_unavailable');
-    const cart=model.update(response,catalogOf(json.products));syncShortcuts();disclose();
+    const cart=model.update(response,pendingCatalog(catalogOf(json.products),config));syncShortcuts();disclose();
     status.reason='ready';return cart;
    })().catch(e=>{model.invalidate();syncShortcuts();status.reason=e.code||'cart_unavailable';throw e;}).finally(()=>{reading=null;});
    return reading;
@@ -173,6 +203,18 @@
   function validation(ctx){
    if(ctx.isValid===false||stopped)return;
    const id=String(ctx.productId??ctx.component?.productId??ctx.component?.getAttribute?.('product-id')??'');if(!/^\d+$/.test(id))return;
+   const cart=model.current(),p=cart?.catalog[id],pageId=(w.location.pathname.match(/\/p(\d+)(?:\/|$)/)||[])[1],external=!!p&&pageId!==id;
+   if(p&&!available(p)&&!external){
+    ctx.isValid=false;noticePermission=null;
+    let note=d.getElementById('po-booking-state');if(!note){note=d.createElement('p');note.id='po-booking-state';note.setAttribute('role','alert');ctx.component?.after(note);}
+    note.textContent=(p.status==='pending'?'الحجز قيد التجهيز':'الحجز غير متاح حالياً')+' — '+p.name+(p.color?' · '+p.color:'')+'. لا يمكن الإضافة حتى تأكيد جاهزية الحجز.';
+    return;
+   }
+   d.getElementById('po-booking-state')?.remove();
+   if(p&&!available(p)||external&&!(noticePermission?.id===id&&noticePermission.key===cart.key&&noticePermission.component===ctx.component)){
+    ctx.isValid=false;noticePermission=null;context={id,component:ctx.component,external,resume:ctx.resume};ack=false;show();return;
+   }
+   if(external)noticePermission=null;
    const result=model.validate(id);
    if(result.allowed)return; // Native preorder campaign validates availability; no shipping dialog for one type.
    ctx.isValid=false; // Block this native gesture; mixed-cart approval requires a fresh customer press.
@@ -201,14 +243,14 @@
     if(!button)return;
     if(pendingGesture){e.preventDefault();e.stopImmediatePropagation();return;}
     const id=button.productId??button.getAttribute('product-id');
-    const ctx={productId:id,component:button,isValid:true};
+    const target=nodes.find(n=>typeof n?.click==='function')||button,path=w.location.pathname;
+    const ctx={productId:id,component:button,isValid:true,resume:()=>{if(!stopped&&button.isConnected&&w.location.pathname===path)target.click();}};
     if(!/^\d+$/.test(String(id??'')))return;
     if(!model.current()){
      // Stop before native handlers; wait silently for the initial cart snapshot.
      // Resume exactly this unprocessed gesture once, never a submitted cart request.
      e.preventDefault();e.stopImmediatePropagation();
      if(pendingGesture)return;pendingGesture=true;
-     const target=nodes.find(n=>typeof n?.click==='function')||button,path=w.location.pathname;
      button.setAttribute('aria-busy','true');
      read().then(()=>{
       if(stopped||!button.isConnected||w.location.pathname!==path)return;
@@ -230,7 +272,7 @@
    read().catch(()=>{});
    w.__linkBeforeAddUnsubscribe=unsubscribe;
    if(!watching){watching=true;
-    const changed=()=>{if(stopped)return;version++;model.invalidate();syncShortcuts();ack=false;read().then(()=>{if(context)show();}).catch(()=>{});};
+    const changed=()=>{if(stopped)return;version++;noticePermission=null;model.invalidate();syncShortcuts();ack=false;read().then(()=>{if(context)show();}).catch(()=>{});};
     const events=w.salla.cart.event;
     for(const name of ['onItemAdded','onItemDeleted','onItemRemoved','onItemUpdated','onItemQuantityUpdated'])if(typeof events?.[name]==='function')events[name](changed);
     d.addEventListener('visibilitychange',()=>{if(d.visibilityState==='visible')changed();});
@@ -245,5 +287,5 @@
   if(d.body){if(w.salla?.onReady)try{const r=w.salla.onReady(install);r?.then?.(install,()=>{});}catch{}boot();}
   else d.addEventListener('DOMContentLoaded',boot,{once:true});
  }
- return {PRODUCT,catalogOf,inspect,decide,cartURL,gate,start};
+ return {PRODUCT,catalogOf,pendingCatalog,inspect,decide,cartURL,gate,start};
 });

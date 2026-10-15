@@ -21,7 +21,7 @@ async function harness(ids=[],path='/frame/p318533359',{delayCart=false,delayFee
  const {document:d,window:dom}=parseHTML('<html><head></head><body><button id="native">أضف</button></body></html>');
  const s=d.createElement('script');s.src='https://link-video-shop.vercel.app/preorder-before-add.js';s.dataset.beforeAdd='1';Object.defineProperty(d,'currentScript',{value:s});
  let rows=ids.map(row),reads=0,notice='',mutations=0,native=0,releaseCart,releaseFeed;const cartWait=new Promise(r=>releaseCart=r),feedWait=new Promise(r=>releaseFeed=r);const events={},timers=new Map();let serial=0;
- const w={document:d,location:{pathname:path,href:'https://salla.sa/linkstore122'+path},addEventListener:dom.addEventListener.bind(dom),setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),fetch:async()=>{if(delayFeed)await feedWait;if(failFeed)throw Error('offline');return {ok:true,json:async()=>({ok:true,catalog:true,complete:true,products})};}};
+ const w={document:d,location:{pathname:path,href:'https://salla.sa/linkstore122'+path},addEventListener:dom.addEventListener.bind(dom),setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),fetch:async url=>{if(url.includes('preorder-frame-colors.json'))return {ok:true,json:async()=>JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'))};if(delayFeed)await feedWait;if(failFeed)throw Error('offline');return {ok:true,json:async()=>({ok:true,catalog:true,complete:true,products})};}};
  w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{details:async()=>{reads++;if(delayCart)await cartWait;if(failCart)throw Error('offline');return response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
  const settle=async()=>{for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r));};
  api.start(w);await settle();
@@ -128,4 +128,50 @@ test('a batch date/revision change during approval resets consent; a new approva
 });
 test('bulk selection of two preorder windows is confirmed once, without cart mutations',async()=>{
  const h=await harness([],'/p777',{products:[fixture,later]});const pending=h.w.LinkPreorderCheckItems([{id:P},{id:P2}]);await h.settle();assert.match(h.d.querySelector('#po-before-add').textContent,/مواعيد وصول مختلفة/);await h.approve();assert.equal(await pending,true);assert.equal(h.mutations(),0);
+});
+
+test('external booking card shows its dates even with empty cart, confirms once and resumes native addition once',async()=>{
+ const h=await harness([],'/category');assert.equal(h.validate(P).isValid,false);
+ assert.match(h.d.querySelector('#po-before-title').textContent,/موعد قطعتك/);
+ assert.match(h.d.querySelector('#po-before-add').textContent,/إطار برغندي/);
+ assert.match(h.d.querySelector('#po-before-add').textContent,/3 نوفمبر 2099/);
+ assert.equal(h.d.querySelector('[data-po-combined]'),null);assert.equal(h.native(),0);
+ await h.approve();await h.settle();assert.equal(h.native(),1);assert.equal(h.mutations(),0);
+ assert.equal(h.d.querySelector('#po-before-add').hasAttribute('open'),false);
+ assert.equal(h.validate(P).isValid,false);await h.settle();assert.equal(h.native(),1);
+ await h.click('[data-po-close]');assert.equal(h.native(),1);
+});
+test('external notice merges mixed shipping choice, resumes one native add, and preserves normal product-page behavior',async()=>{
+ const h=await harness([R],'/category');h.validate(P);assert.match(h.d.querySelector('#po-before-title').textContent,/كيف تحب/);
+ assert.equal(h.d.querySelectorAll('dialog').length,1);await h.approve();assert.equal(h.native(),1);
+ const inside=await harness([],'/p318533359');assert.equal(inside.validate(P).isValid,true);assert.equal(inside.d.querySelector('dialog'),null);
+ const regular=await harness([],'/category');assert.equal(regular.validate(R).isValid,true);assert.equal(regular.d.querySelector('dialog'),null);
+});
+test('three mapped but unopened color products cannot be added from cards, product pages or our bulk callers',async()=>{
+ const config=JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'));
+ for(const color of config.colors.filter(c=>c.booking_id!==P)){
+  for(const path of ['/category','/p'+color.booking_id]){
+   const h=await harness([],path);assert.equal(h.validate(color.booking_id).isValid,false);
+   if(path==='/category'){assert.match(h.d.querySelector('#po-before-title').textContent,/قيد التجهيز/);assert.ok(h.d.querySelector('#po-before-add').textContent.includes(color.name));}
+   else{assert.equal(h.d.querySelector('dialog'),null);assert.match(h.d.querySelector('#po-booking-state').textContent,/قيد التجهيز/);assert.ok(h.d.querySelector('#po-booking-state').textContent.includes(color.name));}
+   assert.equal(h.d.querySelector('[data-po-approve]'),null);assert.equal(h.native(),0);
+  }
+ }
+ const h=await harness([],'/category');const pending=h.w.LinkPreorderCheckItems([{id:'1229565720'}]);await h.settle();assert.equal(h.d.querySelector('[data-po-approve]'),null);await h.click('[data-po-close]');assert.equal(await pending,false);
+ const reverse=await harness(['1229565720'],'/category');assert.equal(reverse.validate(R).isValid,false);assert.match(reverse.d.querySelector('#po-before-title').textContent,/قيد التجهيز/);
+});
+test('external notice waits for first catalog read and cannot reuse consent after a schedule change',async()=>{
+ const delayed=await harness([],'/category',{delayFeed:true});delayed.validate(P);assert.equal(delayed.d.querySelector('dialog'),null);delayed.releaseFeed();await delayed.settle();assert.ok(delayed.d.querySelector('[data-po-together]'));assert.equal(delayed.native(),0);
+ await delayed.click('[data-po-close]');assert.equal(delayed.native(),0);
+ const h=await harness([],'/category');h.validate(P);h.setProducts([{...fixture,ship_from:'2099-12-01',ship_by:'2099-12-03',revision:2}]);await h.approve();assert.equal(h.native(),0);assert.match(h.d.querySelector('.po-error').textContent,/تغيّرت/);await h.approve();assert.equal(h.native(),1);
+ for(const p of [{...fixture,status:'paused'},{...fixture,expected_arrival:'2020-01-01',ship_from:'2020-01-02',ship_by:'2020-01-03'}]){
+  const unavailable=await harness([],'/category',{products:[p]});assert.equal(unavailable.validate(P).isValid,false);assert.equal(unavailable.d.querySelector('[data-po-approve]'),null);
+ }
+});
+test('external bulk preorder notice resolves only after consent and pending entries never masquerade as ready',async()=>{
+ const h=await harness([],'/category');const waiting=h.w.LinkPreorderCheckItems([{id:P}]);await h.settle();assert.match(h.d.querySelector('#po-before-title').textContent,/موعد قطعتك/);await h.approve();assert.equal(await waiting,true);assert.equal(h.native(),0);assert.equal(h.mutations(),0);
+ const config=JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'));
+ const merged=api.pendingCatalog(api.catalogOf([fixture]),config);assert.equal(merged['1229565720'].status,'pending');assert.equal(merged[P].status,'open');
+ assert.equal(api.inspect(response([row('1229565720')]),merged).hasPreorder,true);
+ assert.throws(()=>api.pendingCatalog({},{}));assert.throws(()=>api.pendingCatalog({},{...config,colors:[config.colors[0],config.colors[0]]}));
 });
