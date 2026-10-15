@@ -175,7 +175,7 @@
       product_mismatch:'ظهر الحجز في الصفحة لكن لم تتطابق بياناته مع السلة. لم نغيّر أي منتج. رمز الفحص: PO-MAP.'
     };
     const style = d.createElement('style'); style.textContent = `
-      #link-po-shipping{direction:rtl;text-align:right;font-family:inherit;background:#fbf8fd;border:1px solid #dccbe7;border-radius:18px;padding:20px;margin:18px 0;color:#30223b;line-height:1.8;scroll-margin-top:90px}
+      #link-po-shipping{display:block;position:relative;float:none;clear:both;width:100%;min-width:0;max-width:100%;direction:rtl;text-align:right;font-family:inherit;background:#fbf8fd;border:1px solid #dccbe7;border-radius:18px;padding:18px;margin:0 0 18px;color:#30223b;line-height:1.8;scroll-margin-top:90px;box-sizing:border-box}
       #link-po-shipping *{box-sizing:border-box}#link-po-shipping h2{font-size:21px;color:#51007a;margin:6px 0}#link-po-shipping p{font-size:14px;margin:8px 0}
       #link-po-shipping .po-tag{font-size:12px;font-weight:700;color:#6b1f91}#link-po-shipping .po-choice{display:flex;gap:12px;border:1px solid #dbd1e1;border-radius:12px;padding:14px;background:white;margin:10px 0;cursor:pointer}
       #link-po-shipping .po-choice:has(input:checked){border-color:#6b1f91;box-shadow:0 0 0 1px #6b1f91}#link-po-shipping input{accent-color:#51007a;flex:none;width:19px;height:19px;margin-top:5px}
@@ -212,10 +212,24 @@
       return w.navigator.locks.request('link-po-split-trial', {mode:'exclusive', ifAvailable:true}, token => { if (!token) throw fail('busy'); return fn(); });
     };
     function mount() {
-      if (root?.isConnected) return;
-      root = d.createElement('section'); root.id = 'link-po-shipping'; root.setAttribute('aria-label','طريقة شحن الحجز المسبق');
-      const summary = d.querySelector('[data-cart-summary],.cart-summary,.cart-summary-wrapper,salla-cart-summary,[data-po-demo-cart]');
-      if (summary) summary.before(root); else (d.querySelector('main,.cart-page,.cart-content') || d.body).prepend(root);
+      if (root?.isConnected) return true;
+      const selectors='[data-cart-summary],#cart-summary,.cart-summary,.cart-summary-wrapper,salla-cart-summary,salla-cart-summary-card,[data-po-demo-cart]';
+      const control=Array.from(d.querySelectorAll(nativeSelector+',button,salla-button')).find(el=>!el.closest('header,nav,dialog,[role="dialog"]')&&checkoutControl([el]));
+      let host=control?.closest(selectors) || d.querySelector(selectors);
+      // Prefer the actual card containing the checkout button. Never create a
+      // sibling in the theme's grid, and never prepend content ahead of its header.
+      if(!host&&control){
+        for(let node=control.parentElement;node&&node!==d.body;node=node.parentElement){
+          if(Array.from(node.querySelectorAll('h2,h3,h4,h5,h6')).some(h=>h.textContent.trim()==='ملخص الطلب')){host=node;break;}
+        }
+        if(!host&&control.parentElement!==d.body)host=control.parentElement;
+      }
+      if(!host)host=d.querySelector('[data-cart-items],.cart-page,.cart-content,.s-cart-empty,.cart-empty,#cart-empty,main');
+      // The generic body fallback previously shifted the header in Malak.
+      // If the native cart has not rendered, its DOM observer remounts us later.
+      if(!host||host===d.body||host.closest('header,nav'))return false;
+      root = d.createElement('div'); root.id = 'link-po-shipping'; root.setAttribute('role','region');root.setAttribute('aria-label','طريقة شحن الحجز المسبق');
+      host.prepend(root);
       root.addEventListener('change', e => {
         if (e.target.name === 'link-po-shipping-choice') { choice = e.target.value; ack = false; error = ''; render(); }
         else if (e.target.matches('[data-ack]')) { ack = e.target.checked; error = ''; }
@@ -232,6 +246,7 @@
           if (action === 'checkout') await continueNative();
         });
       });
+      return true;
     }
     const dateText = p => {
       const day = x => new Intl.DateTimeFormat('ar-SA-u-nu-latn',{day:'numeric',month:'long',year:'numeric',calendar:'gregory',timeZone:'Asia/Riyadh'}).format(new Date(x+'T12:00:00Z'));
@@ -240,7 +255,7 @@
     function render() {
       if (!state && !error && !loading) return;
       if (state && !state.cart.preorder.length && !state.saved && !error && !loading) { root?.remove(); return; }
-      mount();
+      if(!mount())return;
       const cart = state?.cart, saved = state?.saved;
       let body = loading ? '<span class="po-tag">خيارات شحن الحجز</span><p role="status">جارٍ التحقق من محتويات السلة…</p>' : '';
       if (saved) {

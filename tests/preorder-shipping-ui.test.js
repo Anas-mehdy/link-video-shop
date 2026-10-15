@@ -3,8 +3,8 @@ const {webcrypto} = require('node:crypto'), {parseHTML} = require('linkedom');
 const source = fs.readFileSync(__dirname+'/../public/preorder-shipping-trial.js','utf8');
 const product = {id:'318533359',status:'open',ship_from:'2026-11-04',ship_by:'2026-11-06'};
 const items = ()=>[{id:'ready',product_id:'999',quantity:2,options:[{id:2,value:'white'}]},{id:'po',product_id:'318533359',quantity:4,options:[]}];
-async function harness({rows=items(),optIn=true,summary=true,demo=true,path='/cart',readiness='callback',delayedSDK=false}={}) {
-  const {window:dom,document:d}=parseHTML(`<html><head></head><body><main>${summary?'<div class="cart-summary">':''}<button data-cart-submit>إتمام الطلب</button><form action="/coupon"><button>كوبون</button></form>${summary?'</div>':''}</main></body></html>`);
+async function harness({rows=items(),optIn=true,summary=true,demo=true,path='/cart',readiness='callback',delayedSDK=false,body}={}) {
+  const {window:dom,document:d}=parseHTML(`<html><head></head><body>${body||`<main>${summary?'<div class="cart-summary">':''}<button data-cart-submit>إتمام الطلب</button><form action="/coupon"><button>كوبون</button></form>${summary?'</div>':''}</main>`}</body></html>`);
   // A plain window facade keeps the DOM library's global proxy from replacing Node timers.
   const w={document:d,Event:dom.Event,addEventListener:dom.addEventListener.bind(dom),location:{pathname:path}};
   delete w.__linkShippingTrial;delete w.__linkPreorderWidget;
@@ -23,7 +23,7 @@ async function harness({rows=items(),optIn=true,summary=true,demo=true,path='/ca
   if(readiness==='promise')w.salla.onReady=()=>Promise.resolve();
   const sdk=w.salla;if(delayedSDK)delete w.salla;
   // linkedom has no capture phase; count the simulated default action after propagation.
-  d.querySelector('[data-cart-submit]').addEventListener('click',e=>setImmediate(()=>{if(!e.defaultPrevented)native++;}));
+  d.querySelector('[data-cart-submit]')?.addEventListener('click',e=>setImmediate(()=>{if(!e.defaultPrevented)native++;}));
   const context={window:w,document:d,URL,Intl,Date,TextEncoder,console};vm.createContext(context);vm.runInContext(source,context);
   const settle=async()=>{for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));for(let i=0;i<100&&d.querySelector('.po-busy')?.textContent;i++)await new Promise(r=>setTimeout(r,2));};
   const flush=async()=>{const jobs=[...timers.values()];timers.clear();jobs.forEach(fn=>fn());await settle();};
@@ -105,4 +105,16 @@ test('late SDK displays loading, initializes once, and never polls the cart API'
 test('native preorder link with unmatched API product IDs produces a visible read-only diagnostic',async()=>{
   const h=await harness({rows:[items()[0]],demo:false});const a=h.d.createElement('a');a.href='/p318533359';h.d.querySelector('main').appendChild(a);
   h.events.update();await h.flush();assert.match(h.d.querySelector('.po-error').textContent,/PO-MAP/);assert.equal(h.removes(),0);assert.equal(h.adds(),0);
+});
+test('Malak-like cart grid keeps its two columns and header order; card is a child of the native summary',async()=>{
+  const h=await harness({body:'<header id="store-header">لنك</header><div id="breadcrumb">سلة المشتريات</div><div id="cart-grid"><aside id="left-column"><div id="coupon">كوبون</div><div class="cart-summary"><h3>ملخص الطلب</h3><button data-cart-submit>إتمام الطلب</button></div></aside><div id="cart-products">المنتجات</div></div>'});
+  const root=h.d.querySelector('#link-po-shipping');assert.equal(root.parentElement.className,'cart-summary');assert.equal(root.tagName,'DIV');
+  assert.equal(h.d.body.firstElementChild.id,'store-header');assert.equal(h.d.querySelector('#cart-grid').children.length,2);assert.equal(h.d.querySelector('#left-column').children.length,2);
+  assert.equal(h.d.querySelector('.cart-summary').firstElementChild,root);assert.equal(h.d.querySelector('#store-header').contains(root),false);
+});
+test('missing native cart anchor never inserts content before the header; late summary mounts cached UI',async()=>{
+  const h=await harness({body:'<header id="store-header">لنك</header><div id="page-content"></div>'});assert.equal(h.d.querySelector('#link-po-shipping'),null);assert.equal(h.d.body.firstElementChild.id,'store-header');
+  const summary=h.d.createElement('div');summary.className='cart-summary';summary.innerHTML='<h3>ملخص الطلب</h3><button data-cart-submit>إتمام الطلب</button>';h.d.querySelector('#page-content').appendChild(summary);
+  const reads=h.reads();h.observers[0]([{target:h.d.querySelector('#page-content')}]);await h.flush();
+  assert.equal(h.d.querySelector('#link-po-shipping').parentElement,summary);assert.equal(h.reads(),reads);assert.equal(h.d.body.firstElementChild.id,'store-header');
 });
