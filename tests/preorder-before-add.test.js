@@ -14,18 +14,18 @@ test('malformed cart never passes; cart URLs preserve store prefix',()=>{
  for(const x of [{},{data:{items:[{id:123,quantity:1}]}},{success:false,data:{items:[]}}])assert.throws(()=>api.inspect(x));
  assert.equal(api.cartURL({href:'https://salla.sa/linkstore122/foo/p123'}),'https://salla.sa/linkstore122/cart');assert.equal(api.cartURL({href:'https://salla.sa/other/p123'}),null);assert.equal(api.cartURL({href:'https://linkstore-sa.com/foo/p123'}),'https://linkstore-sa.com/cart');
 });
-async function harness(ids=[],path='/frame/p318533359'){
+async function harness(ids=[],path='/frame/p318533359',{delayCart=false,delayFeed=false,failFeed=false,failCart=false}={}){
  const {document:d,window:dom}=parseHTML('<html><head></head><body><button id="native">أضف</button></body></html>');
  const s=d.createElement('script');s.src='https://link-video-shop.vercel.app/preorder-before-add.js';s.dataset.beforeAdd='1';Object.defineProperty(d,'currentScript',{value:s});
- let rows=ids.map(row),reads=0,notice='',mutations=0;const events={},timers=new Map();let serial=0;
- const w={document:d,location:{pathname:path,href:'https://salla.sa/linkstore122'+path},addEventListener:dom.addEventListener.bind(dom),setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),fetch:async()=>({ok:true,json:async()=>({ok:true,products:[{id:P,status:'open',ship_from:'2099-11-04',ship_by:'2099-11-06'}]})})};
- w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{details:async()=>{reads++;return response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
+ let rows=ids.map(row),reads=0,notice='',mutations=0,native=0,releaseCart,releaseFeed;const cartWait=new Promise(r=>releaseCart=r),feedWait=new Promise(r=>releaseFeed=r);const events={},timers=new Map();let serial=0;
+ const w={document:d,location:{pathname:path,href:'https://salla.sa/linkstore122'+path},addEventListener:dom.addEventListener.bind(dom),setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),fetch:async()=>{if(delayFeed)await feedWait;if(failFeed)throw Error('offline');return {ok:true,json:async()=>({ok:true,products:[{id:P,status:'open',ship_from:'2099-11-04',ship_by:'2099-11-06'}]})};}};
+ w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{details:async()=>{reads++;if(delayCart)await cartWait;if(failCart)throw Error('offline');return response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
  const settle=async()=>{for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r));};
  api.start(w);await settle();
- const validate=(id,isValid=true)=>{let button=d.querySelector('salla-add-product-button');if(!button){button=d.createElement('salla-add-product-button');d.body.appendChild(button);}button.setAttribute('product-id',id);const e=new dom.Event('click',{bubbles:true,cancelable:true});if(!isValid)e.preventDefault();button.dispatchEvent(e);return {isValid:!e.defaultPrevented};};
+ const validate=(id,isValid=true)=>{let button=d.querySelector('salla-add-product-button');if(!button){button=d.createElement('salla-add-product-button');d.body.appendChild(button);button.addEventListener('click',e=>setImmediate(()=>{if(!e.defaultPrevented)native++;}));}button.setAttribute('product-id',id);const e=new dom.Event('click',{bubbles:true,cancelable:true});if(!isValid)e.preventDefault();button.dispatchEvent(e);return {isValid:!e.defaultPrevented};};
  const click=async selector=>{d.querySelector(selector).dispatchEvent(new dom.Event('click',{bubbles:true}));await settle();};
  const approve=async()=>{const box=d.querySelector('[data-po-together]');box.checked=true;box.dispatchEvent(new dom.Event('change',{bubbles:true}));await click('[data-po-approve]');};
- return {w,d,validate,approve,click,settle,events,setRows:ids=>rows=ids.map(row),reads:()=>reads,notice:()=>notice,mutations:()=>mutations,hook:()=>w.LinkPreorderBeforeAddStatus?.ready};
+ return {w,d,validate,approve,click,settle,events,releaseCart,releaseFeed,native:()=>native,setRows:ids=>rows=ids.map(row),reads:()=>reads,notice:()=>notice,mutations:()=>mutations,hook:()=>w.LinkPreorderBeforeAddStatus?.ready};
 }
 test('native product-only carts never show shipping choices',async()=>{
  for(const [ids,id,path] of [[[],P,'/p318533359'],[[P],P,'/p318533359'],[[R],R,'/p999']]){const h=await harness(ids,path);assert.equal(h.validate(id).isValid,true);assert.equal(h.d.querySelector('#po-before-add'),null);assert.equal(h.mutations(),0);}
@@ -45,6 +45,29 @@ test('SDK events recalculate the reverse direction and already mixed carts expla
 test('native cart and checkout routes do zero IO and register no hook',async()=>{
  for(const path of ['/cart','/linkstore122/cart','/checkout/step']){const h=await harness([P,R],path);assert.equal(h.reads(),0);assert.equal(h.hook(),undefined);assert.equal(h.d.querySelector('#po-before-add'),null);}
 });
-test('runtime contains no cart mutation, storage, click replay or checkout interception',()=>{
- const source=fs.readFileSync(require.resolve('../public/preorder-before-add'),'utf8');assert.doesNotMatch(source,/\.addItem\(|\.deleteItem\(|localStorage|\.click\(|addEventListener\(['"]submit/);
+test('runtime contains no cart mutation, storage or checkout interception',()=>{
+ const source=fs.readFileSync(require.resolve('../public/preorder-before-add'),'utf8');assert.doesNotMatch(source,/\.addItem\(|\.deleteItem\(|localStorage|addEventListener\(['"]submit/);
+});
+
+test('empty and preorder-only carts do not depend on schedule lookup and never show choices',async()=>{
+ for(const ids of [[],[P]]){
+  const h=await harness(ids,'/p318533359',{delayFeed:true});assert.equal(h.validate(P).isValid,true);assert.equal(h.d.querySelector('#po-before-add'),null);await h.settle();assert.equal(h.native(),1);h.releaseFeed();await h.settle();assert.equal(h.d.querySelector('#po-before-add'),null);
+  const failed=await harness(ids,'/p318533359',{failFeed:true});assert.equal(failed.validate(P).isValid,true);assert.equal(failed.d.querySelector('#po-before-add'),null);
+ }
+});
+test('early gesture waits silently for unknown empty cart and resumes native add exactly once',async()=>{
+ const h=await harness([],'/p318533359',{delayCart:true});assert.equal(h.validate(P).isValid,false);h.validate(P);assert.equal(h.d.querySelector('#po-before-add'),null);await h.settle();assert.equal(h.native(),0);h.releaseCart();await h.settle();assert.equal(h.native(),1);assert.equal(h.mutations(),0);assert.equal(h.d.querySelector('#po-before-add'),null);
+});
+test('early gestures in either mixed direction show choices only after confirmed read and never resume add',async()=>{
+ for(const [ids,id,path] of [[[R],P,'/p318533359'],[[P],R,'/p999']]){const h=await harness(ids,path,{delayCart:true});h.validate(id);assert.equal(h.d.querySelector('#po-before-add'),null);h.releaseCart();await h.settle();assert.ok(h.d.querySelector('[data-po-together]'));assert.equal(h.native(),0);}
+});
+test('cart becoming homogeneous closes shipping choices rather than displaying a pointless message',async()=>{
+ const h=await harness([R]);h.validate(P);assert.ok(h.d.querySelector('#po-before-add').hasAttribute('open'));h.setRows([]);h.events.update();await h.settle();assert.equal(h.d.querySelector('#po-before-add').hasAttribute('open'),false);assert.equal(h.validate(P).isValid,true);
+});
+test('failed unknown cart read gives an inline error without shipping options or resuming add',async()=>{
+ const h=await harness([],'/p318533359',{failCart:true});h.validate(P);await h.settle();assert.equal(h.d.querySelector('#po-before-add'),null);assert.ok(h.d.querySelector('#po-cart-read-error'));assert.equal(h.native(),0);
+});
+
+test('repeat presses during deferred initial gesture never add twice after cart snapshot arrives',async()=>{
+ const h=await harness([],'/p318533359',{delayCart:true,delayFeed:true});h.validate(P);h.releaseCart();await h.settle();h.validate(P);await h.settle();assert.equal(h.native(),0);h.releaseFeed();await h.settle();assert.equal(h.native(),1);assert.equal(h.d.querySelector('#po-before-add'),null);
 });

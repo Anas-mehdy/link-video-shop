@@ -8,10 +8,10 @@ Captures native `salla-add-product-button` clicks before native handlers. Actual
 
 - Empty cart, ready + ready, preorder + preorder: no shipping choice.
 - Ready cart + adding preorder OR preorder cart + adding ready: block that addition and show an unselected choice dialog.
-- Combined: show public dispatch dates; customer explicitly agrees that ready stock waits. Fresh cart read before granting one-use permission bound to product and unchanged cart. Customer presses the original Salla add button again. No programmatic click, submit or cart mutation.
+- Combined: show public dispatch dates; customer explicitly agrees that ready stock waits. Fresh cart read before granting one-use permission bound to product and unchanged cart. Customer presses the original Salla add button again. No programmatic add, submit or cart mutation on approval; mixed-cart approval requires a fresh customer press.
 - Separate: open the native store-scoped cart in a new tab; finish the products already there first, then return to buy the other type as a second order. Salla calculates regional shipping independently for each order. No flat surcharge or automatic split.
 - Already mixed cart: explicitly request manual native cart review to make independent orders; never imply the script separated it.
-- Cart changes invalidate permission. Read errors block the attempted addition with retry. Native validators that already failed stay failed. No persistent browser storage or checkout interception.
+- Cart changes invalidate permission. The initial unknown cart is checked silently; its blocked gesture resumes exactly once only after a confirmed homogeneous result, via the original native click target and native validation. Repeated presses while waiting are blocked. Cart-read errors show an inline retry error, never a shipping-choice dialog. Schedule lookup does not gate homogeneous carts; the native preorder campaign controls sale availability. If a cart becomes homogeneous, any open shipping-choice dialog closes. Native validators that already failed stay failed. No persistent browser storage or checkout interception.
 - Existing marketing/date card is reused without its old competing checkbox/DOM click guard.
 
 ## Limits and launch checks

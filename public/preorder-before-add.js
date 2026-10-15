@@ -1,5 +1,5 @@
 /* Opt-in choice before native Salla product button clicks.
-   Cart is read-only: no add/delete, checkout interception, storage or click replay. */
+   Cart is read-only: no add/delete, checkout interception or storage. */
 (function(scope,factory){
  'use strict';const api=factory();
  if(typeof module==='object'&&module.exports)module.exports=api;
@@ -70,6 +70,9 @@
   `;d.head.appendChild(s);}
   function close(){if(dialog?.open&&typeof dialog.close==='function')dialog.close();else dialog?.removeAttribute('open');context=null;ack=false;}
   function show(message=''){
+   const known=model.current();
+   // Shipping choices are meaningful only when this addition mixes stock types.
+   if(!context||!known||!decide(known,context.id).mixes){model.cancel();close();return;}
    if(!d.body)return;styles();
    if(!dialog){dialog=d.createElement('dialog');dialog.id='po-before-add';dialog.setAttribute('aria-labelledby','po-before-title');d.body.appendChild(dialog);
     dialog.addEventListener('cancel',()=>{model.cancel();context=null;ack=false;});
@@ -93,9 +96,7 @@
    const cart=model.current(),decision=cart&&context?decide(cart,context.id):null;
    const url=demo?'#demo-cart':cartURL(w.location);
    let body;
-   if(!decision)body='<p>جارٍ التحقق من محتويات السلة. لن نغيّر أي منتج.</p><button data-po-retry>تحقق من السلة</button>';
-   else if(!decision.mixes)body='<p>سلتك لا تجمع بين الجاهز والحجز. تقدر تكمل من زر الإضافة الأصلي.</p>';
-   else{
+   {
     const first=decision.addingPreorder?'المنتجات المتوفرة':'منتجات الحجز',next=decision.addingPreorder?'الحجز':'المنتج المتوفر';
     body=`<p>${decision.addingPreorder?'عندك منتجات متوفرة بالسلة، والمنتج اللي بتضيفه حجز مسبق.':'عندك حجز مسبق بالسلة، والمنتج اللي بتضيفه متوفر للشحن.'}</p>
      ${schedule?`<div class="po-date">الشحن المتوقع للحجز: <b>${esc(fmt(schedule.ship_from))} إلى ${esc(fmt(schedule.ship_by))}</b><small>تُضاف مدة توصيل الناقل حسب مدينتك.</small></div>`:''}
@@ -122,7 +123,7 @@
     const cart=model.update(response);
     const currentId=context?.id??(w.location.pathname.match(/\/p(\d+)(?:\/|$)/)||[])[1];
     if(cart.hasPreorder||currentId===PRODUCT){
-     const json=await bounded(async()=>{const r=await w.fetch(origin+'/api/protection-feed?mode=preorders&ids='+PRODUCT,{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('schedule_unavailable');return r.json();});
+     const json=await bounded(async()=>{const r=await w.fetch(origin+'/api/protection-feed?mode=preorders&ids='+PRODUCT,{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('schedule_unavailable');return r.json();}).catch(()=>null);
      if(expectedVersion!==version||stopped)throw error('cart_changed');
      schedule=json?.ok&&json.products?.find(p=>String(p.id)===PRODUCT);
     }
@@ -134,8 +135,8 @@
    if(ctx.isValid===false||stopped)return;
    const id=String(ctx.productId??ctx.component?.productId??ctx.component?.getAttribute?.('product-id')??'');if(!/^\d+$/.test(id))return;
    const result=model.validate(id);
-   if(result.allowed&&(id!==PRODUCT||scheduleValid()))return;
-   ctx.isValid=false; // Block this native gesture; approval never replays it.
+   if(result.allowed)return; // Native preorder campaign validates availability; no shipping dialog for one type.
+   ctx.isValid=false; // Block this native gesture; mixed-cart approval requires a fresh customer press.
    context={id,component:ctx.component};ack=false;
    show(id===PRODUCT&&!scheduleValid()?'نتحقق من موعد الحجز قبل الإضافة.':'');
    if(result.reason==='loading'||id===PRODUCT&&!scheduleValid())read().then(()=>{if(context)show();}).catch(()=>show('تعذر التحقق من السلة أو موعد الحجز. حاول مجدداً.'));
@@ -147,13 +148,37 @@
    // Actual Twilight 2.14.600 calls its validate hook only with a product-options
    // component, and omits productId. Capture the native button gesture instead.
    // Native validation and cart addition still execute normally after approval.
+   let resuming=false,pendingGesture=false;
    function capture(e){
+    if(resuming)return;
     if(e.defaultPrevented||stopped)return;
     const nodes=e.composedPath?.()||[e.target];
     const button=nodes.find(n=>n?.matches?.('salla-add-product-button'))||e.target?.closest?.('salla-add-product-button');
     if(!button)return;
+    if(pendingGesture){e.preventDefault();e.stopImmediatePropagation();return;}
     const id=button.productId??button.getAttribute('product-id');
-    const ctx={productId:id,component:button,isValid:true};validation(ctx);
+    const ctx={productId:id,component:button,isValid:true};
+    if(!/^\d+$/.test(String(id??'')))return;
+    if(!model.current()){
+     // Stop before native handlers; wait silently for the initial cart snapshot.
+     // Resume exactly this unprocessed gesture once, never a submitted cart request.
+     e.preventDefault();e.stopImmediatePropagation();
+     if(pendingGesture)return;pendingGesture=true;
+     const target=nodes.find(n=>typeof n?.click==='function')||button,path=w.location.pathname;
+     button.setAttribute('aria-busy','true');
+     read().then(()=>{
+      if(stopped||!button.isConnected||w.location.pathname!==path)return;
+      validation(ctx);if(ctx.isValid===false)return;
+      d.getElementById('po-cart-read-error')?.remove();
+      resuming=true;try{target.click();}finally{resuming=false;}
+     }).catch(()=>{
+      if(stopped||!button.isConnected)return;
+      let note=d.getElementById('po-cart-read-error');if(!note){note=d.createElement('p');note.id='po-cart-read-error';note.setAttribute('role','alert');button.after(note);}
+      note.textContent='تعذر التحقق من السلة. حاول الإضافة مجدداً.';
+     }).finally(()=>{pendingGesture=false;button.removeAttribute('aria-busy');});
+     return;
+    }
+    d.getElementById('po-cart-read-error')?.remove();validation(ctx);
     if(ctx.isValid===false){e.preventDefault();e.stopImmediatePropagation();}
    }
    d.addEventListener('click',capture,true);
