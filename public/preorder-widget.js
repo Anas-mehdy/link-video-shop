@@ -67,11 +67,25 @@
      if(!configResponse.ok)throw Error('bridge_config');const config=await configResponse.json();
      if(config.product_id!==productId||!/^\d+$/.test(config.schedule_source_id||'')||!Array.isArray(config.colors)||config.colors.length>20||config.colors.some(c=>!/^\d+$/.test(c.option_id||'')||c.booking_id!==null&&!/^\d+$/.test(c.booking_id||'')||!/^#[0-9a-f]{6}$/i.test(c.swatch||'')||!/^https:\/\//.test(c.image||'')))throw Error('bridge_config');
      bridgeConfig=config;
-     if(typeof window.salla?.product?.getDetails!=='function')throw Error('bridge_stock');
-     let stockTimer;const response=await Promise.race([window.salla.product.getDetails(productId,['options']),new Promise((_,reject)=>{stockTimer=setTimeout(()=>reject(Error('bridge_stock_timeout')),8000);})]).finally(()=>clearTimeout(stockTimer)),detail=response?.data?.product||response?.data||response?.product||response;
-     if(String(detail?.id)!==productId||!Array.isArray(detail.options))throw Error('bridge_stock');
-     const values=detail.options.flatMap(o=>o.values||[]);bridgeStock={};
-     for(const c of config.colors){const v=values.find(v=>String(v.id)===c.option_id);if(typeof v?.is_out_of_stock!=='boolean')throw Error('bridge_stock');bridgeStock[c.option_id]=v.is_out_of_stock;}
+     // The theme supplies authoritative option state as details[].is_out.
+     // Read that observed page contract first; the SDK projection can omit it.
+     const native=document.querySelector('salla-product-options[product-id="'+productId+'"]');
+     let options;
+     if(native?.hasAttribute('options'))options=JSON.parse(native.getAttribute('options'));
+     else{
+      if(typeof window.salla?.product?.getDetails!=='function')throw Error('bridge_stock');
+      let stockTimer;const response=await Promise.race([window.salla.product.getDetails(productId,['options']),new Promise((_,reject)=>{stockTimer=setTimeout(()=>reject(Error('bridge_stock_timeout')),8000);})]).finally(()=>clearTimeout(stockTimer));
+      const detail=response?.data?.product||response?.data||response?.product||response;
+      if(String(detail?.id)!==productId)throw Error('bridge_stock');options=detail.options;
+     }
+     if(!Array.isArray(options))throw Error('bridge_stock');
+     const values=options.flatMap(o=>o.details||o.values||[]),stock={};
+     for(const c of config.colors){
+      const matches=values.filter(v=>String(v.id)===c.option_id);if(matches.length!==1)throw Error('bridge_stock');
+      const v=matches[0],out=typeof v.is_out==='boolean'?v.is_out:v.is_out_of_stock;
+      if(typeof out!=='boolean')throw Error('bridge_stock');stock[c.option_id]=out;
+     }
+     bridgeStock=stock;
     }
     const requestedIds=bridge?[...new Set([bridgeConfig.schedule_source_id,...bridgeConfig.colors.map(c=>c.booking_id).filter(Boolean)])].join(','):targetId;
     const response=await fetch(`${origin}/api/protection-feed?mode=preorders&ids=${requestedIds}${preview?'&preview=1':''}`,{credentials:'omit',cache:'no-store'});

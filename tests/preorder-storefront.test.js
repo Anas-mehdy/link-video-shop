@@ -2,9 +2,10 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const {parseHTML}=require('linkedom');
 const product={id:'318533359',name:'إطار Link',color:'بورغندي',status:'open',expected_arrival:'2026-11-03',ship_from:'2026-11-04',ship_by:'2026-11-06',revision:1};
 const code=fs.readFileSync(__dirname+'/../public/preorder-widget.js','utf8');
-async function harness({path='/p318533359',mode='',beforeAdd=false,items=[],fail=false,products=[{...product}],stockFail=false}={}){
+async function harness({path='/p318533359',mode='',beforeAdd=false,items=[],fail=false,products=[{...product}],stockFail=false,nativeOptions=null}={}){
  const {window}=parseHTML('<html><head></head><body><main><form class="product-form"><button type="submit">إضافة</button></form><div class="cart-summary"><a href="/checkout">متابعة</a><form action="/coupon"><button type="submit">كوبون</button></form></div></main></body></html>');
  const document=window.document,script=document.createElement('script');script.src='https://link-video-shop.vercel.app/preorder-widget.js';if(mode)script.dataset.mode=mode;if(beforeAdd)script.dataset.beforeAdd='1';
+ if(nativeOptions){const el=document.createElement('salla-product-options');el.setAttribute('product-id','981596666');el.setAttribute('options',JSON.stringify(nativeOptions));document.querySelector('.product-form').appendChild(el);}
  delete window.__linkPreorderWidget;
  Object.defineProperty(document,'currentScript',{value:script});
  const timers=new Map(),events={},observers=[];let serial=0,calls=0,currentItems=items,data={ok:true,products};const colors=JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json','utf8'));let stock=Object.fromEntries(colors.colors.map(c=>[c.option_id,true]));
@@ -74,4 +75,19 @@ test('frame bridge does not link paused/expired bookings, and removes a card whe
 });
 test('unknown native option inventory fails without showing purchasable preorder links',async()=>{
  const h=await harness({path:'/p981596666',stockFail:true});assert.equal(h.document.querySelectorAll('a.po-color-action').length,0);assert.match(h.document.querySelector('.link-preorder').textContent,/تعذر التحقق/);
+});
+
+test('observed Salla page options render cards even when SDK stock lookup fails',async()=>{
+ const options=JSON.parse(fs.readFileSync(__dirname+'/fixtures/frame-native-options.json'));
+ const h=await harness({path:'/p981596666',nativeOptions:options,stockFail:true});
+ assert.equal(h.document.querySelectorAll('.po-color-card').length,4);
+ assert.equal(h.document.querySelectorAll('a.po-color-action').length,1);
+ options[0].details.find(v=>v.id===719664310).is_out=false;
+ const ready=await harness({path:'/p981596666',nativeOptions:options,stockFail:true});
+ assert.equal(ready.document.querySelectorAll('.po-color-card').length,3);
+ assert.equal(ready.document.querySelectorAll('a.po-color-action').length,0);
+ delete options[0].details[1].is_out;
+ const unknown=await harness({path:'/p981596666',nativeOptions:options,stockFail:true});
+ assert.equal(unknown.document.querySelectorAll('a.po-color-action').length,0);
+ assert.match(unknown.document.querySelector('.link-preorder').textContent,/تعذر التحقق/);
 });

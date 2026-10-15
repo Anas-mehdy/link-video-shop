@@ -1,0 +1,101 @@
+[
+  {
+    "id": 1453417027,
+    "name": "اختر اللون",
+    "required": true,
+    "type": "thumbnail",
+    "placeholder": "",
+    "not_same_day_order": false,
+    "availability_range": 0,
+    "from_date_time": null,
+    "to_date_time": null,
+    "visibility_condition": null,
+    "details": [
+      {
+        "id": 719664310,
+        "name": "بورغندي",
+        "code": "",
+        "additional_price": 0,
+        "option_id": 1453417027,
+        "option_value": "295368657",
+        "is_selected": false,
+        "is_default": 0,
+        "image": "https://cdn.salla.sa/Zpqzp/f8c3c9da-ca4f-495c-9966-d724ad2db3b4-500x500-jQOWtUZEIbG4x14FjBebr7eCSs1G5655Qgz1KksY.png",
+        "color": "295368657",
+        "is_out": true,
+        "skus_availability": {
+          "1156904559": false
+        }
+      },
+      {
+        "id": 79844279,
+        "name": "سيلفر",
+        "code": "",
+        "additional_price": 0,
+        "option_id": 1453417027,
+        "option_value": "293132521",
+        "is_selected": false,
+        "is_default": 0,
+        "image": "https://cdn.salla.sa/Zpqzp/cb9dd397-c3cd-4114-ac1b-d9530ce0e8df-500x500-d2QqOBPHNzwaakdxMSCJ7fLW0cYf6JB04Euosvtb.png",
+        "color": "293132521",
+        "is_out": true,
+        "skus_availability": {
+          "425491051": false
+        }
+      },
+      {
+        "id": 1454338736,
+        "name": "سماوي",
+        "code": "",
+        "additional_price": 0,
+        "option_id": 1453417027,
+        "option_value": "295368689",
+        "is_selected": false,
+        "is_default": 0,
+        "image": "https://cdn.salla.sa/Zpqzp/9d8bdbac-ee1f-48d6-9807-2ca32d2d3ed7-500x500-ke0insGNSQxavI7aNjgyzw8ztQURd14P8HTxHUPG.png",
+        "color": "295368689",
+        "is_out": true,
+        "skus_availability": {
+          "472247927": false
+        }
+      },
+      {
+        "id": 156548313,
+        "name": "أسود",
+        "code": "",
+        "additional_price": 0,
+        "option_id": 1453417027,
+        "option_value": "295368801",
+        "is_selected": false,
+        "is_default": 0,
+        "image": "https://cdn.salla.sa/Zpqzp/68037ae7-7ec4-4df3-a190-fd05f911a9f5-500x500-zUvHsdADHFxRDPnblDTzczdfJTB4jvPuZABUvVdt.png",
+        "color": "295368801",
+        "is_out": true,
+        "skus_availability": {
+          "265726740": false
+        }
+      },
+      {
+        "id": 1867263949,
+        "name": "أبيض",
+        "code": "",
+        "additional_price": 0,
+        "option_id": 1453417027,
+        "option_value": "295375203",
+        "is_selected": false,
+        "is_default": 0,
+        "image": "https://cdn.salla.sa/Zpqzp/dd86b5b0-2abb-4227-9f2d-1f8781095e54-500x500-Xs1gwAyi97wwnKeMbhSw1VkgkzzZ65T4bVSxGNRT.png",
+        "color": "295375203",
+        "is_out": false,
+        "skus_availability": {
+          "1853935589": true
+        }
+      }
+    ],
+    "condition_attributes": "",
+    "value": null,
+    "donation": null,
+    "is_advance": true,
+    "format": null
+  }
+]
