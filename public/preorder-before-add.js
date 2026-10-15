@@ -81,6 +81,8 @@
   w.__linkBeforeAddStarted=true;
   const origin=new URL(script.src).origin,demo=script.dataset.demo==='1';
   const model=gate();let dialog,context=null,ack=false,ready=false,reading=null,version=0,bootTimer,stopped=false,bootTries=0,watching=false,noticePermission=null,approving=false;
+  const nativeForms=new WeakMap();
+  const formState=form=>stable([...form.querySelectorAll('input,select,textarea')].map(x=>[x.name,x.type,x.value,!!x.checked]));
   const status={ready:false,reason:'waiting_for_sdk'};w.LinkPreorderBeforeAddStatus=status;
   const quickSelector='salla-quick-buy,salla-mini-checkout-widget,.s-add-product-button-buy-now,.s-fast-checkout-button';
   function syncShortcuts(){
@@ -167,13 +169,15 @@
   }
   // Explicit opt-in integration for our own bulk/video/accessory add flows.
   // Does not wrap or replace any Salla SDK method.
-  w.LinkPreorderCheckItems=async items=>{
+  w.LinkPreorderCheckItems=async (items,{nativeForm}={})=>{
    if(stopped)throw error('cart_unavailable');
    if(!Array.isArray(items)||!items.length||items.some(x=>!/^\d+$/.test(String(x.id))))throw error('product_unknown');
    if(context)return false;
+   const ticket=nativeForm&&nativeForms.get(nativeForm);if(nativeForm)nativeForms.delete(nativeForm);
    await read();
    if(context)return false;
    const ids=items.map(x=>String(x.id)),candidate={ids,id:ids[0]};
+   if(ticket&&ids.length===1&&ids[0]===ticket.id&&ticket.key===model.current().key&&ticket.until>=Date.now()&&ticket.state===formState(nativeForm))return true;
    const decision=decisionFor(model.current(),candidate),pageId=(w.location.pathname.match(/\/p(\d+)(?:\/|$)/)||[])[1];
    const external=decision.products.some(p=>ids.includes(p.id)&&pageId!==p.id);
    if(!decision.mixes&&!external&&decision.products.every(available))return true;
@@ -216,7 +220,11 @@
    }
    if(external)noticePermission=null;
    const result=model.validate(id);
-   if(result.allowed)return; // Native preorder campaign validates availability; no shipping dialog for one type.
+   if(result.allowed){
+    const form=ctx.component?.closest?.('form[data-link-po-preflight="1"]');
+    if(form)nativeForms.set(form,{id,key:model.current().key,state:formState(form),until:Date.now()+2000});
+    return;
+   }
    ctx.isValid=false; // Block this native gesture; mixed-cart approval requires a fresh customer press.
    context={id,component:ctx.component};ack=false;
    show();
@@ -268,6 +276,7 @@
     if(ctx.isValid===false){e.preventDefault();e.stopImmediatePropagation();}
    }
    d.addEventListener('click',capture,true);
+   if(typeof w.CustomEvent==='function')d.dispatchEvent(new w.CustomEvent('link:preorders-ready'));
    const unsubscribe=()=>d.removeEventListener('click',capture,true);
    read().catch(()=>{});
    w.__linkBeforeAddUnsubscribe=unsubscribe;

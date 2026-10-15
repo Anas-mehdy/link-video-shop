@@ -175,3 +175,13 @@ test('external bulk preorder notice resolves only after consent and pending entr
  assert.equal(api.inspect(response([row('1229565720')]),merged).hasPreorder,true);
  assert.throws(()=>api.pendingCatalog({},{}));assert.throws(()=>api.pendingCatalog({},{...config,colors:[config.colors[0],config.colors[0]]}));
 });
+
+test('an owned video form consumes one fresh native approval without a duplicate disclosure',async()=>{
+ const h=await harness([],'/category');h.validate(P);await h.click('[data-po-close]');
+ const button=h.d.querySelector('salla-add-product-button'),form=h.d.createElement('form');form.dataset.linkPoPreflight='1';h.d.body.appendChild(form);form.appendChild(button);const quantity=h.d.createElement('input');quantity.name='quantity';quantity.value='1';form.appendChild(quantity);
+ h.validate(P);await h.approve();assert.equal(h.native(),1);
+ assert.equal(await h.w.LinkPreorderCheckItems([{id:P}],{nativeForm:form}),true);assert.equal(h.d.querySelector('dialog').hasAttribute('open'),false);
+ // That consent is single-use; a second independent form call must disclose again.
+ const repeat=h.w.LinkPreorderCheckItems([{id:P}],{nativeForm:form});await h.settle();assert.equal(h.d.querySelector('dialog').hasAttribute('open'),true);await h.click('[data-po-close]');assert.equal(await repeat,false);
+ h.validate(P);await h.approve();quantity.value='2';const changed=h.w.LinkPreorderCheckItems([{id:P}],{nativeForm:form});await h.settle();assert.equal(h.d.querySelector('dialog').hasAttribute('open'),true);await h.click('[data-po-close]');assert.equal(await changed,false);
+});
