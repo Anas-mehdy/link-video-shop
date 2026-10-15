@@ -1,0 +1,34 @@
+{
+  "product_id": "981596666",
+  "schedule_source_id": "318533359",
+  "colors": [
+    {
+      "option_id": "719664310",
+      "name": "بورغندي",
+      "image": "https://cdn.salla.sa/Zpqzp/f8c3c9da-ca4f-495c-9966-d724ad2db3b4-500x500-jQOWtUZEIbG4x14FjBebr7eCSs1G5655Qgz1KksY.png",
+      "swatch": "#762b46",
+      "booking_id": "318533359"
+    },
+    {
+      "option_id": "79844279",
+      "name": "سيلفر",
+      "image": "https://cdn.salla.sa/Zpqzp/cb9dd397-c3cd-4114-ac1b-d9530ce0e8df-500x500-d2QqOBPHNzwaakdxMSCJ7fLW0cYf6JB04Euosvtb.png",
+      "swatch": "#b9bdc4",
+      "booking_id": null
+    },
+    {
+      "option_id": "1454338736",
+      "name": "سماوي",
+      "image": "https://cdn.salla.sa/Zpqzp/9d8bdbac-ee1f-48d6-9807-2ca32d2d3ed7-500x500-ke0insGNSQxavI7aNjgyzw8ztQURd14P8HTxHUPG.png",
+      "swatch": "#a9cedf",
+      "booking_id": null
+    },
+    {
+      "option_id": "156548313",
+      "name": "أسود",
+      "image": "https://cdn.salla.sa/Zpqzp/68037ae7-7ec4-4df3-a190-fd05f911a9f5-500x500-zUvHsdADHFxRDPnblDTzczdfJTB4jvPuZABUvVdt.png",
+      "swatch": "#25262b",
+      "booking_id": null
+    }
+  ]
+}

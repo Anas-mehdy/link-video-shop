@@ -82,7 +82,7 @@
   function disclose(){
    const pageId=(w.location.pathname.match(/\/p(\d+)(?:\/|$)/)||[])[1];
    if(!demo&&(model.current()?.catalog[pageId]||pageId==='981596666')&&!w.__linkPreorderWidget&&!d.getElementById('link-po-disclosure-loader')){
-    const s=d.createElement('script');s.id='link-po-disclosure-loader';s.src=origin+'/preorder-widget.js?v=20261015-5';s.dataset.beforeAdd='1';s.dataset.productId=pageId==='981596666'?PRODUCT:pageId;s.async=true;d.head.appendChild(s);
+    const s=d.createElement('script');s.id='link-po-disclosure-loader';s.src=origin+'/preorder-widget.js?v=20261015-6';s.dataset.beforeAdd='1';s.dataset.productId=pageId==='981596666'?PRODUCT:pageId;s.async=true;d.head.appendChild(s);
    }
   }
   function styles(){if(d.getElementById('po-before-add-style'))return;const s=d.createElement('style');s.id='po-before-add-style';s.textContent=`
