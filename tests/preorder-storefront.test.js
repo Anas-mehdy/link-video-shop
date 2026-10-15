@@ -2,9 +2,9 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const {parseHTML}=require('linkedom');
 const product={id:'318533359',name:'إطار Link',color:'بورغندي',status:'open',expected_arrival:'2026-11-03',ship_from:'2026-11-04',ship_by:'2026-11-06',revision:1};
 const code=fs.readFileSync(__dirname+'/../public/preorder-widget.js','utf8');
-async function harness({path='/p318533359',mode='',items=[],fail=false,products=[{...product}]}={}){
+async function harness({path='/p318533359',mode='',beforeAdd=false,items=[],fail=false,products=[{...product}]}={}){
  const {window}=parseHTML('<html><head></head><body><main><form class="product-form"><button type="submit">إضافة</button></form><div class="cart-summary"><a href="/checkout">متابعة</a><form action="/coupon"><button type="submit">كوبون</button></form></div></main></body></html>');
- const document=window.document,script=document.createElement('script');script.src='https://link-video-shop.vercel.app/preorder-widget.js';if(mode)script.dataset.mode=mode;
+ const document=window.document,script=document.createElement('script');script.src='https://link-video-shop.vercel.app/preorder-widget.js';if(mode)script.dataset.mode=mode;if(beforeAdd)script.dataset.beforeAdd='1';
  delete window.__linkPreorderWidget;
  Object.defineProperty(document,'currentScript',{value:script});
  const timers=new Map(),events={},observers=[];let serial=0,calls=0,currentItems=items,data={ok:true,products};
@@ -45,3 +45,5 @@ test('public feed allows only sanitized schedule fields, hides drafts by default
  await feed({query:{ids:'318533359'}},{});assert.equal(response.data.products.length,0);
  await feed({query:{ids:'318533359',preview:'1'}},{});assert.equal(response.data.products.length,1);assert.ok(queries.every(q=>q.includes('merchant_id=eq.1829345766')));assert.ok(!JSON.stringify(response.data).includes('PRIVATE'));assert.ok(!Object.hasOwn(response.data.products[0],'incoming_quantity'));assert.equal(response.headers['Cache-Control'],'no-store');
 });
+
+test('delegated before-add mode keeps date card without a second checkbox or DOM guard',async()=>{const h=await harness({beforeAdd:true});assert.ok(h.document.querySelector('.link-preorder').textContent.includes('شحن طلبك المتوقع'));assert.equal(h.document.querySelector('[data-po-ack]'),null);const e=new h.window.Event('click',{bubbles:true,cancelable:true});h.document.querySelector('.product-form button').dispatchEvent(e);assert.equal(e.defaultPrevented,false);});

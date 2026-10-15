@@ -144,9 +144,11 @@
     // but no native cart reads, mutations, checkout guards, saved-cart banner or redirects.
     if (script.dataset.demo !== '1') {
       w.LinkPreorderShippingTrialPaused = true;
-      if (/\/p(?:318533359|981596666)(?:\/|$)/.test(w.location.pathname) && !w.__linkPreorderWidget) {
-        const productScript = d.createElement('script');
-        productScript.src = new URL(script.src).origin + '/preorder-widget.js';
+      // Existing test-theme loader now delegates only to the approved pre-add gate.
+      // Absolutely no script/UI is installed on native cart or checkout routes.
+      if (!/(?:^|\/)(?:cart|checkout)(?:\/|$)/.test(w.location.pathname) && !d.getElementById('link-preorder-before-add-loader')) {
+        const productScript = d.createElement('script');productScript.id='link-preorder-before-add-loader';
+        productScript.src = new URL(script.src).origin + '/preorder-before-add.js';productScript.dataset.beforeAdd='1';
         productScript.async = true; d.head.appendChild(productScript);
       }
       return;

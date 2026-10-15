@@ -3,7 +3,7 @@
  'use strict';
  if(window.__linkPreorderWidget)return;window.__linkPreorderWidget=true;
  const script=document.currentScript,origin=new URL(script?.src||location.href).origin;
- const preview=script?.dataset.mode==='preview',targetId='318533359';
+ const preview=script?.dataset.mode==='preview',beforeAdd=script?.dataset.beforeAdd==='1',targetId='318533359';
  const productId=(location.pathname.match(/\/p(\d+)(?:\/|$)/)||[])[1];
  const bridge=productId==='981596666';
  const cartPage=/^\/(?:ar\/|en\/)?cart\/?$/.test(location.pathname);
@@ -38,6 +38,7 @@
    return;
   }
   root.innerHTML=`${preview?'<p class="po-test">معاينة على ثيم التجارب — الحجز لم يُفتح للعملاء</p>':''}<span class="po-tag">حجز مسبق · الدفعة القادمة</span><h3>${mixed?'طلبك يجمع منتجات جاهزة وحجزاً مسبقاً':'نفدت الدفعة… وقطعتك الجاية بالطريق 💜'}</h3>${mixed?'':'<p class="po-lead">بسبب الإقبال على البورغندي، نفدت الكمية الحالية. والخبر الحلو؟ دفعة جديدة في الطريق!</p>'}${products.map(p=>`<p><b>${esc(p.name)} · ${esc(p.color)}</b></p>${dates(p)}`).join('')}<p class="po-reassure">${!unavailable&&!preview?'احجز قطعتك من الدفعة القادمة؛ وبمجرد وصولها وفحصها نجهّز طلبك ونشحنه لك ضمن الموعد الموضّح.':'بمجرد وصول الدفعة وفحصها، نجهّز طلبات الحجز ونشحنها ضمن الموعد الموضّح.'}</p><p class="po-muted">هذا حجز مسبق، والمنتج غير جاهز للشحن الآن. موعد الشحن يعني تسليم طلبك للناقل، وتُضاف بعده مدة التوصيل حسب مدينتك.</p>${mixed?'<p><strong>يُشحن الطلب كاملاً مع منتجات الحجز في شحنة واحدة عند جاهزيتها.</strong> إذا تبغى المنتجات الجاهزة الآن، اطلبها بطلب مستقل؛ تظهر رسوم كل طلب قبل الدفع.</p>':'<p class="po-muted">إذا أضفت منتجات جاهزة، يُشحن الطلب كاملاً عند جاهزية الحجز. إذا تبغاها الآن، اطلبها بطلب مستقل.</p>'}${unavailable?`<p class="po-muted">${preview?'هذه معاينة للدفعة القادمة، والحجز لم يُفتح بعد.':'الحجز متوقف حالياً. تواصل معنا للتأكد من موعد فتحه.'}</p>`:''}<label><input type="checkbox" data-po-ack><span>اطّلعت على الموعد المتوقع، وأوافق على شحن الطلب كاملاً عند جاهزية منتجات الحجز.</span></label><p class="po-error" role="alert"></p>`;
+  if(beforeAdd)root.querySelector('[data-po-ack]')?.closest('label')?.remove();
  }
  async function refresh(){
   if(cartPage&&window.__linkShippingTrial){render([]);return;}
@@ -62,6 +63,7 @@
  // Covers native DOM clicks/submit, including composed web-component paths.
  // This is a UI reminder, not a server-side checkout restriction or consent record.
  function guard(e){
+  if(beforeAdd&&!cartPage)return;
   if(cartPage&&window.__linkShippingTrial)return;
   if(bridge||!root?.isConnected)return;
   const path=e.composedPath?.()||[e.target];
