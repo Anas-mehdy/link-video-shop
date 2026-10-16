@@ -11,16 +11,17 @@ module.exports = async function handler(req, res) {
       // Repair at most one local batch first; this path never fetches Salla.
       await require('../lib/salla-sync').processEvents(undefined,{localOnly:true});
       // Share even-minute ticks in configured batch hours; cart sends retain odd minutes.
+      let postpurchase={worked:false,reason:'cart_priority_minute'};
       if(new Date().getUTCMinutes()%2===0){
-        try{const aftersale=await require('../lib/postpurchase-delivery').tick();if(aftersale.worked)return json(res,200,{ok:true,...aftersale});}
-        catch{/* A postpurchase failure must not interrupt cart reminders. */}
+        try{const aftersale=await require('../lib/postpurchase-delivery').tick();postpurchase=aftersale;if(aftersale.worked)return json(res,200,{ok:true,...aftersale});}
+        catch(e){postpurchase={worked:false,reason:'worker_error',code:/^[A-Za-z0-9_]{1,32}$/.test(String(e.code||''))?String(e.code):'unclassified'};console.error('postpurchase_worker_failed',postpurchase.code);}
       }
       // One bounded label job takes this tick; never delay a send beyond its claim lease.
       let recovery;
       try { recovery=await require('../lib/etisalna-labels').recoverOne(); }
       catch { recovery={worked:false,error:'recovery_label_unavailable'}; }
-      if(recovery.worked)return json(res,200,{ok:true,mode:'automatic',sent:false,reason:'recovery_label_processed',...recovery});
-      return json(res,200,{ok:true,...await require('../lib/whatsapp-delivery').tick()});
+      if(recovery.worked)return json(res,200,{ok:true,mode:'automatic',sent:false,reason:'recovery_label_processed',...recovery,postpurchase});
+      return json(res,200,{ok:true,...await require('../lib/whatsapp-delivery').tick(),postpurchase});
     }
     if(req.query?.action==='whatsapp-test')return json(res,200,{ok:true,...await require('../lib/whatsapp-test-send').send(require('../lib/crm').bodyObject(req))});
     if(req.query?.action==='cart-followup')return json(res,200,{ok:true,mode:'dry_run',records:await require('../lib/cart-followup').refresh()});

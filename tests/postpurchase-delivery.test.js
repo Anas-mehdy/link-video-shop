@@ -51,3 +51,9 @@ test('existing worker preserves odd-minute cart ticks and falls back when afters
  assert.equal(aftersales,minute===2?1:0);assert.equal(carts,minute===2&&worked?0:1);
  }
 });
+test('provider rejection keeps HTTP status without persisting private response content',async()=>{
+ const m=mock();let finish;
+ const database=async(p,o)=>{if(p==='rpc/crm_pp_delivery_finish')finish=JSON.parse(o.body);return m.database(p,o)};
+ const result=await tick({...dependencies,database,request:async()=>({status:422,json:async()=>({error:'private customer response'})})});
+ assert.equal(result.status,'rejected');assert.equal(finish.p_reason,'provider_rejected_http_422');assert.ok(!JSON.stringify(finish).includes('private'));
+});
