@@ -72,3 +72,10 @@ test('empty cart mixed bulk uses a signed empty challenge and never invents an i
  await h.service.finish({ticket:result.ticket,checkout_id:b.checkout_id,items});
  assert.equal(h.records.length,1);assert.equal(h.records[0].stage,'finalized');assert.equal(h.records[0].items.length,2);
 });
+test('finalization compares schedule values after JSONB round-trip, independent of object key order',async()=>{
+ const h=harness(),b=h.body(),result=await h.service.begin(b);
+ h.records[0].schedules=h.records[0].schedules.map(row=>Object.fromEntries(Object.entries(row).reverse()));
+ const finish={ticket:result.ticket,checkout_id:b.checkout_id,items:[...b.items,{product_id:'900',quantity:1,options:[]}]};
+ await h.service.finish(finish);
+ assert.equal(h.records[1].stage,'finalized');
+});
