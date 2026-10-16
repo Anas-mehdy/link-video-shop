@@ -50,7 +50,6 @@
   });
   const hasPreorder=items.some(i=>!!catalog[i.id]),hasReady=items.some(i=>!catalog[i.id]);
   const checkoutId=data?.cart?.id??data?.id;
-  if(checkoutId!=null&&(typeof checkoutId==='number'&&!Number.isSafeInteger(checkoutId)||!/^\d{1,40}$/.test(String(checkoutId))))throw error('cart_unavailable');
   return {items,rawItems:rows,checkoutId,catalog,hasPreorder,hasReady,mixed:new Set(items.map(i=>group(catalog[i.id]))).size>1,key:stable({items,catalog,checkoutId})};
  }
  function decide(cart,incoming){
@@ -243,7 +242,11 @@
     // Never assume that an absent local ID proves an empty server-side cart.
     if(e?.name!=='CartNotCreated')throw e;
     const owner=cartIdAPI();if(!owner)throw e;
-    const id=exactId(await owner.getCurrentCartId());
+    const id=await owner.getCurrentCartId();
+    // Pass the native identifier back unchanged. Some legacy SDK responses
+    // expose numeric IDs; precision is enforced separately when recording
+    // evidence, never by coercing IDs or blocking ordinary native shopping.
+    if(!(typeof id==='string'&&/^\d{1,40}$/.test(id)||typeof id==='number'&&Number.isFinite(id)&&Number.isInteger(id)&&id>0))throw error('cart_unavailable');
     return w.salla.cart.details(id,['options','attachments']);
    }
   }

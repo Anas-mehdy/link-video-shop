@@ -28,7 +28,7 @@
  let script=d.getElementById('link-preorder-before-add-loader');
  if(!script){
   script=d.createElement('script');script.id='link-preorder-before-add-loader';
-  script.src='https://link-video-shop.vercel.app/preorder-before-add.js?v=20261016-12';script.dataset.beforeAdd='1';script.async=true;
+  script.src='https://link-video-shop.vercel.app/preorder-before-add.js?v=20261016-13';script.dataset.beforeAdd='1';script.async=true;
   script.addEventListener('load',finish,{once:true});script.addEventListener('error',failed,{once:true});d.head.appendChild(script);
  }else{script.addEventListener('load',finish,{once:true});script.addEventListener('error',failed,{once:true});}
 });

@@ -22,7 +22,7 @@ async function harness(ids=[],path='/frame/p318533359',{delayCart=false,delayFee
  const s=d.createElement('script');s.src='https://link-video-shop.vercel.app/preorder-before-add.js';s.dataset.beforeAdd='1';Object.defineProperty(d,'currentScript',{value:s});
  let guestInitialized=false,guestInits=0;const detailIds=[];const posts=[];let rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads=0,notice='',mutations=0,native=0,releaseCart,releaseFeed;const cartWait=new Promise(r=>releaseCart=r),feedWait=new Promise(r=>releaseFeed=r);const events={},timers=new Map();let serial=0;
  const w={document:d,location:{pathname:path,href:'https://salla.sa/linkstore122'+path},addEventListener:dom.addEventListener.bind(dom),setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),fetch:async(url,options)=>{if(url.includes('mode=preorder-consent')){const body=JSON.parse(options.body);posts.push(body);return {ok:!(body.action==='begin'?failBegin:failFinish),json:async()=>({ok:true,...(body.action==='begin'?{ticket:'test-ticket'}:{recorded:true})})};}if(url.includes('preorder-frame-colors.json'))return {ok:true,json:async()=>JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'))};if(delayFeed)await feedWait;if(failFeed)throw Error('offline');return {ok:true,json:async()=>({ok:true,catalog:true,complete:true,products,...(consent?{consent:{enabled:true,policy_version:'together-20261016-v1',policy_text:'أوافق على انتظار جميع منتجات الطلب حتى وصول آخر دفعة وفحصها. شحنة واحدة، ورسومها تظهر حسب عنواني قبل الدفع.'}}: {})})};}};
- w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{getCurrentCartId:async()=>{guestInits++;if(failGuestInit)throw Error('offline');guestInitialized=true;return guestId;},details:async id=>{reads++;detailIds.push(id);if(newGuest&&!guestInitialized&&!id)throw Object.assign(Error('Cart not created yet'),{name:'CartNotCreated'});if(delayCart)await cartWait;if(failCart)throw Error('offline');return newGuest&&guestInitialized?{data:{items:rows,cart:{id:guestId}}}:response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
+ w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{getCurrentCartId:async()=>{guestInits++;if(failGuestInit)throw Error('offline');guestInitialized=!!guestId;return guestId;},details:async id=>{reads++;detailIds.push(id);if(newGuest&&!guestInitialized&&!id)throw Object.assign(Error('Cart not created yet'),{name:'CartNotCreated'});if(delayCart)await cartWait;if(failCart)throw Error('offline');return newGuest&&guestInitialized?{data:{items:rows,cart:{id:guestId}}}:response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
  const settle=async()=>{for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r));};
  api.start(w);await settle();
  const validate=(id,isValid=true)=>{let button=d.querySelector('salla-add-product-button');if(!button){button=d.createElement('salla-add-product-button');d.body.appendChild(button);button.addEventListener('click',e=>setImmediate(()=>{if(!e.defaultPrevented)native++;}));}button.setAttribute('product-id',id);const e=new dom.Event('click',{bubbles:true,cancelable:true});if(!isValid)e.preventDefault();button.dispatchEvent(e);return {isValid:!e.defaultPrevented};};
@@ -225,9 +225,15 @@ test('guest initialization restores actual preorders instead of presuming an emp
  const h=await harness([P],'/p999',{newGuest:true});
  assert.equal(h.guestInits(),1);assert.equal(h.validate(R).isValid,false);assert.ok(h.d.querySelector('[data-po-together]'));assert.equal(h.native(),0);assert.equal(h.mutations(),0);
 });
-test('guest initialization outages and unsafe IDs stay blocked; ordinary failures never trigger a guessed empty-cart fallback',async()=>{
- for(const options of [{newGuest:true,failGuestInit:true},{newGuest:true,guestId:Number('3212565107043415786')}]){
+test('guest initialization outages stay blocked; ordinary failures never trigger a guessed empty-cart fallback',async()=>{
+ for(const options of [{newGuest:true,failGuestInit:true},{newGuest:true,guestId:null}]){
   const h=await harness([],'/p999',options);assert.equal(h.validate(R).isValid,false);await h.settle();assert.equal(h.native(),0);assert.ok(h.d.querySelector('#po-cart-read-error'));
  }
  const other=await harness([],'/p999',{failCart:true});assert.equal(other.guestInits(),0);assert.equal(other.validate(R).isValid,false);
+});
+
+test('legacy numeric guest IDs pass through native reads without granting unsafe consent evidence',async()=>{
+ const id=Number('3212565107043415786');
+ const ready=await harness([],'/p999',{newGuest:true,guestId:id});assert.equal(ready.detailIds[1],id);assert.equal(ready.validate(R).isValid,true);
+ const mixed=await harness([R],'/p318533359',{newGuest:true,guestId:id,consent:true});mixed.validate(P);await mixed.approve();assert.equal(mixed.posts.length,0);assert.equal(mixed.native(),0);assert.match(mixed.d.querySelector('.po-error').textContent,/حفظ اختيار الشحن/);
 });
