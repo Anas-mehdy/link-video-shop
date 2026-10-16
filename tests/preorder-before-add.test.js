@@ -20,15 +20,15 @@ test('malformed cart never passes; cart URLs preserve store prefix',()=>{
 async function harness(ids=[],path='/frame/p318533359',{delayCart=false,delayFeed=false,failFeed=false,failCart=false,newGuest=false,failGuestInit=false,guestId='3212565107043415786',consent=false,failBegin=false,failFinish=false,products=[{...fixture}]}={}){
  const {document:d,window:dom}=parseHTML('<html><head></head><body><button id="native">أضف</button></body></html>');
  const s=d.createElement('script');s.src='https://link-video-shop.vercel.app/preorder-before-add.js';s.dataset.beforeAdd='1';Object.defineProperty(d,'currentScript',{value:s});
- let guestInitialized=false,guestInits=0;const detailIds=[];const posts=[];let rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads=0,notice='',mutations=0,native=0,releaseCart,releaseFeed;const cartWait=new Promise(r=>releaseCart=r),feedWait=new Promise(r=>releaseFeed=r);const events={},timers=new Map();let serial=0;
+ let guestInitialized=false,guestInits=0;const detailIds=[],readResults=[];const posts=[];let rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads=0,notice='',mutations=0,native=0,releaseCart,releaseFeed;const cartWait=new Promise(r=>releaseCart=r),feedWait=new Promise(r=>releaseFeed=r);const events={},timers=new Map();let serial=0;
  const w={document:d,location:{pathname:path,href:'https://salla.sa/linkstore122'+path},addEventListener:dom.addEventListener.bind(dom),setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),fetch:async(url,options)=>{if(url.includes('mode=preorder-consent')){const body=JSON.parse(options.body);posts.push(body);return {ok:!(body.action==='begin'?failBegin:failFinish),json:async()=>({ok:true,...(body.action==='begin'?{ticket:'test-ticket'}:{recorded:true})})};}if(url.includes('preorder-frame-colors.json'))return {ok:true,json:async()=>JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'))};if(delayFeed)await feedWait;if(failFeed)throw Error('offline');return {ok:true,json:async()=>({ok:true,catalog:true,complete:true,products,...(consent?{consent:{enabled:true,policy_version:'together-20261016-v1',policy_text:'أوافق على انتظار جميع منتجات الطلب حتى وصول آخر دفعة وفحصها. شحنة واحدة، ورسومها تظهر حسب عنواني قبل الدفع.'}}: {})})};}};
- w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{getCurrentCartId:async()=>{guestInits++;if(failGuestInit)throw Error('offline');guestInitialized=!!guestId;return guestId;},details:async id=>{reads++;detailIds.push(id);if(newGuest&&!guestInitialized&&!id)throw Object.assign(Error('Cart not created yet'),{name:'CartNotCreated'});if(delayCart)await cartWait;if(failCart)throw Error('offline');return newGuest&&guestInitialized?{data:{items:rows,cart:{id:guestId}}}:response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
+ w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{getCurrentCartId:async()=>{guestInits++;if(failGuestInit)throw Error('offline');guestInitialized=!!guestId;return guestId;},details:async id=>{reads++;detailIds.push(id);if(newGuest&&!guestInitialized&&!id)throw Object.assign(Error('Cart not created yet'),{name:'CartNotCreated'});if(delayCart)await cartWait;if(failCart)throw Error('offline');if(readResults.length)return readResults.shift();return newGuest&&guestInitialized?{data:{items:rows,cart:{id:guestId}}}:response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
  const settle=async()=>{for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r));};
  api.start(w);await settle();
  const validate=(id,isValid=true)=>{let button=d.querySelector('salla-add-product-button');if(!button){button=d.createElement('salla-add-product-button');d.body.appendChild(button);button.addEventListener('click',e=>setImmediate(()=>{if(!e.defaultPrevented)native++;}));}button.setAttribute('product-id',id);const e=new dom.Event('click',{bubbles:true,cancelable:true});if(!isValid)e.preventDefault();button.dispatchEvent(e);return {isValid:!e.defaultPrevented};};
  const click=async selector=>{d.querySelector(selector).dispatchEvent(new dom.Event('click',{bubbles:true}));await settle();};
  const approve=async()=>{const box=d.querySelector('[data-po-together]');box.checked=true;box.dispatchEvent(new dom.Event('change',{bubbles:true}));await click('[data-po-approve]');};
- return {w,d,posts,detailIds,guestInits:()=>guestInits,validate,approve,click,settle,events,releaseCart,releaseFeed,native:()=>native,setProducts:v=>products=v,setRows:ids=>rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads:()=>reads,notice:()=>notice,mutations:()=>mutations,hook:()=>w.LinkPreorderBeforeAddStatus?.ready};
+ return {w,d,posts,detailIds,readResults,tick:async()=>{const entry=timers.entries().next().value;if(entry){timers.delete(entry[0]);entry[1]();}await settle();},guestInits:()=>guestInits,validate,approve,click,settle,events,releaseCart,releaseFeed,native:()=>native,setProducts:v=>products=v,setRows:ids=>rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads:()=>reads,notice:()=>notice,mutations:()=>mutations,hook:()=>w.LinkPreorderBeforeAddStatus?.ready};
 }
 test('native product-only carts never show shipping choices',async()=>{
  for(const [ids,id,path] of [[[],P,'/p318533359'],[[P],P,'/p318533359'],[[R],R,'/p999']]){const h=await harness(ids,path);assert.equal(h.validate(id).isValid,true);assert.equal(h.d.querySelector('#po-before-add'),null);assert.equal(h.mutations(),0);}
@@ -207,6 +207,26 @@ test('enabled durable consent is saved before native allowance and finalized onl
 test('failed intent never grants permission; failed finalization reports the record gap without altering cart',async()=>{
  const blocked=await harness([R],'/p318533359',{consent:true,failBegin:true});blocked.validate(P);await blocked.approve();assert.match(blocked.d.querySelector('.po-error').textContent,/حفظ اختيار الشحن/);assert.equal(blocked.native(),0);
  const h=await harness([R],'/p318533359',{consent:true,failFinish:true});h.validate(P);await h.approve();h.validate(P);h.setRows([R,P]);h.events.add();await h.settle();assert.match(h.d.querySelector('#po-consent-save-error').textContent,/تعذر توثيق/);assert.equal(h.mutations(),0);
+});
+test('overlapping update/add events cannot discard the approved ticket or invalidate its evidence read',async()=>{
+ const h=await harness([R],'/p318533359',{consent:true});h.validate(P);await h.approve();h.validate(P);
+ h.setRows([R,P]);h.events.update();h.events.add();h.events.update();await h.settle();
+ assert.equal(h.posts.filter(p=>p.action==='finish').length,1);
+ assert.equal(h.w.LinkPreorderBeforeAddStatus.consent,'finalized');
+ assert.ok(h.detailIds.includes('3212565107043415786'),'fresh evidence read targets the exact signed cart');
+ assert.equal(h.mutations(),0);
+});
+test('native add may precede the updated snapshot; a bounded retry saves the actual later cart',async()=>{
+ const h=await harness([R],'/p318533359',{consent:true});h.validate(P);await h.approve();h.validate(P);
+ h.readResults.push(response([{...row(R),options:[]} ]));h.setRows([R,P]);h.events.add();await h.settle();
+ assert.equal(h.posts.length,1);assert.equal(h.w.LinkPreorderBeforeAddStatus.consent,'retrying');
+ await h.tick();assert.equal(h.posts.length,2);assert.equal(h.w.LinkPreorderBeforeAddStatus.consent,'finalized');
+});
+test('a successful native event without the approved contents eventually stays unverified',async()=>{
+ const h=await harness([R],'/p318533359',{consent:true});h.validate(P);await h.approve();h.validate(P);
+ h.events.add();await h.settle();for(let i=0;i<3;i++)await h.tick();
+ assert.equal(h.posts.length,1);assert.equal(h.w.LinkPreorderBeforeAddStatus.consent,'unverified');
+ assert.match(h.d.querySelector('#po-consent-save-error').textContent,/تعذر توثيق/);
 });
 test('durable bulk consent waits for all approved native additions before saving the final cart',async()=>{
  const h=await harness([R],'/p318533359',{consent:true});

@@ -100,7 +100,7 @@
    return exactId(await bounded(()=>owner.getCurrentCartId()));
   }
   async function saveEvidence(body){
-   const response=await bounded(()=>w.fetch(origin+'/api/protection-feed?mode=preorder-consent',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}));
+   const response=await bounded(()=>w.fetch(origin+'/api/protection-feed?mode=preorder-consent',{method:'POST',credentials:'omit',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}));
    if(!response.ok)throw error('consent_unavailable');const result=await response.json();if(!result?.ok)throw error('consent_unavailable');return result;
   }
   async function recordIntent(cart,request){
@@ -113,14 +113,36 @@
    const before={};for(const item of cart.items)before[item.id]=(before[item.id]||0)+item.quantity;
    pendingConsent={ticket:result.ticket,checkout_id:id,until:Date.now()+120000,before,expected:request.quantities||{[request.id]:1}};
   }
-  async function finalizeEvidence(cart,ticket){
-   try{
-    if(ticket.until<Date.now())throw error('consent_expired');
-    await saveEvidence({action:'finish',ticket:ticket.ticket,checkout_id:await checkoutId(cart),items:evidenceItems(cart)});
-   }catch{
+  function consentWarning(){
     let note=d.getElementById('po-consent-save-error');if(!note){note=d.createElement('p');note.id='po-consent-save-error';note.setAttribute('role','alert');d.body.prepend(note);}
     note.textContent='أُضيف المنتج، لكن تعذر توثيق اختيار الشحنة الواحدة. تواصل معنا لتأكيد طريقة الشحن قبل تجهيز الطلب.';
+  }
+  async function finalizeEvidence(ticket){
+   if(ticket.finishing){ticket.wake?.();return;}ticket.finishing=true;status.consent='finalizing';
+   // Independent of UI/catalog reads: an itemAdded event invalidates those
+   // reads, and the native cart may briefly return its pre-add snapshot.
+   for(let attempt=0;attempt<4;attempt++){
+    if(stopped||pendingConsent!==ticket)return;
+    try{
+     if(ticket.until<Date.now())throw error('consent_expired');
+     const cart=inspect(await bounded(()=>w.salla.cart.details(ticket.checkout_id,['options','attachments'])));
+     if(cart.checkoutId!=null&&exactId(cart.checkoutId)!==ticket.checkout_id)throw error('cart_changed');
+     const totals={};for(const item of cart.items)totals[item.id]=(totals[item.id]||0)+item.quantity;
+     if(!Object.entries(ticket.expected).every(([id,q])=>(totals[id]||0)>=(ticket.before[id]||0)+q))throw error('addition_pending');
+     await saveEvidence({action:'finish',ticket:ticket.ticket,checkout_id:ticket.checkout_id,items:evidenceItems(cart)});
+     if(pendingConsent===ticket){pendingConsent=null;status.consent='finalized';d.getElementById('po-consent-save-error')?.remove();}
+     return;
+    }catch(e){
+     status.consent='retrying';
+     if(e.code!=='addition_pending')consentWarning();
+     if(attempt<3&&ticket.until>Date.now())await new Promise(resolve=>{
+      const resume=()=>{w.clearTimeout(timer);ticket.wake=null;resolve();};
+      const timer=w.setTimeout(resume,400*(attempt+1));ticket.wake=resume;
+     });
+     else break;
+    }
    }
+   if(pendingConsent===ticket){pendingConsent=null;status.consent='unverified';consentWarning();}
   }
   const formState=form=>stable([...form.querySelectorAll('input,select,textarea')].map(x=>[x.name,x.type,x.value,!!x.checked]));
   const status={ready:false,reason:'waiting_for_sdk'};w.LinkPreorderBeforeAddStatus=status;
@@ -344,10 +366,9 @@
    read().catch(()=>{});
    w.__linkBeforeAddUnsubscribe=unsubscribe;
    if(!watching){watching=true;
-    const changed=(added=false)=>{if(stopped)return;const ticket=added===true?pendingConsent:null;if(added!==true)pendingConsent=null;version++;noticePermission=null;model.invalidate();syncShortcuts();ack=false;read().then(cart=>{
-     if(ticket&&pendingConsent===ticket){const totals={};for(const item of cart.items)totals[item.id]=(totals[item.id]||0)+item.quantity;
-      if(Object.entries(ticket.expected).every(([id,q])=>(totals[id]||0)>=(ticket.before[id]||0)+q)){pendingConsent=null;finalizeEvidence(cart,ticket);}
-     }
+    const changed=(added=false)=>{if(stopped)return;const ticket=added===true?pendingConsent:null;version++;noticePermission=null;model.invalidate();syncShortcuts();ack=false;
+     if(ticket)finalizeEvidence(ticket);
+     read().then(cart=>{
      if(context)show();
     }).catch(()=>{});};
     const events=w.salla.cart.event;
