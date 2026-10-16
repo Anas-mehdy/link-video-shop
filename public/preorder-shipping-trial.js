@@ -148,7 +148,7 @@
       // Absolutely no script/UI is installed on native cart or checkout routes.
       if (!/(?:^|\/)(?:cart|checkout)(?:\/|$)/.test(w.location.pathname) && !d.getElementById('link-preorder-before-add-loader')) {
         const productScript = d.createElement('script');productScript.id='link-preorder-before-add-loader';
-        productScript.src = new URL(script.src).origin + '/preorder-before-add.js?v=20261016-14';productScript.dataset.beforeAdd='1';
+        productScript.src = new URL(script.src).origin + '/preorder-before-add.js?v=20261016-15';productScript.dataset.beforeAdd='1';
         productScript.async = true; d.head.appendChild(productScript);
       }
       return;

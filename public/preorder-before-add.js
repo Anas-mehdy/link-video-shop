@@ -129,8 +129,9 @@
      if(cart.checkoutId!=null&&exactId(cart.checkoutId)!==ticket.checkout_id)throw error('cart_changed');
      const totals={};for(const item of cart.items)totals[item.id]=(totals[item.id]||0)+item.quantity;
      if(!Object.entries(ticket.expected).every(([id,q])=>(totals[id]||0)>=(ticket.before[id]||0)+q))throw error('addition_pending');
-     await saveEvidence({action:'finish',ticket:ticket.ticket,checkout_id:ticket.checkout_id,items:evidenceItems(cart)});
-     if(pendingConsent===ticket){pendingConsent=null;status.consent='finalized';d.getElementById('po-consent-save-error')?.remove();}
+     const saved=await saveEvidence({action:'finish',ticket:ticket.ticket,checkout_id:ticket.checkout_id,items:evidenceItems(cart)});
+     if(saved.recorded!==true)throw error('consent_unavailable');
+     if(pendingConsent===ticket){pendingConsent=null;status.consent='finalized';d.getElementById('po-consent-save-error')?.remove();w.console?.info?.('[Link preorder] consent finalized');}
      return;
     }catch(e){
      status.consent='retrying';
