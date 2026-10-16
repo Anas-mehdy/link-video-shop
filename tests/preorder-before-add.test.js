@@ -17,18 +17,18 @@ test('malformed cart never passes; cart URLs preserve store prefix',()=>{
  for(const x of [{},{data:{items:[{id:123,quantity:1}]}},{success:false,data:{items:[]}}])assert.throws(()=>api.inspect(x));
  assert.equal(api.cartURL({href:'https://salla.sa/linkstore122/foo/p123'}),'https://salla.sa/linkstore122/cart');assert.equal(api.cartURL({href:'https://salla.sa/other/p123'}),null);assert.equal(api.cartURL({href:'https://linkstore-sa.com/foo/p123'}),'https://linkstore-sa.com/cart');
 });
-async function harness(ids=[],path='/frame/p318533359',{delayCart=false,delayFeed=false,failFeed=false,failCart=false,consent=false,failBegin=false,failFinish=false,products=[{...fixture}]}={}){
+async function harness(ids=[],path='/frame/p318533359',{delayCart=false,delayFeed=false,failFeed=false,failCart=false,newGuest=false,failGuestInit=false,guestId='3212565107043415786',consent=false,failBegin=false,failFinish=false,products=[{...fixture}]}={}){
  const {document:d,window:dom}=parseHTML('<html><head></head><body><button id="native">أضف</button></body></html>');
  const s=d.createElement('script');s.src='https://link-video-shop.vercel.app/preorder-before-add.js';s.dataset.beforeAdd='1';Object.defineProperty(d,'currentScript',{value:s});
- const posts=[];let rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads=0,notice='',mutations=0,native=0,releaseCart,releaseFeed;const cartWait=new Promise(r=>releaseCart=r),feedWait=new Promise(r=>releaseFeed=r);const events={},timers=new Map();let serial=0;
+ let guestInitialized=false,guestInits=0;const detailIds=[];const posts=[];let rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads=0,notice='',mutations=0,native=0,releaseCart,releaseFeed;const cartWait=new Promise(r=>releaseCart=r),feedWait=new Promise(r=>releaseFeed=r);const events={},timers=new Map();let serial=0;
  const w={document:d,location:{pathname:path,href:'https://salla.sa/linkstore122'+path},addEventListener:dom.addEventListener.bind(dom),setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),fetch:async(url,options)=>{if(url.includes('mode=preorder-consent')){const body=JSON.parse(options.body);posts.push(body);return {ok:!(body.action==='begin'?failBegin:failFinish),json:async()=>({ok:true,...(body.action==='begin'?{ticket:'test-ticket'}:{recorded:true})})};}if(url.includes('preorder-frame-colors.json'))return {ok:true,json:async()=>JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'))};if(delayFeed)await feedWait;if(failFeed)throw Error('offline');return {ok:true,json:async()=>({ok:true,catalog:true,complete:true,products,...(consent?{consent:{enabled:true,policy_version:'together-20261016-v1',policy_text:'أوافق على انتظار جميع منتجات الطلب حتى وصول آخر دفعة وفحصها. شحنة واحدة، ورسومها تظهر حسب عنواني قبل الدفع.'}}: {})})};}};
- w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{getCurrentCartId:async()=> '3212565107043415786',details:async()=>{reads++;if(delayCart)await cartWait;if(failCart)throw Error('offline');return response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
+ w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{getCurrentCartId:async()=>{guestInits++;if(failGuestInit)throw Error('offline');guestInitialized=true;return guestId;},details:async id=>{reads++;detailIds.push(id);if(newGuest&&!guestInitialized&&!id)throw Object.assign(Error('Cart not created yet'),{name:'CartNotCreated'});if(delayCart)await cartWait;if(failCart)throw Error('offline');return newGuest&&guestInitialized?{data:{items:rows,cart:{id:guestId}}}:response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
  const settle=async()=>{for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r));};
  api.start(w);await settle();
  const validate=(id,isValid=true)=>{let button=d.querySelector('salla-add-product-button');if(!button){button=d.createElement('salla-add-product-button');d.body.appendChild(button);button.addEventListener('click',e=>setImmediate(()=>{if(!e.defaultPrevented)native++;}));}button.setAttribute('product-id',id);const e=new dom.Event('click',{bubbles:true,cancelable:true});if(!isValid)e.preventDefault();button.dispatchEvent(e);return {isValid:!e.defaultPrevented};};
  const click=async selector=>{d.querySelector(selector).dispatchEvent(new dom.Event('click',{bubbles:true}));await settle();};
  const approve=async()=>{const box=d.querySelector('[data-po-together]');box.checked=true;box.dispatchEvent(new dom.Event('change',{bubbles:true}));await click('[data-po-approve]');};
- return {w,d,posts,validate,approve,click,settle,events,releaseCart,releaseFeed,native:()=>native,setProducts:v=>products=v,setRows:ids=>rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads:()=>reads,notice:()=>notice,mutations:()=>mutations,hook:()=>w.LinkPreorderBeforeAddStatus?.ready};
+ return {w,d,posts,detailIds,guestInits:()=>guestInits,validate,approve,click,settle,events,releaseCart,releaseFeed,native:()=>native,setProducts:v=>products=v,setRows:ids=>rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads:()=>reads,notice:()=>notice,mutations:()=>mutations,hook:()=>w.LinkPreorderBeforeAddStatus?.ready};
 }
 test('native product-only carts never show shipping choices',async()=>{
  for(const [ids,id,path] of [[[],P,'/p318533359'],[[P],P,'/p318533359'],[[R],R,'/p999']]){const h=await harness(ids,path);assert.equal(h.validate(id).isValid,true);assert.equal(h.d.querySelector('#po-before-add'),null);assert.equal(h.mutations(),0);}
@@ -214,4 +214,20 @@ test('durable bulk consent waits for all approved native additions before saving
  assert.equal(h.posts.length,1);
  h.setRows([R,P]);h.events.add();await h.settle();assert.equal(h.posts.length,1);
  h.setRows([R,P,'1000']);h.events.add();await h.settle();assert.equal(h.posts.length,2);assert.equal(h.posts[1].items.length,3);
+});
+
+
+test('new unsigned-in guest initializes the native cart ID before reading and can add a ready product',async()=>{
+ const h=await harness([],'/p999',{newGuest:true});
+ assert.equal(h.guestInits(),1);assert.deepEqual(h.detailIds,[null,'3212565107043415786']);assert.equal(h.validate(R).isValid,true);await h.settle();assert.equal(h.native(),1);assert.equal(h.d.querySelector('#po-cart-read-error'),null);assert.equal(h.mutations(),0);
+});
+test('guest initialization restores actual preorders instead of presuming an empty cart',async()=>{
+ const h=await harness([P],'/p999',{newGuest:true});
+ assert.equal(h.guestInits(),1);assert.equal(h.validate(R).isValid,false);assert.ok(h.d.querySelector('[data-po-together]'));assert.equal(h.native(),0);assert.equal(h.mutations(),0);
+});
+test('guest initialization outages and unsafe IDs stay blocked; ordinary failures never trigger a guessed empty-cart fallback',async()=>{
+ for(const options of [{newGuest:true,failGuestInit:true},{newGuest:true,guestId:Number('3212565107043415786')}]){
+  const h=await harness([],'/p999',options);assert.equal(h.validate(R).isValid,false);await h.settle();assert.equal(h.native(),0);assert.ok(h.d.querySelector('#po-cart-read-error'));
+ }
+ const other=await harness([],'/p999',{failCart:true});assert.equal(other.guestInits(),0);assert.equal(other.validate(R).isValid,false);
 });

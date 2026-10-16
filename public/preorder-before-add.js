@@ -50,6 +50,7 @@
   });
   const hasPreorder=items.some(i=>!!catalog[i.id]),hasReady=items.some(i=>!catalog[i.id]);
   const checkoutId=data?.cart?.id??data?.id;
+  if(checkoutId!=null&&(typeof checkoutId==='number'&&!Number.isSafeInteger(checkoutId)||!/^\d{1,40}$/.test(String(checkoutId))))throw error('cart_unavailable');
   return {items,rawItems:rows,checkoutId,catalog,hasPreorder,hasReady,mixed:new Set(items.map(i=>group(catalog[i.id]))).size>1,key:stable({items,catalog,checkoutId})};
  }
  function decide(cart,incoming){
@@ -91,10 +92,11 @@
   const model=gate();let dialog,context=null,ack=false,ready=false,reading=null,version=0,bootTimer,stopped=false,bootTries=0,watching=false,noticePermission=null,approving=false;
   const nativeForms=new WeakMap();let consentConfig=null,pendingConsent=null;
   const exactId=value=>{if(typeof value==='number'&&!Number.isSafeInteger(value))throw error('cart_unavailable');const id=String(value??'');if(!/^\d{1,40}$/.test(id))throw error('cart_unavailable');return id;};
+  const cartIdAPI=()=>[w.salla?.cart,w.salla?.cart?.api,w.salla?.api?.cart].find(api=>typeof api?.getCurrentCartId==='function');
   const evidenceItems=cart=>cart.rawItems.map(r=>({product_id:r.product_id??r.product?.id,quantity:r.quantity,options:r.options,...(r.product_sku_id!=null?{product_sku_id:r.product_sku_id}:r.sku_id!=null?{sku_id:r.sku_id}:r.sku?.id!=null?{sku_id:r.sku.id}:{}),...(r.notes?{notes:true}:{}),...(r.attachments?.length?{attachments:[true]}:{})}));
   async function checkoutId(cart){
    if(cart.checkoutId!=null)return exactId(cart.checkoutId);
-   const owner=typeof w.salla?.cart?.getCurrentCartId==='function'?w.salla.cart:w.salla?.cart?.api;
+   const owner=cartIdAPI();
    if(typeof owner?.getCurrentCartId!=='function')throw error('cart_unavailable');
    return exactId(await bounded(()=>owner.getCurrentCartId()));
   }
@@ -232,12 +234,25 @@
    const products=decisionFor(cart,context).products;
    return products.length>0&&products.every(available);
   }
+  async function readNativeCart(){
+   try{return await w.salla.cart.details(null,['options','attachments']);}
+   catch(e){
+    // Twilight intentionally avoids creating a cart for a new guest during
+    // details(). Native addItem normally initializes it later. Our preflight
+    // must initialize/restore its native ID first, then read the real contents.
+    // Never assume that an absent local ID proves an empty server-side cart.
+    if(e?.name!=='CartNotCreated')throw e;
+    const owner=cartIdAPI();if(!owner)throw e;
+    const id=exactId(await owner.getCurrentCartId());
+    return w.salla.cart.details(id,['options','attachments']);
+   }
+  }
   async function read(){
    if(reading)return reading;
    const expectedVersion=version;
    reading=(async()=>{
     const [response,json,config]=await Promise.all([
-     bounded(()=>w.salla.cart.details(null,['options','attachments'])),
+     bounded(readNativeCart),
      bounded(async()=>{const r=await w.fetch(origin+'/api/protection-feed?mode=preorders&catalog=1',{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('catalog_unavailable');return r.json();}),
      bounded(async()=>{const r=await w.fetch(origin+'/preorder-frame-colors.json?v=20261015-10',{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('catalog_unavailable');return r.json();})
     ]);
@@ -312,7 +327,7 @@
       resuming=true;try{target.click();}finally{resuming=false;}
      }).catch(()=>{
       if(stopped||!button.isConnected)return;
-      let note=d.getElementById('po-cart-read-error');if(!note){note=d.createElement('p');note.id='po-cart-read-error';note.setAttribute('role','alert');button.after(note);}
+      let note=d.getElementById('po-cart-read-error');if(!note){note=d.createElement('p');note.id='po-cart-read-error';note.setAttribute('role','alert');note.style.cssText='display:block;width:100%;font-size:12px;line-height:1.6;color:#a51e3b;margin:8px 0;text-align:right';const card=button.closest('salla-product-card');if(card)card.appendChild(note);else button.after(note);}
       note.textContent='تعذر التحقق من السلة. حاول الإضافة مجدداً.';
      }).finally(()=>{pendingGesture=false;button.removeAttribute('aria-busy');});
      return;

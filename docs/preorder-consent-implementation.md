@@ -42,6 +42,12 @@ User confirmed storage_ready_not_active with consent_collection_enabled=false on
 
 Known conservative limits: two-minute addition capability, 40 records/cart/hour application check, max100 items, complete explicit option arrays, no customized notes/attachments or nested options, exact SKU evidence, ambiguous historic duplicate batches need review. Requests still need ordinary platform abuse protection; the per-cart application check is not a distributed global rate limiter.
 
+## Guest-cart initialization fix (2026-10-16)
+
+User reported the before-add “تعذر التحقق من السلة” message on a normal product card while signed out. Twilight 2.14.603's actual `details()` calls `getCurrentCartId(false, ..., false)`, intentionally returning `CartNotCreated` for a guest without a stored ID. The guard previously blocked the native add that would normally initialize that ID.
+
+Guard version 20261016-12 catches only the named `CartNotCreated` case, obtains/initializes the cart ID through the native SDK's default `getCurrentCartId()`, then reads the actual cart by that ID. It never assumes that missing local storage means an empty server cart, asks for login, or adds/removes a product. Other read/initialization failures remain blocked. Unsafe numeric cart IDs are rejected. Tests cover an empty guest, an existing preorder cart restored for a guest, and failed/unsafe initialization. Product-card read errors are rendered after the card content rather than wedged beside the add button when the native card wrapper is present.
+
 ## Required collector and reconciler behavior
 
 - Record an explicit affirmative action, exact displayed text/version, server receipt time, native cart ID as text, exact whole-cart product/variant/quantity snapshot, and preorder dates/revisions. Never precheck the checkbox.
