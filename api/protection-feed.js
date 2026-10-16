@@ -5,6 +5,7 @@ const { modelKey, modelsIn } = require('../lib/protection-models');
 const off = {ok:true,enabled:false,mode:'off',product:null,recommendations:[]};
 
 module.exports = async function handler(req,res) {
+  if(req.query?.mode==='preorder-consent')return require('../lib/preorder-consent-service').handle(req,res);
   cors(req,res);
   if(req.method==='OPTIONS') return json(res,204,{});
   if(req.method!=='GET') return json(res,405,{ok:false,error:'Method not allowed'});

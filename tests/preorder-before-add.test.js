@@ -17,18 +17,18 @@ test('malformed cart never passes; cart URLs preserve store prefix',()=>{
  for(const x of [{},{data:{items:[{id:123,quantity:1}]}},{success:false,data:{items:[]}}])assert.throws(()=>api.inspect(x));
  assert.equal(api.cartURL({href:'https://salla.sa/linkstore122/foo/p123'}),'https://salla.sa/linkstore122/cart');assert.equal(api.cartURL({href:'https://salla.sa/other/p123'}),null);assert.equal(api.cartURL({href:'https://linkstore-sa.com/foo/p123'}),'https://linkstore-sa.com/cart');
 });
-async function harness(ids=[],path='/frame/p318533359',{delayCart=false,delayFeed=false,failFeed=false,failCart=false,products=[{...fixture}]}={}){
+async function harness(ids=[],path='/frame/p318533359',{delayCart=false,delayFeed=false,failFeed=false,failCart=false,consent=false,failBegin=false,failFinish=false,products=[{...fixture}]}={}){
  const {document:d,window:dom}=parseHTML('<html><head></head><body><button id="native">أضف</button></body></html>');
  const s=d.createElement('script');s.src='https://link-video-shop.vercel.app/preorder-before-add.js';s.dataset.beforeAdd='1';Object.defineProperty(d,'currentScript',{value:s});
- let rows=ids.map(row),reads=0,notice='',mutations=0,native=0,releaseCart,releaseFeed;const cartWait=new Promise(r=>releaseCart=r),feedWait=new Promise(r=>releaseFeed=r);const events={},timers=new Map();let serial=0;
- const w={document:d,location:{pathname:path,href:'https://salla.sa/linkstore122'+path},addEventListener:dom.addEventListener.bind(dom),setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),fetch:async url=>{if(url.includes('preorder-frame-colors.json'))return {ok:true,json:async()=>JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'))};if(delayFeed)await feedWait;if(failFeed)throw Error('offline');return {ok:true,json:async()=>({ok:true,catalog:true,complete:true,products})};}};
- w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{details:async()=>{reads++;if(delayCart)await cartWait;if(failCart)throw Error('offline');return response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
+ const posts=[];let rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads=0,notice='',mutations=0,native=0,releaseCart,releaseFeed;const cartWait=new Promise(r=>releaseCart=r),feedWait=new Promise(r=>releaseFeed=r);const events={},timers=new Map();let serial=0;
+ const w={document:d,location:{pathname:path,href:'https://salla.sa/linkstore122'+path},addEventListener:dom.addEventListener.bind(dom),setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),fetch:async(url,options)=>{if(url.includes('mode=preorder-consent')){const body=JSON.parse(options.body);posts.push(body);return {ok:!(body.action==='begin'?failBegin:failFinish),json:async()=>({ok:true,...(body.action==='begin'?{ticket:'test-ticket'}:{recorded:true})})};}if(url.includes('preorder-frame-colors.json'))return {ok:true,json:async()=>JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'))};if(delayFeed)await feedWait;if(failFeed)throw Error('offline');return {ok:true,json:async()=>({ok:true,catalog:true,complete:true,products,...(consent?{consent:{enabled:true,policy_version:'together-20261016-v1',policy_text:'أوافق على انتظار جميع منتجات الطلب حتى وصول آخر دفعة وفحصها. شحنة واحدة، ورسومها تظهر حسب عنواني قبل الدفع.'}}: {})})};}};
+ w.salla={onReady:fn=>fn(),notify:{success:x=>notice=x},cart:{getCurrentCartId:async()=> '3212565107043415786',details:async()=>{reads++;if(delayCart)await cartWait;if(failCart)throw Error('offline');return response(rows);},addItem:()=>mutations++,deleteItem:()=>mutations++,event:{onItemAdded:fn=>events.add=fn,onItemUpdated:fn=>events.update=fn}}};
  const settle=async()=>{for(let i=0;i<10;i++)await new Promise(r=>setImmediate(r));};
  api.start(w);await settle();
  const validate=(id,isValid=true)=>{let button=d.querySelector('salla-add-product-button');if(!button){button=d.createElement('salla-add-product-button');d.body.appendChild(button);button.addEventListener('click',e=>setImmediate(()=>{if(!e.defaultPrevented)native++;}));}button.setAttribute('product-id',id);const e=new dom.Event('click',{bubbles:true,cancelable:true});if(!isValid)e.preventDefault();button.dispatchEvent(e);return {isValid:!e.defaultPrevented};};
  const click=async selector=>{d.querySelector(selector).dispatchEvent(new dom.Event('click',{bubbles:true}));await settle();};
  const approve=async()=>{const box=d.querySelector('[data-po-together]');box.checked=true;box.dispatchEvent(new dom.Event('change',{bubbles:true}));await click('[data-po-approve]');};
- return {w,d,validate,approve,click,settle,events,releaseCart,releaseFeed,native:()=>native,setProducts:v=>products=v,setRows:ids=>rows=ids.map(row),reads:()=>reads,notice:()=>notice,mutations:()=>mutations,hook:()=>w.LinkPreorderBeforeAddStatus?.ready};
+ return {w,d,posts,validate,approve,click,settle,events,releaseCart,releaseFeed,native:()=>native,setProducts:v=>products=v,setRows:ids=>rows=ids.map(id=>({...row(id),...(consent?{options:[]}: {})})),reads:()=>reads,notice:()=>notice,mutations:()=>mutations,hook:()=>w.LinkPreorderBeforeAddStatus?.ready};
 }
 test('native product-only carts never show shipping choices',async()=>{
  for(const [ids,id,path] of [[[],P,'/p318533359'],[[P],P,'/p318533359'],[[R],R,'/p999']]){const h=await harness(ids,path);assert.equal(h.validate(id).isValid,true);assert.equal(h.d.querySelector('#po-before-add'),null);assert.equal(h.mutations(),0);}
@@ -193,4 +193,25 @@ test('magnetic grip remains a pending preorder until its own dated CRM batch is 
  const pending=api.pendingCatalog(api.catalogOf([fixture]),config)[id];assert.equal(pending.expected_arrival,'2026-11-13');assert.equal(pending.ship_from,'2026-11-14');assert.equal(pending.ship_by,'2026-11-16');
  const opened=await harness([],'/category',{products:[fixture,{...later,id,name:'مسكة لنك المغناطيسية الفاخرة',color:''}]});
  assert.equal(opened.validate(id).isValid,false);assert.match(opened.d.querySelector('#po-before-add').textContent,/13 نوفمبر 2099/);await opened.approve();assert.equal(opened.native(),1);
+});
+
+
+test('enabled durable consent is saved before native allowance and finalized only after successful native add',async()=>{
+ const h=await harness([R],'/p318533359',{consent:true});
+ assert.equal(h.validate(P).isValid,false);await h.approve();
+ assert.equal(h.posts.length,1);assert.equal(h.posts[0].action,'begin');assert.equal(h.posts[0].affirmative,true);assert.equal(h.posts[0].checkout_id,'3212565107043415786');assert.deepEqual(h.posts[0].incoming,[P]);
+ assert.equal(h.validate(P).isValid,true);assert.equal(h.posts.length,1,'allowing a gesture does not prove native addition');
+ h.setRows([R,P]);h.events.add();await h.settle();
+ assert.equal(h.posts.length,2);assert.equal(h.posts[1].action,'finish');assert.equal(h.posts[1].ticket,'test-ticket');assert.deepEqual(h.posts[1].items.map(r=>r.product_id),[R,P]);assert.equal(h.mutations(),0);
+});
+test('failed intent never grants permission; failed finalization reports the record gap without altering cart',async()=>{
+ const blocked=await harness([R],'/p318533359',{consent:true,failBegin:true});blocked.validate(P);await blocked.approve();assert.match(blocked.d.querySelector('.po-error').textContent,/حفظ اختيار الشحن/);assert.equal(blocked.native(),0);
+ const h=await harness([R],'/p318533359',{consent:true,failFinish:true});h.validate(P);await h.approve();h.validate(P);h.setRows([R,P]);h.events.add();await h.settle();assert.match(h.d.querySelector('#po-consent-save-error').textContent,/تعذر توثيق/);assert.equal(h.mutations(),0);
+});
+test('durable bulk consent waits for all approved native additions before saving the final cart',async()=>{
+ const h=await harness([R],'/p318533359',{consent:true});
+ const approved=h.w.LinkPreorderCheckItems([{id:P},{id:'1000'}]);await h.settle();await h.approve();assert.equal(await approved,true);
+ assert.equal(h.posts.length,1);
+ h.setRows([R,P]);h.events.add();await h.settle();assert.equal(h.posts.length,1);
+ h.setRows([R,P,'1000']);h.events.add();await h.settle();assert.equal(h.posts.length,2);assert.equal(h.posts[1].items.length,3);
 });

@@ -29,13 +29,13 @@
  let script=d.getElementById('link-preorder-before-add-loader');
  if(!script){
   script=d.createElement('script');script.id='link-preorder-before-add-loader';
-  script.src='https://link-video-shop.vercel.app/preorder-before-add.js?v=20261015-10';script.dataset.beforeAdd='1';script.async=true;
+  script.src='https://link-video-shop.vercel.app/preorder-before-add.js?v=20261016-11';script.dataset.beforeAdd='1';script.async=true;
   script.addEventListener('load',finish,{once:true});script.addEventListener('error',failed,{once:true});d.head.appendChild(script);
  }else{script.addEventListener('load',finish,{once:true});script.addEventListener('error',failed,{once:true});}
 });
 /* LINK_PREORDER_BOOTSTRAP_END */
 /* Link Store — Malak navigation · preorder runtime enabled 2026-10-15
- * Standalone: no Salla write operations, no data collection.
+ * Navigation with preorder bootstrap; native cart writes remain in Salla.
  * Installed on main Malak (603175051) and Malak Trials (1409940314).
  * Remove its loader to disable immediately.
  */

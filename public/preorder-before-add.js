@@ -1,5 +1,6 @@
 /* Opt-in choice before native Salla product button clicks.
-   Cart is read-only: no add/delete, checkout interception or storage. */
+   Cart stays read-only: no add/delete or checkout interception.
+   Optional consent evidence is saved server-side, without local cart storage. */
 (function(scope,factory){
  'use strict';const api=factory();
  if(typeof module==='object'&&module.exports)module.exports=api;
@@ -45,10 +46,11 @@
   if(!rows)throw error('cart_unavailable');
   const items=rows.map(r=>{const id=String(r.product_id??r.product?.id??''),quantity=Number(r.quantity);
    if(!/^\d+$/.test(id)||!Number.isSafeInteger(quantity)||quantity<1)throw error('cart_unavailable');
-   return {id,quantity,options:r.options??null};
+   return {id,quantity,options:r.options??null,sku:r.product_sku_id??r.sku_id??r.sku?.id??null};
   });
   const hasPreorder=items.some(i=>!!catalog[i.id]),hasReady=items.some(i=>!catalog[i.id]);
-  return {items,catalog,hasPreorder,hasReady,mixed:new Set(items.map(i=>group(catalog[i.id]))).size>1,key:stable({items,catalog})};
+  const checkoutId=data?.cart?.id??data?.id;
+  return {items,rawItems:rows,checkoutId,catalog,hasPreorder,hasReady,mixed:new Set(items.map(i=>group(catalog[i.id]))).size>1,key:stable({items,catalog,checkoutId})};
  }
  function decide(cart,incoming){
   const ids=(Array.isArray(incoming)?incoming:[incoming]).map(String);
@@ -87,7 +89,38 @@
   w.__linkBeforeAddStarted=true;
   const origin=new URL(script.src).origin,demo=script.dataset.demo==='1';
   const model=gate();let dialog,context=null,ack=false,ready=false,reading=null,version=0,bootTimer,stopped=false,bootTries=0,watching=false,noticePermission=null,approving=false;
-  const nativeForms=new WeakMap();
+  const nativeForms=new WeakMap();let consentConfig=null,pendingConsent=null;
+  const exactId=value=>{if(typeof value==='number'&&!Number.isSafeInteger(value))throw error('cart_unavailable');const id=String(value??'');if(!/^\d{1,40}$/.test(id))throw error('cart_unavailable');return id;};
+  const evidenceItems=cart=>cart.rawItems.map(r=>({product_id:r.product_id??r.product?.id,quantity:r.quantity,options:r.options,...(r.product_sku_id!=null?{product_sku_id:r.product_sku_id}:r.sku_id!=null?{sku_id:r.sku_id}:r.sku?.id!=null?{sku_id:r.sku.id}:{}),...(r.notes?{notes:true}:{}),...(r.attachments?.length?{attachments:[true]}:{})}));
+  async function checkoutId(cart){
+   if(cart.checkoutId!=null)return exactId(cart.checkoutId);
+   const owner=typeof w.salla?.cart?.getCurrentCartId==='function'?w.salla.cart:w.salla?.cart?.api;
+   if(typeof owner?.getCurrentCartId!=='function')throw error('cart_unavailable');
+   return exactId(await bounded(()=>owner.getCurrentCartId()));
+  }
+  async function saveEvidence(body){
+   const response=await bounded(()=>w.fetch(origin+'/api/protection-feed?mode=preorder-consent',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}));
+   if(!response.ok)throw error('consent_unavailable');const result=await response.json();if(!result?.ok)throw error('consent_unavailable');return result;
+  }
+  async function recordIntent(cart,request){
+   const decision=decisionFor(cart,request);if(!consentConfig?.enabled||!decision.mixes)return;
+   const displayedText=dialog?.querySelector('[data-po-together]')?.nextElementSibling?.querySelector('small')?.textContent;
+   if(displayedText!==consentConfig.policy_text)throw error('consent_policy_changed');
+   const id=await checkoutId(cart);
+   const result=await saveEvidence({action:'begin',affirmative:true,checkout_id:id,items:evidenceItems(cart),incoming:request.ids||[request.id],policy_version:consentConfig.policy_version,policy_text:consentConfig.policy_text,schedules:decision.products.map(p=>({product_id:p.id,revision:p.revision,expected_arrival:p.expected_arrival,ship_from:p.ship_from,ship_by:p.ship_by}))});
+   if(!result.ticket)throw error('consent_unavailable');
+   const before={};for(const item of cart.items)before[item.id]=(before[item.id]||0)+item.quantity;
+   pendingConsent={ticket:result.ticket,checkout_id:id,until:Date.now()+120000,before,expected:request.quantities||{[request.id]:1}};
+  }
+  async function finalizeEvidence(cart,ticket){
+   try{
+    if(ticket.until<Date.now())throw error('consent_expired');
+    await saveEvidence({action:'finish',ticket:ticket.ticket,checkout_id:await checkoutId(cart),items:evidenceItems(cart)});
+   }catch{
+    let note=d.getElementById('po-consent-save-error');if(!note){note=d.createElement('p');note.id='po-consent-save-error';note.setAttribute('role','alert');d.body.prepend(note);}
+    note.textContent='أُضيف المنتج، لكن تعذر توثيق اختيار الشحنة الواحدة. تواصل معنا لتأكيد طريقة الشحن قبل تجهيز الطلب.';
+   }
+  }
   const formState=form=>stable([...form.querySelectorAll('input,select,textarea')].map(x=>[x.name,x.type,x.value,!!x.checked]));
   const status={ready:false,reason:'waiting_for_sdk'};w.LinkPreorderBeforeAddStatus=status;
   const quickSelector='salla-quick-buy,salla-mini-checkout-widget,.s-add-product-button-buy-now,.s-fast-checkout-button';
@@ -136,6 +169,8 @@
       await read();if(context!==request)return;
       if(model.current()?.key!==expected){model.cancel();ack=false;show('تغيّرت السلة أو مواعيد الدفعات. راجع التفاصيل ووافق من جديد.');return;}
       if(!scheduleValid()){show('تعذر التحقق من موعد الحجز. حاول مجدداً قبل الإضافة.');return;}
+      pendingConsent=null;await recordIntent(model.current(),request);
+      if(context!==request||model.current()?.key!==expected){pendingConsent=null;model.cancel();ack=false;show('تغيّرت السلة. راجع التفاصيل ووافق من جديد.');return;}
       if(context.resolve){close(true);return;}
       if(context.external){
        const resume=context.resume;
@@ -149,7 +184,7 @@
       // Customer presses the original native add button. Never replay a click or submit.
       const target=component?.el??component;target?.focus?.({preventScroll:true});
       w.salla?.notify?.success?.('تم اعتماد الشحنة الواحدة. اضغط زر الإضافة الأصلي لإكمال الإضافة.');
-     }catch{show('تعذر التحقق من السلة. لم نضف أو نحذف أي منتج.');}finally{approving=false;}
+     }catch{pendingConsent=null;ack=false;show('تعذر التحقق من السلة أو حفظ اختيار الشحن. حاول مجدداً قبل الإضافة.');}finally{approving=false;}
     });
    }
    const cart=model.current();
@@ -183,7 +218,9 @@
    const ticket=nativeForm&&nativeForms.get(nativeForm);if(nativeForm)nativeForms.delete(nativeForm);
    await read();
    if(context)return false;
-   const ids=items.map(x=>String(x.id)),candidate={ids,id:ids[0]};
+   const ids=items.map(x=>String(x.id)),quantities={};
+   for(const item of items){const q=item.quantity??1;if(!Number.isSafeInteger(q)||q<1)throw error('product_unknown');quantities[String(item.id)]=(quantities[String(item.id)]||0)+q;}
+   const candidate={ids,id:ids[0],quantities};
    if(ticket&&ids.length===1&&ids[0]===ticket.id&&ticket.key===model.current().key&&ticket.until>=Date.now()&&ticket.state===formState(nativeForm))return true;
    const decision=decisionFor(model.current(),candidate),pageId=(w.location.pathname.match(/\/p(\d+)(?:\/|$)/)||[])[1];
    const external=decision.products.some(p=>ids.includes(p.id)&&pageId!==p.id);
@@ -200,12 +237,13 @@
    const expectedVersion=version;
    reading=(async()=>{
     const [response,json,config]=await Promise.all([
-     bounded(()=>w.salla.cart.details()),
+     bounded(()=>w.salla.cart.details(null,['options','attachments'])),
      bounded(async()=>{const r=await w.fetch(origin+'/api/protection-feed?mode=preorders&catalog=1',{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('catalog_unavailable');return r.json();}),
      bounded(async()=>{const r=await w.fetch(origin+'/preorder-frame-colors.json?v=20261015-10',{credentials:'omit',cache:'no-store'});if(!r.ok)throw error('catalog_unavailable');return r.json();})
     ]);
     if(expectedVersion!==version||stopped)throw error('cart_changed');
     if(!json?.ok||json.catalog!==true||json.complete!==true)throw error('catalog_unavailable');
+    consentConfig=json.consent||null;
     const cart=model.update(response,pendingCatalog(catalogOf(json.products),config));syncShortcuts();disclose();
     status.reason='ready';return cart;
    })().catch(e=>{model.invalidate();syncShortcuts();status.reason=e.code||'cart_unavailable';throw e;}).finally(()=>{reading=null;});
@@ -288,9 +326,15 @@
    read().catch(()=>{});
    w.__linkBeforeAddUnsubscribe=unsubscribe;
    if(!watching){watching=true;
-    const changed=()=>{if(stopped)return;version++;noticePermission=null;model.invalidate();syncShortcuts();ack=false;read().then(()=>{if(context)show();}).catch(()=>{});};
+    const changed=(added=false)=>{if(stopped)return;const ticket=added===true?pendingConsent:null;if(added!==true)pendingConsent=null;version++;noticePermission=null;model.invalidate();syncShortcuts();ack=false;read().then(cart=>{
+     if(ticket&&pendingConsent===ticket){const totals={};for(const item of cart.items)totals[item.id]=(totals[item.id]||0)+item.quantity;
+      if(Object.entries(ticket.expected).every(([id,q])=>(totals[id]||0)>=(ticket.before[id]||0)+q)){pendingConsent=null;finalizeEvidence(cart,ticket);}
+     }
+     if(context)show();
+    }).catch(()=>{});};
     const events=w.salla.cart.event;
-    for(const name of ['onItemAdded','onItemDeleted','onItemRemoved','onItemUpdated','onItemQuantityUpdated'])if(typeof events?.[name]==='function')events[name](changed);
+    if(typeof events?.onItemAdded==='function')events.onItemAdded(()=>changed(true));
+    for(const name of ['onItemDeleted','onItemRemoved','onItemUpdated','onItemQuantityUpdated'])if(typeof events?.[name]==='function')events[name](()=>changed());
     d.addEventListener('visibilitychange',()=>{if(d.visibilityState==='visible')changed();});
     w.addEventListener('pagehide',()=>{stopped=true;w.clearTimeout(bootTimer);w.__linkBeforeAddUnsubscribe?.();});
     w.addEventListener('pageshow',e=>{if(e.persisted){stopped=false;ready=false;install();}});

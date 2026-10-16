@@ -39,7 +39,7 @@ test('mixed cart updates on removal, does not guard coupons, never uses cart-lin
 });
 test('public feed allows only sanitized schedule fields, hides drafts by default, rejects query injection',async()=>{
  const queries=[];let response;
- const context={module:{exports:{}},AbortSignal,Set,require:()=>({MERCHANT_ID:1829345766,sb:async p=>{queries.push(p);return [{product_id:'318533359',product_name:'إطار',color:'بورغندي',status:'draft',ship_from:'2026-11-04',ship_by:'2026-11-06',revision:1,customer_phone:'PRIVATE',incoming_quantity:400}];},json:(_r,status,data,headers)=>response={status,data,headers}})};
+ const context={module:{exports:{}},AbortSignal,Set,require:name=>name==='./preorder-consent-service'?{control:async()=>false,VERSION:'test',TEXT:'test'}:({MERCHANT_ID:1829345766,sb:async p=>{queries.push(p);return [{product_id:'318533359',product_name:'إطار',color:'بورغندي',status:'draft',ship_from:'2026-11-04',ship_by:'2026-11-06',revision:1,customer_phone:'PRIVATE',incoming_quantity:400}];},json:(_r,status,data,headers)=>response={status,data,headers}})};
  vm.createContext(context);vm.runInContext(fs.readFileSync(__dirname+'/../lib/preorder-storefront.js','utf8'),context);
  const feed=context.module.exports.feed;
  await feed({query:{ids:'318533359&select=*'}},{});assert.equal(response.status,400);assert.equal(queries.length,0);
@@ -50,7 +50,7 @@ test('public feed allows only sanitized schedule fields, hides drafts by default
 test('delegated before-add mode keeps date card without a second checkbox or DOM guard',async()=>{const h=await harness({beforeAdd:true});assert.ok(h.document.querySelector('.link-preorder').textContent.includes('شحن طلبك المتوقع'));assert.equal(h.document.querySelector('[data-po-ack]'),null);const e=new h.window.Event('click',{bubbles:true,cancelable:true});h.document.querySelector('.product-form button').dispatchEvent(e);assert.equal(e.defaultPrevented,false);});
 test('catalog returns only complete active schedules, hides draft/closed, and fails on overflow, variants or duplicate active products',async()=>{
  const queries=[];let response,rows=[{...product,product_id:product.id,product_name:'الإطار',variant_id:''}];
- const context={module:{exports:{}},AbortSignal,Set,require:()=>({MERCHANT_ID:1829345766,sb:async p=>{queries.push(p);return rows;},json:(_r,status,data,headers)=>response={status,data,headers}})};
+ const context={module:{exports:{}},AbortSignal,Set,require:name=>name==='./preorder-consent-service'?{control:async()=>false,VERSION:'test',TEXT:'test'}:({MERCHANT_ID:1829345766,sb:async p=>{queries.push(p);return rows;},json:(_r,status,data,headers)=>response={status,data,headers}})};
  vm.createContext(context);vm.runInContext(fs.readFileSync(__dirname+'/../lib/preorder-storefront.js','utf8'),context);const feed=context.module.exports.feed;
  await feed({query:{catalog:'1',preview:'1',ids:'inject&x'}},{});assert.equal(response.status,200);assert.equal(response.data.complete,true);assert.equal(response.data.preview,false);assert.equal(response.data.products.length,1);assert.ok(queries[0].includes('status=in.(open,paused)'));assert.ok(!JSON.stringify(response.data).includes('variant_id'));
  const first=rows[0];rows=[{...first,status:'draft'},{...first,product_id:'999',status:'closed'}];await feed({query:{catalog:'1'}},{});assert.equal(response.data.products.length,0);
