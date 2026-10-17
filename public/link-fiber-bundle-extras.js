@@ -30,7 +30,7 @@ function css(){if(document.getElementById('link-fiber-extras-style'))return;cons
 .link-fiber-extra .lf-option{display:flex;align-items:center;gap:9px;border:1px solid #e7ddec;border-radius:12px;padding:12px;margin:8px 0;background:#fff;cursor:pointer}
 .link-fiber-extra .lf-option:has(input:checked){background:#f3eaf8;border-color:#51007a}
 .link-fiber-extra input{accent-color:#51007a}.link-fiber-extra .lf-option strong{margin-inline-start:auto;color:#51007a;font-size:13px}
-.link-fiber-extra .lf-color{width:100%;border:1px solid #d9c4e4;background:#fff;border-radius:10px;padding:11px;font:inherit;margin-top:8px}
+.link-fiber-extra select.lf-color{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;min-height:48px!important;height:auto!important;direction:rtl!important;text-align:right!important;box-sizing:border-box!important;border:1px solid #d9c4e4!important;background:#fff!important;color:#281b30!important;border-radius:10px!important;padding:11px 14px!important;font:inherit!important;font-size:14px!important;line-height:1.6!important;margin:10px 0 0!important;opacity:1!important;white-space:normal!important;text-overflow:clip!important;appearance:auto!important}.link-fiber-extra select.lf-color option{color:#281b30!important;background:#fff!important}.link-fiber-extra select.lf-color:disabled{display:none!important}
 .link-fiber-extra .lf-note{font-size:12px;color:#715c7c;line-height:1.7;margin:9px 0}.link-fiber-extra .lf-msg{font-size:12px;color:#51007a;min-height:18px;margin-top:8px}
 .link-fiber-extra .lf-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #e9e0ed}
 .link-fiber-extra .lf-row:last-child{border:0}.link-fiber-extra img{height:64px;width:64px;object-fit:contain;border-radius:9px;background:white}
@@ -54,8 +54,8 @@ const row=el('label','','lf-option'),input=el('input');input.type='checkbox';inp
 row.append(input,el('span',lens.name),el('strong','+ '+money(lens.price)));camera.append(row);
 const select=el('select','','lf-color');const placeholder=el('option','اختر لون العدسات');placeholder.value='';select.append(placeholder);
 lens.colors.forEach(([value,label])=>{const opt=el('option',label);opt.value=value;select.append(opt);});
-select.disabled=true;select.setAttribute('aria-label','لون عدسات الحماية');camera.append(select);
-input.addEventListener('change',()=>{selected=input.checked;select.disabled=!selected;msg.textContent='';});
+select.disabled=true;select.setAttribute('aria-label','لون عدسات الحماية');select.setAttribute('dir','rtl');camera.append(select);
+input.addEventListener('change',()=>{selected=input.checked;select.disabled=!selected;msg.textContent='';if(selected)select.focus();});
 select.addEventListener('change',()=>{color=Number(select.value)||null;msg.textContent='';});
 camera.append(el('p','اختياري: اختر العدسات واللون، ثم اضغط «أضف للسلة» للباكج. تُضاف العدسات كمنتج مستقل بالسعر الموضح.','lf-note'),msg);
 function currentQuantity(){const q=Number(form.querySelector('[name="quantity"]')?.value||1);return Number.isInteger(q)&&q>0?q:1;}
