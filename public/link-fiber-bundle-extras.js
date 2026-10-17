@@ -12,7 +12,8 @@ window.__linkFiberExtras=true;
 const el=(tag,txt='',cls='')=>{const e=document.createElement(tag);if(txt)e.textContent=txt;if(cls)e.className=cls;return e;};
 const money=n=>new Intl.NumberFormat('ar-SA-u-nu-latn',{maximumFractionDigits:2}).format(n)+' ر.س';
 const lenses={
-'S24 Ultra':{id:540794920,name:'عدسات Link لحماية الكاميرا – Galaxy S24 Ultra',price:19.96,option:17448494,colors:[[490141847,'أسود'],[1863518096,'أبيض'],[955786897,'أخضر'],[180700562,'وردي'],[1688364179,'أزرق'],[914916252,'فضي'],[5612189,'تيتانيوم']]},
+'S24 Ultra':{id:540794920,name:'عدسات Link لحماية الكاميرا – Galaxy S24 Ultra',price:19.96,option:17448494,colors:[[490141847,'أسود'],[914916252,'فضي'],[5612189,'تيتانيوم'],[1905328748,'بنفسجي']]},
+'S23 Ultra':{id:870924025,name:'عدسات Link لحماية الكاميرا – Galaxy S23 Ultra',price:49,option:1502507331,colors:[[10933991,'أسود'],[2009436397,'أخضر زيتي']]},
 'S25 Ultra':{id:2000656879,name:'عدسات Link لحماية الكاميرا – Galaxy S25 Ultra',price:85,option:2075226229,colors:[[191341677,'أسود'],[1699529582,'أبيض'],[16122216,'وردي'],[1389568105,'أزرق'],[750276458,'فضي'],[2122673771,'تيتانيوم']]}
 };
 // Other models intentionally have no camera item until an active, model-confirmed lens SKU is verified.
