@@ -6,7 +6,7 @@ const ids={
 '316768505':'S25 Ultra','702158061':'S23 Ultra','1293159908':'S25 Ultra','138002617':'S25 Ultra',
 '274336065':'S23 Ultra','226667877':'S25','577784353':'S23 Ultra','2023951170':'S25',
 '497977612':'S23 Ultra','1658110619':'S24 Ultra','1168464312':'S25 Ultra','1475876922':'S25 Ultra',
-'1619145201':'S23 Ultra','601583214':'S24 Ultra'};
+'1619145201':'S23 Ultra','601583214':'S24 Ultra','1117056617':'S24 Ultra','1113440558':'S25 Ultra'};
 const id=location.pathname.match(/\/p(\d+)\/?$/)?.[1]; if(!id||!ids[id]||window.__linkFiberExtras)return;
 window.__linkFiberExtras=true;
 const el=(tag,txt='',cls='')=>{const e=document.createElement(tag);if(txt)e.textContent=txt;if(cls)e.className=cls;return e;};
