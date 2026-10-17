@@ -1268,3 +1268,11 @@
     init();
   }
 })();
+
+/* LINK_FIBER_EXTRAS_LOADER_V1 */
+(function(){
+  if(!/\/p(?:868193571|195931898|1004068331|81019550|1974746699|353874798|388956440|382788829|316768505|702158061|1293159908|138002617|274336065|226667877|577784353|2023951170|497977612|1658110619|1168464312|1475876922|1619145201|601583214)\/?$/.test(location.pathname))return;
+  if(document.getElementById('link-fiber-bundle-extras-loader'))return;
+  const s=document.createElement('script');s.id='link-fiber-bundle-extras-loader';
+  s.src='https://link-video-shop.vercel.app/link-fiber-bundle-extras.js?v=20261017-1';s.async=true;document.head.appendChild(s);
+})();
