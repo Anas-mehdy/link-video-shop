@@ -79,3 +79,12 @@ test('finalization compares schedule values after JSONB round-trip, independent 
  await h.service.finish(finish);
  assert.equal(h.records[1].stage,'finalized');
 });
+test('a saved consent stays visible while thin order items are enriched; missing evidence never triggers a provider lookup',async()=>{
+ const h=harness(),b=h.body(),intent=await h.service.begin(b),items=[...b.items,{product_id:'900',quantity:1,options:[]}];
+ await h.service.finish({ticket:intent.ticket,checkout_id:b.checkout_id,items});
+ const o={external_order_id:'123',ordered_at:new Date(Date.now()+1000).toISOString(),source_payload:{checkout_id:b.checkout_id,items:items.map(i=>({...i,options:undefined}))}};
+ const unresolved=await h.service.evidence([o],h.batches,{resolveItems:async()=>null});assert.equal(unresolved['123'].recorded,true);assert.equal(unresolved['123'].reason,'snapshot_incomplete');
+ const resolved=await h.service.evidence([o],h.batches,{resolveItems:async()=>items});assert.equal(resolved['123'].status,'browser_record_matched');
+ const unknown={...o,external_order_id:'124',source_payload:{...o.source_payload,checkout_id:'123456'}};
+ const missing=await h.service.evidence([unknown],h.batches,{resolveItems:()=>{throw Error('must not fetch');}});assert.equal(missing['124'].reason,'no_record');assert.equal(missing['124'].recorded,undefined);
+});

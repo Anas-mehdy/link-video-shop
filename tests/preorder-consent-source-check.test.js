@@ -22,3 +22,8 @@ test('dashboard never treats mixed order contents or allocation as shipping cons
  assert.match(html,/موافقة تجميع الشحن غير موثقة/);assert.match(html,/إذا اعتمد العميل التجميع/);
  assert.doesNotMatch(html,/الطلب الذي يجمع الجاهز والحجز يُجهّز ويُشحن كاملاً/);
 });
+test('dashboard separates recorded but unmatched consent from an absent consent and escapes its disclosure',()=>{
+ const window={};vm.runInNewContext(fs.readFileSync(__dirname+'/../public/dashboard-preorders.js','utf8'),{window,Intl,URLSearchParams});
+ const data={ready:true,batches:[],summary:[],queue:[],notices:[],page:1,reservations:[{external_order_id:'123',mixed_order:true,state:'reserved'}],shipping_consents:{123:{status:'review',reason:'snapshot_incomplete',recorded:true,received_at:'2026-10-18T11:38:31Z',policy_text:'<script>test</script>',schedules:[{ship_from:'2026-11-14',ship_by:'2026-11-16'}]}}};
+ const html=window.LinkPreorders.render(data);assert.match(html,/موافقة الشحنة الواحدة محفوظة/);assert.match(html,/badge amber/);assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);assert.doesNotMatch(html,/موافقة تجميع الشحن غير موثقة/);
+});
