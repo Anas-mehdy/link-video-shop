@@ -16,7 +16,7 @@
     protection: '<path d="M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
   };
-  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['preorders','الحجز المسبق'],['customers','العملاء'],['staffsales','مبيعات خدمة العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['postpurchase','ما بعد البيع'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
+  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['preorders','الحجز المسبق'],['customers','العملاء'],['staffsales','مبيعات خدمة العملاء'],['carts','السلات المتروكة'],['carthuman','متابعة السلات الكبيرة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['postpurchase','ما بعد البيع'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.overview}</svg>`;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt = value => value == null ? '—' : Number(value).toLocaleString('ar-SA-u-nu-latn');
@@ -211,6 +211,7 @@
     if (page==='ads') window.LinkAds.bind({navigate,toast});
     if (page==='whatsapp') window.LinkWhatsApp.bind({navigate,toast,api});
     if (page==='postpurchase') window.LinkPostPurchase.bind({navigate,toast,api});
+    if (page==='carthuman') window.LinkCartHuman.bind({navigate,toast,api});
     if (page==='preorders') window.LinkPreorders.bind({navigate,toast,api});
     if (page==='automations') window.LinkCartFollowup.bind({api,toast});
     if (recordState[page]) {
@@ -253,6 +254,7 @@
       if (page==='overview') { overview=await api('overview'); html=home(overview); }
       else if (page==='whatsapp') { html=window.LinkWhatsApp.render(await api('whatsapp')); }
       else if (page==='postpurchase') { html=window.LinkPostPurchase.render(await api('postpurchase')); }
+      else if (page==='carthuman') { html=window.LinkCartHuman.render(await api('cart-human')); }
       else if (page==='preorders') { html=window.LinkPreorders.render(await window.LinkPreorders.load(api)); }
       else if (page==='ads') { html=await window.LinkAds.load(token); }
       else if (page==='staffsales') { html=staffSalesView(await api('staff-sales')); }
