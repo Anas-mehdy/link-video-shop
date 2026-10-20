@@ -80,3 +80,18 @@ test('Dashboard lists human carts, escapes customer data and disables unapproved
  assert.ok(html.includes('&lt;script&gt;'));assert.ok(html.includes('&lt;img&gt;'));assert.match(html,/data-human-send="[^"]+" disabled/);
  const dashboard=fs.readFileSync(__dirname+'/../public/dashboard.js','utf8');assert.equal(dashboard.match(/\['carthuman','متابعة السلات الكبيرة'\]/g).length,1);
 });
+test('Feedback validates inputs, scopes writes, and never calls sender',async()=>{
+ const {saveFeedback}=require('../lib/cart-human');let calls=[];
+ const database=async(path,opts)=>{calls.push([path,opts]);return path.startsWith('crm_cart_human_followups?')?[{id:record.id}]:null;};
+ for(const body of [{id:'bad',reason:'price',outcome:'discussing',note:''},{id:record.id,reason:'invented',outcome:'discussing',note:''},{id:record.id,reason:'price',outcome:'bought',note:''},{id:record.id,reason:'price',outcome:'discussing',note:'x'.repeat(1001)}])await assert.rejects(saveFeedback(body,{database}));
+ assert.equal(calls.length,0);
+ await assert.rejects(saveFeedback({id:record.id,reason:'price',outcome:'discussing',note:''},{database:async()=>[]}));
+ await saveFeedback({id:record.id,reason:'shipping_cost',outcome:'discussing',note:'  غالي الشحن  '},{database});
+ assert.match(calls[0][0],/merchant_id=eq.1829345766/);
+ const saved=JSON.parse(calls[1][1].body);assert.equal(saved.note,'غالي الشحن');assert.equal(saved.followup_id,record.id);assert.equal(calls.length,2);
+});
+test('Feedback form escapes notes and separates conversation from purchase',()=>{
+ const vm=require('node:vm'),ctx={window:{}};vm.runInNewContext(fs.readFileSync(__dirname+'/../public/dashboard-cart-human.js','utf8'),ctx);
+ const html=ctx.window.LinkCartHuman.render({storage_ready:true,server_ready:true,configuration:{template_approved:true},previous_second:[],queue:[{id:record.id,amount:350,reason:'accepted',feedback:{reason:'price',outcome:'discussing',note:'</textarea><script>x</script>'}}]});
+ assert.ok(html.includes('&lt;/textarea&gt;'));assert.ok(html.includes('data-human-feedback'));assert.ok(html.includes('حل الاستفسار لا يعني إتمام الشراء'));assert.ok(html.includes('السعر: 1'));
+});
