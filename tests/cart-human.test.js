@@ -31,6 +31,11 @@ test('Database routing >300, exact boundary, history, approval, replies, optouts
  const claim=async c=>(await db.query('select crm_claim_cart_human((select id from crm_cart_human_followups where cart_id=$1)) r',[c])).rows[0].r;
  assert.equal((await claim(big.c)).blocked,'template_not_ready');
  await db.exec('update crm_cart_human_settings set template_approved=true');assert.equal((await claim(big.c)).blocked,'delay');
+ await db.exec("update test_clock set t='2026-10-19T00:59:00Z'");
+ assert.equal((await claim(big.c)).blocked,'delay');
+ await db.exec("update test_clock set t='2026-10-19T01:00:00Z'");
+ const early=(await db.query('select crm_cart_human_list() r')).rows[0].r.queue.find(r=>r.cart_id===big.c);assert.equal(early.reason,'ready');
+ assert.equal((await db.query('select crm_claim_cart_second(1829345766) r')).rows[0].r.idle,'no_due');
  await db.exec("update test_clock set t='2026-10-19T08:01:00Z'");
  await db.query('insert into crm_whatsapp_customer_replies values(1829345766,$1,public.delivery_now())',[reply.phone]);
  await db.query('insert into crm_whatsapp_optouts values(1829345766,$1,public.delivery_now())',[opt.phone]);

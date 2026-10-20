@@ -41,7 +41,7 @@ begin
  select coalesce(jsonb_agg(row_data order by sort_at desc),'[]'::jsonb) into result from (
  select h.created_at as sort_at,jsonb_build_object('id',h.id,'cart_id',c.id,'external_cart_id',c.external_cart_id,'customer_name',c.customer_name,
  'phone',f.attempted_phone,'amount',c.total_amount,'currency',c.currency,'items',coalesce(c.source_payload->'items','[]'::jsonb),
- 'first_at',f.completed_at,'second_at',s.attempted_at,'scheduled_for',f.completed_at+make_interval(hours=>coalesce(settings.delay_hours,8)),
+ 'first_at',f.completed_at,'second_at',s.attempted_at,'scheduled_for',f.completed_at+interval '1 hour',
  'status',h.status,'attempted_at',h.attempted_at,'provider_message_id',h.provider_message_id,'last_reply_at',r.last_reply_at,
  'reason',case when c.recovered_at is not null or c.status not in ('active','contacted') or exists(select 1 from public.orders o where o.merchant_id=c.merchant_id and o.customer_id=c.customer_id and o.ordered_at>=f.activity_at and coalesce(o.status_slug,'') not in ('canceled','cancelled','refunded','restored','restoring','payment_pending')) then 'purchased_or_inactive'
  when exists(select 1 from public.crm_whatsapp_optouts x where x.merchant_id=c.merchant_id and x.phone=f.attempted_phone) then 'optout'
@@ -51,7 +51,7 @@ begin
  when r.last_reply_at>=now()-interval '24 hours' then 'window_open'
  when r.last_reply_at>=f.attempted_at then 'customer_replied'
  when f.completed_at<now()-interval '48 hours' then 'expired'
- when f.completed_at+make_interval(hours=>coalesce(settings.delay_hours,8))>now() then 'delay'
+ when f.completed_at+interval '1 hour'>now() then 'delay'
  else 'ready' end) row_data
  from public.crm_cart_human_followups h join public.abandoned_carts c on c.id=h.cart_id
  join public.crm_cart_deliveries f on f.cart_id=c.id and f.merchant_id=c.merchant_id
