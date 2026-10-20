@@ -51,6 +51,27 @@ test('Database routing >300, exact boundary, history, approval, replies, optouts
  assert.equal((await db.query("select has_table_privilege('anon','crm_cart_human_followups','select') r")).rows[0].r,false);
  assert.equal((await db.query("select has_function_privilege('authenticated','crm_claim_cart_human(uuid)','execute') r")).rows[0].r,false);
  const list=(await db.query('select crm_cart_human_list() r')).rows[0].r;assert.equal(list.previous_second.length,1);assert.equal(list.queue.length,5);
+ await db.exec("update crm_cart_delivery_settings set started_at=public.delivery_now()-interval '1 day'");
+ const fresh=(await db.query("insert into abandoned_carts(merchant_id,external_cart_id,abandoned_at,crm_source_at,status,phone,checkout_url,total_amount) values(1829345766,'fresh-big',public.delivery_now(),public.delivery_now(),'active','966599999991','https://mtjr.at/new',350) returning id")).rows[0].id;
+ await db.query('select crm_cart_delivery_reconcile(1829345766)');
+ assert.equal((await db.query('select status from crm_cart_deliveries where cart_id=$1',[fresh])).rows[0].status,'cancelled');
+ assert.equal((await claim(fresh)).blocked,'delay');
+ await db.exec("update test_clock set t='2026-10-19T09:01:00Z'");
+ const freshRow=(await db.query('select crm_cart_human_list() r')).rows[0].r.queue.find(r=>r.cart_id===fresh);
+ assert.equal(freshRow.reason,'ready');assert.equal(freshRow.first_at,null);
+ const human=await claim(fresh);assert.equal(human.phone,'966599999991');
+ await db.query("select crm_finish_cart_human($1,$2,'accepted','987')",[human.id,human.attempt_token]);
+ assert.equal((await db.query('select crm_claim_cart_delivery(1829345766) r')).rows[0].r.idle,'no_due');
+ assert.equal((await db.query('select crm_claim_cart_second(1829345766) r')).rows[0].r.idle,'no_due');
+ // Cart value rising before first claim must also divert, while 300 remains automatic.
+ const small=(await db.query("insert into abandoned_carts(merchant_id,external_cart_id,abandoned_at,crm_source_at,status,phone,checkout_url,total_amount) values(1829345766,'fresh-small',public.delivery_now()-interval '1 hour',public.delivery_now()-interval '1 hour','active','966599999992','https://mtjr.at/small',300) returning id")).rows[0].id;
+ const first=(await db.query('select crm_claim_cart_delivery(1829345766) r')).rows[0].r;assert.equal(first.phone,'966599999992');
+ await db.query("select crm_finish_cart_delivery($1,$2,'accepted','988')",[first.id,first.attempt_token]);
+ const rise=(await db.query("insert into abandoned_carts(merchant_id,external_cart_id,abandoned_at,crm_source_at,status,phone,checkout_url,total_amount) values(1829345766,'rising',public.delivery_now()-interval '1 hour',public.delivery_now()-interval '1 hour','active','966599999993','https://mtjr.at/rising',299) returning id")).rows[0].id;
+ await db.query('select crm_cart_delivery_reconcile(1829345766)');await db.query('update abandoned_carts set total_amount=301 where id=$1',[rise]);
+ assert.equal((await db.query('select crm_claim_cart_delivery(1829345766) r')).rows[0].r.idle,'no_due');
+ assert.equal((await db.query('select status from crm_cart_deliveries where cart_id=$1',[rise])).rows[0].status,'cancelled');
+
  }finally{await db.close();}
 });
 test('Dashboard lists human carts, escapes customer data and disables unapproved sends',()=>{
