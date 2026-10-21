@@ -2,7 +2,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),path=requ
 const {tick,configure}=require('../lib/postpurchase-delivery');
 const env={ETISALNA_API_ACCESS_TOKEN:'test',CRM_WORKER_TOKEN:'test',CRM_ENCRYPTION_KEY:'a'.repeat(64),WHATSAPP_AUTOMATION_ENABLED:'true'};
 const uuid='11111111-1111-4111-8111-111111111111';
-function mock({batchReason='reserved',claimReason='claimed',optout=false}={}){const calls=[];return {calls,database:async(p,o)=>{calls.push(p);if(p==='rpc/crm_pp_delivery_batch')return {reason:batchReason,token:uuid,batch_at:'2026-10-14T08:00:00Z'};if(p.startsWith('orders?'))return [{id:uuid,customer_id:uuid,external_order_id:'123'}];if(p.startsWith('customers?'))return [{name:'أنس',normalized_phone:'905350215375'}];if(p==='rpc/crm_pp_delivery_claim')return {reason:claimReason,id:uuid,token:uuid};if(p.startsWith('crm_pp_delivery_control?'))return [{enabled:true}];if(p.startsWith('crm_whatsapp_optouts?'))return optout?[{phone:'905350215375'}]:[];if(p==='rpc/crm_pp_delivery_finish')return true;return [];}};}
+function mock({batchReason='reserved',claimReason='claimed',optout=false}={}){const calls=[];return {calls,database:async(p,o)=>{calls.push(p);if(p==='rpc/crm_pp_delivery_batch')return {reason:batchReason,token:uuid,batch_at:'2026-10-14T08:00:00Z'};if(p.startsWith('orders?'))return [{id:uuid,customer_id:uuid,external_order_id:'123',source_payload:{customer:{mobile:'+905350215375'}}}];if(p.startsWith('customers?'))return [{name:'أنس',normalized_phone:'905350215375'}];if(p==='rpc/crm_pp_delivery_claim')return {reason:claimReason,id:uuid,token:uuid};if(p.startsWith('crm_pp_delivery_control?'))return [{enabled:true}];if(p.startsWith('crm_whatsapp_optouts?'))return optout?[{phone:'905350215375'}]:[];if(p==='rpc/crm_pp_delivery_finish')return true;return [];}};}
 const dependencies={environment:env,review:async()=>({rows:[{reason:'review_ready',external_order_id:'123'}]}),pageData:async()=>({model:'iPhone 17 Pro Max',products:[{id:'2'}],live_stock_checked:true}),seal:()=> 'a'.repeat(120),makePayload:(r,p,phone)=>({phone,p})};
 test('paused and outside-hour ticks do not review, check Salla or send',async()=>{
  for(const batchReason of ['paused','outside_hours','batch_full']){const m=mock({batchReason});const r=await tick({...dependencies,database:m.database,review:async()=>{throw Error('must not review')},request:async()=>{throw Error('must not call provider')}});assert.equal(r.worked,false);assert.equal(m.calls.length,1);}
@@ -56,4 +56,8 @@ test('provider rejection keeps HTTP status without persisting private response c
  const database=async(p,o)=>{if(p==='rpc/crm_pp_delivery_finish')finish=JSON.parse(o.body);return m.database(p,o)};
  const result=await tick({...dependencies,database,request:async()=>({status:422,json:async()=>({error:'private customer response'})})});
  assert.equal(result.status,'rejected');assert.equal(finish.p_reason,'provider_rejected_http_422');assert.ok(!JSON.stringify(finish).includes('private'));
+});
+test('wrong snapshot recipient is blocked before page, claim, stock or send',async()=>{
+ const m=mock();let sends=0;const database=async(p,o)=>{const r=await m.database(p,o);if(p.startsWith('orders?'))r[0].source_payload.customer.mobile='+966555000111';return r};
+ const r=await tick({...dependencies,database,pageData:async()=>{throw Error('must not create page')},request:async()=>sends++});assert.equal(r.reason,'order_phone_mismatch');assert.equal(sends,0);assert.ok(!m.calls.includes('rpc/crm_pp_delivery_claim'));
 });
