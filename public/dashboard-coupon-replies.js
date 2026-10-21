@@ -1,0 +1,19 @@
+(()=>{
+'use strict';
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const reasons={needs_agent:'مشكلة بالكود — للموظفة',conversation_paused:'موقوفة لهذه المحادثة',optout:'إلغاء اشتراك',cooldown:'أُرسل للرقم خلال 24 ساعة',provider_request:'محاولة إرسال',provider_accepted:'قبلها المزود',unconfirmed_attempt:'النتيجة غير مؤكدة — راجع المحادثة قبل إعادة الإرسال'};
+function view(d){const s=d.configuration;return `<p class="muted">يعمل على طلبات الخصم النصية الجديدة في واتساب اتصالنا. يرسل الأكواد الثلاثة فورًا، بحد مرة لكل رقم خلال 24 ساعة. شكاوى الأكواد تبقى للموظفة. الرسائل الصوتية لا تشغّله.</p><p><b>${s.enabled&&d.ready?'الرد مفعّل':'الرد متوقف'}</b></p><form id="coupon-settings"><label><input type="checkbox" name="enabled" ${s.enabled?'checked':''}> تشغيل الرد التلقائي</label><p><label for="coupon-message">الرسالة المرسلة</label></p><textarea id="coupon-message" name="message" rows="12" minlength="20" maxlength="2000" required style="width:100%">${esc(s.message)}</textarea><p><button class="primary" type="submit">حفظ</button> <button class="secondary" type="button" id="coupon-refresh">تحديث السجل</button></p></form><p class="muted">الخصم مبلغ ثابت بالريال: LINK10 فوق 100، وLINK15 من 200، وLINK20 من 300. يشمل جميع المنتجات. قبول المزود لا يؤكد التسليم.</p><h3>إيقاف الرد لمحادثة</h3><p class="muted">أدخل رقم المحادثة الموجود في رابطها داخل اتصالنا. ويمكن إضافة تصنيف coupon_bot_paused في اتصالنا لإيقاف الرد عليها.</p><form id="coupon-pause" class="form-row"><label>رقم المحادثة <input name="conversation_id" inputmode="numeric" pattern="[1-9][0-9]{0,15}" required></label><button class="secondary" name="pause" type="submit">إيقاف الرد عليها</button></form><p>${d.conversations.map(c=>`<button class="secondary" data-resume="${esc(c.conversation_id)}">استئناف ${esc(c.conversation_id)}</button>`).join(' ')||'لا توجد محادثات موقوفة من الداشبورد.'}</p><h3>آخر 100 محاولة</h3><div class="table-wrap"><table><thead><tr><th>الوقت بتوقيت السعودية</th><th>المحادثة</th><th>النتيجة</th><th>الرسالة</th><th>التحكم</th></tr></thead><tbody>${d.replies.map(r=>`<tr><td>${esc(new Date(r.created_at).toLocaleString('ar-SA',{timeZone:'Asia/Riyadh'}))}</td><td>${esc(r.conversation_id)}</td><td>${esc(reasons[r.reason]||r.status)}</td><td>${esc(r.provider_message_id||'—')}</td><td><button class="secondary" data-pause="${esc(r.conversation_id)}">إيقاف الرد</button></td></tr>`).join('')||'<tr><td colspan="5">لا توجد محاولات بعد.</td></tr>'}</tbody></table></div>`;}
+async function bind({api,toast}){const target=document.getElementById('coupon-replies');if(!target)return;
+async function show(){const d=await api('coupon-replies');if(!target.isConnected)return;target.innerHTML=view(d);
+ target.querySelector('#coupon-settings').onsubmit=async e=>{e.preventDefault();const f=e.currentTarget;await action(()=>api('coupon-replies',{method:'PUT',body:JSON.stringify({enabled:f.elements.enabled.checked,message:f.elements.message.value})}));};
+ target.querySelector('#coupon-refresh').onclick=()=>action(async()=>{});
+ target.querySelector('#coupon-pause').onsubmit=e=>{e.preventDefault();pause(e.currentTarget.elements.conversation_id.value,true);};
+ target.querySelectorAll('[data-pause]').forEach(b=>b.onclick=()=>pause(b.dataset.pause,true));
+ target.querySelectorAll('[data-resume]').forEach(b=>b.onclick=()=>pause(b.dataset.resume,false));
+}
+async function action(fn){target.querySelectorAll('button').forEach(b=>b.disabled=true);try{await fn();await show();}catch(e){toast(e.message);target.querySelectorAll('button').forEach(b=>b.disabled=false);}}
+function pause(conversation_id,paused){return action(()=>api('coupon-replies',{method:'POST',body:JSON.stringify({conversation_id,paused})}));}
+try{await show();}catch{if(target.isConnected)target.textContent='تعذر تحميل أتمتة أكواد الخصم؛ تحقق من تجهيز الخدمة.';}
+}
+window.LinkCouponReplies={bind};
+})();
