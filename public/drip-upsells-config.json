@@ -187,7 +187,17 @@
           "price": 129,
           "image": "https://cdn.salla.sa/Zpqzp/44190d2c-997b-42c3-890a-19f9228749e7-400x500-sUhs7FG81GFxHEZicIXqONaOfrwQuljkPtQRrPok.png",
           "url": "https://linkstore-sa.com/استيكر-حماية-مطفي-iphone-18-pro-max/p1217314035",
-          "available": false,
+          "available": true,
+          "group": "screen",
+          "choices": []
+        },
+        {
+          "id": 1494831445,
+          "name": "استيكر حماية لنك لامع خصوصي – iPhone 18 Pro Max",
+          "price": 129,
+          "image": "https://cdn.salla.sa/Zpqzp/bb84bb90-f819-4842-a4ea-79203b05c010-500x500-aQ9U2BM5UmKHDXSSVR8YsiiReRbI7SibUSYaGEKa.png",
+          "url": "https://linkstore-sa.com/screen-protector-hmy-link-lm-khswsy-iphone-18-pro-max-1494831445/p1494831445",
+          "available": true,
           "group": "screen",
           "choices": []
         }
