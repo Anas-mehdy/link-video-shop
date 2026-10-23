@@ -48,16 +48,16 @@
   var categories = [
     // model discovery: old/pre-existing category IDs confirmed from live Salla tree
     [1035289395,0,'أجهزة آيفون'],[261251644,0,'أجهزة السامسونغ'],
-    [634749937,1035289395,'iPhone 18 pro max'],[1486436379,1035289395,'iPhone 18 pro'],
     [379699538,1035289395,'iPhone Duo'],
+    [634749937,1035289395,'iPhone 18 pro max'],[1486436379,1035289395,'iPhone 18 pro'],
     [1970961949,1035289395,'iPhone 17 pro max'],[463298332,1035289395,'iPhone 17 pro'],[39079987,1035289395,'iPhone 17 Air'],[725983294,1035289395,'iPhone 17'],
     [532996019,1035289395,'iPhone 16 pro max'],[1308602546,1035289395,'iPhone 16 pro'],[815755608,1035289395,'iPhone 16 Plus'],[86167359,1035289395,'iPhone 16'],
     [1981367175,1035289395,'iPhone 15 pro max'],[607921286,1035289395,'iPhone 15 pro'],[1496277473,1035289395,'iPhone 15 Plus'],[1460661816,1035289395,'iPhone 15'],
     [506153704,1035289395,'iPhone 14 Pro Max'],[545582573,1035289395,'iPhone 14 Pro'],[720732386,1035289395,'iPhone 14 Plus'],[1285442363,1035289395,'iPhone 14'],
     [1392932811,1035289395,'iPhone 13 Pro Max'],[20539594,1035289395,'iPhone 13 Pro'],[1749125381,1035289395,'iPhone 13'],
     [985390771,1035289395,'iPhone 12 pro max'],[1759428530,1035289395,'iPhone 12 pro'],[990476058,1035289395,'iPhone 12'],
-    [486304081,261251644,'Z Fold 8'],[1576546904,261251644,'Z Fold 8 Ultra'],
-    [856197501,261251644,'Z Fold 7'],
+    [486304081,261251644,'Z Fold 8'],
+    [856197501,261251644,'Z Fold 7'],[1576546904,261251644,'Z Fold 8 Ultra'],
     [1782629414,261251644,'Galaxy S26 Ultra'],[1319011876,261251644,'Galaxy S26 Plus'],[2096263166,261251644,'Galaxy S26'],
     [585849050,261251644,'Galaxy S25 Ultra'],[160611805,261251644,'Galaxy S25 Plus'],[336312071,261251644,'Galaxy S25'],
     [1844412371,261251644,'Galaxy S24 Ultra'],[1951929040,261251644,'Galaxy S24 Plus'],[1641076224,261251644,'Galaxy S24'],
@@ -267,6 +267,28 @@
         model.appendChild(existing);
       } else if (existing.value === info.value) {
         existing.dataset.linkCategoryTarget = info.value;
+      }
+      // Order only our two options; preserve the native placeholder and every other model.
+      if (existing.value !== info.value) return;
+      var selectable = Array.from(model.options).filter(function(o) {
+        var value=normalize(o.value), label=normalize(o.textContent);
+        return o!==existing && !o.disabled && value!=='' && value!=='0'
+          && !/^(اختر|حدد|choose|select)/.test(label);
+      });
+      if (brand==='iphone') {
+        // iPhone Duo must be the first *model*, after the placeholder.
+        var first=selectable[0];
+        if (first && existing.nextElementSibling!==first) model.insertBefore(existing,first);
+      } else if (brand==='samsung') {
+        // Z Fold 7 immediately follows Z Fold 8 (before Z Fold 8 Ultra).
+        var fold8=selectable.find(function(o){
+          return o.value==='486304081' || /\bz\s*fold\s*8\b(?!\s*ultra)/i.test(o.textContent||'');
+        });
+        if (fold8) {
+          if (fold8.nextElementSibling!==existing) model.insertBefore(existing,fold8.nextElementSibling);
+        } else if (selectable[0] && existing.nextElementSibling!==selectable[0]) {
+          model.insertBefore(existing,selectable[0]);
+        }
       }
     }
     function enableChoice() {
