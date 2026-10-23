@@ -49,6 +49,7 @@
     // model discovery: old/pre-existing category IDs confirmed from live Salla tree
     [1035289395,0,'أجهزة آيفون'],[261251644,0,'أجهزة السامسونغ'],
     [634749937,1035289395,'iPhone 18 pro max'],[1486436379,1035289395,'iPhone 18 pro'],
+    [379699538,1035289395,'iPhone Duo'],
     [1970961949,1035289395,'iPhone 17 pro max'],[463298332,1035289395,'iPhone 17 pro'],[39079987,1035289395,'iPhone 17 Air'],[725983294,1035289395,'iPhone 17'],
     [532996019,1035289395,'iPhone 16 pro max'],[1308602546,1035289395,'iPhone 16 pro'],[815755608,1035289395,'iPhone 16 Plus'],[86167359,1035289395,'iPhone 16'],
     [1981367175,1035289395,'iPhone 15 pro max'],[607921286,1035289395,'iPhone 15 pro'],[1496277473,1035289395,'iPhone 15 Plus'],[1460661816,1035289395,'iPhone 15'],
@@ -56,6 +57,7 @@
     [1392932811,1035289395,'iPhone 13 Pro Max'],[20539594,1035289395,'iPhone 13 Pro'],[1749125381,1035289395,'iPhone 13'],
     [985390771,1035289395,'iPhone 12 pro max'],[1759428530,1035289395,'iPhone 12 pro'],[990476058,1035289395,'iPhone 12'],
     [486304081,261251644,'Z Fold 8'],[1576546904,261251644,'Z Fold 8 Ultra'],
+    [856197501,261251644,'Z Fold 7'],
     [1782629414,261251644,'Galaxy S26 Ultra'],[1319011876,261251644,'Galaxy S26 Plus'],[2096263166,261251644,'Galaxy S26'],
     [585849050,261251644,'Galaxy S25 Ultra'],[160611805,261251644,'Galaxy S25 Plus'],[336312071,261251644,'Galaxy S25'],
     [1844412371,261251644,'Galaxy S24 Ultra'],[1951929040,261251644,'Galaxy S24 Plus'],[1641076224,261251644,'Galaxy S24'],
@@ -200,5 +202,98 @@
   var count=0;var watcher=new MutationObserver(function(){if(nativeToggle&&nativeToggle.isConnected){watcher.disconnect();return;}if(wireToggle()||++count>120)watcher.disconnect();});
   if(document.body)watcher.observe(document.body,{childList:true,subtree:true});
   else document.addEventListener('DOMContentLoaded',function(){watcher.observe(document.body,{childList:true,subtree:true});});
-  window.LinkSidebar={open:openMenu,close:closeMenu,version:'2026-10-12-test',canonicalCategoryCount:128,ignoredDuplicates:89};
+  window.LinkSidebar={open:openMenu,close:closeMenu,version:'2026-10-12-test',canonicalCategoryCount:130,ignoredDuplicates:89};
+})();
+
+/* LINK_HOME_DEVICE_CATEGORY_EXT_V1
+ * Extend the existing Malak "اختر حسب جوالك" selector with two verified
+ * active Salla categories. Do not replace the native widget or affect its
+ * existing models. New selections use canonical Salla category URLs.
+ */
+(function () {
+  'use strict';
+  if (window.__linkHomeDeviceCategoryExtV1) return;
+  window.__linkHomeDeviceCategoryExtV1 = true;
+  var categories = {
+    iphone: {value:'379699538', name:'iPhone Duo', url:'https://linkstore-sa.com/iphone-duo/c379699538'},
+    samsung: {value:'856197501', name:'Samsung Z Fold 7', url:'https://linkstore-sa.com/z-fold-7/c856197501'}
+  };
+  function normalize(s) { return String(s||'').trim().toLowerCase(); }
+  function getBrand(select) {
+    if (!select) return '';
+    var label = select.selectedOptions && select.selectedOptions[0] ? select.selectedOptions[0].textContent : '';
+    var value = normalize(select.value);
+    var text = normalize(label)+' '+value;
+    if (/iphone|apple|آيفون|ايفون|أجهزة آيفون/.test(text) || value === '1035289395') return 'iphone';
+    if (/samsung|galaxy|سامسونج|سامسونغ|سامسونق/.test(text) || value === '261251644') return 'samsung';
+    return '';
+  }
+  function findPicker() {
+    var headings = document.querySelectorAll('h1,h2,h3,h4,h5');
+    for (var i=0;i<headings.length;i++) {
+      if (!/اختر حسب جوالك/.test(headings[i].textContent||'')) continue;
+      var ancestor = headings[i].parentElement;
+      for (var level=0;ancestor&&level<6;level++,ancestor=ancestor.parentElement) {
+        var dropdowns = ancestor.querySelectorAll('select');
+        if (dropdowns.length<2) continue;
+        var actions = ancestor.querySelectorAll('button,input[type="submit"],a,[role="button"]');
+        for (var j=0;j<actions.length;j++) {
+          if (/عرض المنتجات/.test(actions[j].textContent||actions[j].value||'')) {
+            return {root:ancestor,brand:dropdowns[0],model:dropdowns[1],button:actions[j]};
+          }
+        }
+      }
+    }
+    return null;
+  }
+  function init(picker) {
+    if (picker.root.dataset.linkDeviceCategoryExt === '1') return;
+    picker.root.dataset.linkDeviceCategoryExt = '1';
+    var type = picker.brand, model = picker.model, button = picker.button;
+    function chosen() {
+      var selected = model.selectedOptions && model.selectedOptions[0];
+      if (!selected || !selected.dataset || !selected.dataset.linkCategoryTarget) return null;
+      return Object.values(categories).find(function(x){ return x.value===selected.dataset.linkCategoryTarget; }) || null;
+    }
+    function sync() {
+      var brand = getBrand(type), info = categories[brand];
+      if (!info) return;
+      var existing = Array.from(model.options).find(function(o){return normalize(o.textContent)===normalize(info.name);});
+      if (!existing) {
+        existing = document.createElement('option');
+        existing.textContent = info.name;
+        existing.value = info.value;
+        existing.dataset.linkCategoryTarget = info.value;
+        model.appendChild(existing);
+      } else if (existing.value === info.value) {
+        existing.dataset.linkCategoryTarget = info.value;
+      }
+    }
+    function enableChoice() {
+      if (!chosen()) return;
+      button.disabled = false;
+      button.removeAttribute('disabled');
+      button.removeAttribute('aria-disabled');
+    }
+    var schedule = function(){ Promise.resolve().then(function(){sync();enableChoice();}); };
+    type.addEventListener('change',schedule);
+    model.addEventListener('change',function(){ schedule(); setTimeout(enableChoice,0); });
+    new MutationObserver(schedule).observe(model,{childList:true});
+    picker.root.addEventListener('click',function(event){
+      if (!button.contains(event.target) && button !== event.target) return;
+      var item=chosen();if (!item) return;
+      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+      window.location.assign(item.url);
+    },true);
+    picker.root.addEventListener('submit',function(event){
+      var item=chosen();if (!item) return;
+      event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+      window.location.assign(item.url);
+    },true);
+    schedule();
+  }
+  function scan(){var picker=findPicker();if(picker){init(picker);return true;}return false;}
+  if (document.readyState==='loading') document.addEventListener('DOMContentLoaded',scan,{once:true});
+  else scan();
+  var attempts=0,interval=setInterval(function(){if(scan()||++attempts>=12)clearInterval(interval);},1200);
 })();
