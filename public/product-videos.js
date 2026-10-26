@@ -1276,3 +1276,31 @@
   const s=document.createElement('script');s.id='link-fiber-bundle-extras-loader';
   s.src='https://link-video-shop.vercel.app/link-fiber-bundle-extras.js?v=20261017-5';s.async=true;document.head.appendChild(s);
 })();
+
+
+/* LINK_IPHONE_15_16_BUNDLE_EXTRAS_LOADER_V1 */
+(function () {
+  'use strict';
+  // Explicitly scoped to the eighteen iPhone 15/16 Pro/Pro Max protection bundles.
+  const ids = new Set([
+    '337470571', '2124241103', '1159383903', '2099185109',
+    '1333023403', '91316023', '2128231315', '1624527035',
+    '1361761380', '1290205417', '1704574540', '1182571171',
+    '450590506', '1101033315', '96081719', '844016427',
+    '2035445448', '63111629'
+  ]);
+  function load() {
+    const productId = (location.pathname.match(/\/p(\d+)(?:\/|$)/) || [])[1];
+    if (!ids.has(productId)) return;
+    if (document.getElementById('link-iphone-bundle-loader')) return;
+    const script = document.createElement('script');
+    script.id = 'link-iphone-bundle-loader';
+    script.src = 'https://link-video-shop.vercel.app/iphone-bundle-upsells.js?v=20261026b';
+    script.async = true;
+    script.onerror = () => console.error('[Link iPhone bundles] Failed to load JS add-ons');
+    document.head.appendChild(script);
+  }
+  load();
+  window.addEventListener('pageshow',load);
+  window.addEventListener('popstate',load);
+})();
