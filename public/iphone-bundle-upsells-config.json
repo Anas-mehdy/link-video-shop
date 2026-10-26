@@ -1,0 +1,362 @@
+{
+  "version": 1,
+  "updated": "2026-10-26",
+  "bundles": {
+    "63111629": {
+      "model": "15p",
+      "includes": "lenses"
+    },
+    "91316023": {
+      "model": "16pm",
+      "includes": "screen"
+    },
+    "96081719": {
+      "model": "15pm",
+      "includes": "screen"
+    },
+    "337470571": {
+      "model": "16p",
+      "includes": "lenses"
+    },
+    "450590506": {
+      "model": "15pm",
+      "includes": "lenses"
+    },
+    "844016427": {
+      "model": "16p",
+      "includes": "screen"
+    },
+    "1101033315": {
+      "model": "15pm",
+      "includes": "screen"
+    },
+    "1159383903": {
+      "model": "15pm",
+      "includes": "lenses"
+    },
+    "1182571171": {
+      "model": "16p",
+      "includes": "lenses"
+    },
+    "1290205417": {
+      "model": "15p",
+      "includes": "screen"
+    },
+    "1333023403": {
+      "model": "16p",
+      "includes": "screen"
+    },
+    "1361761380": {
+      "model": "16pm",
+      "includes": "screen"
+    },
+    "1624527035": {
+      "model": "16p",
+      "includes": "lenses"
+    },
+    "1704574540": {
+      "model": "16pm",
+      "includes": "lenses"
+    },
+    "2035445448": {
+      "model": "15pm",
+      "includes": "lenses"
+    },
+    "2099185109": {
+      "model": "15p",
+      "includes": "lenses"
+    },
+    "2124241103": {
+      "model": "16pm",
+      "includes": "lenses"
+    },
+    "2128231315": {
+      "model": "16pm",
+      "includes": "lenses"
+    }
+  },
+  "models": {
+    "15p": {
+      "label": "iPhone 15 Pro",
+      "screens": [
+        {
+          "id": 1175446085,
+          "name": "استيكر حماية لنك لامع – iPhone 15 Pro",
+          "price": 69,
+          "image": "https://cdn.salla.sa/Zpqzp/bbb573af-062d-4c36-85a1-540618acabca-414.28571428571x500-eMd3zexw66HHKFOFVJW52lpAVnR0cr7e5xOz4IoM.png",
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-iphone-15-pro/p1175446085",
+          "available": true
+        },
+        {
+          "id": 1385241404,
+          "name": "استيكر حماية لنك لامع خصوصية – iPhone 15 Pro",
+          "price": 69,
+          "image": "https://cdn.salla.sa/Zpqzp/29d4f41b-2a7e-4615-bff2-32e9736e9ceb-402.77777777778x500-iotaHPXaZiYGq0Hl27uIYQo2UNNnwGRnbPVqruAy.png",
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-خصوصية-iphone-15-pro/p1385241404",
+          "available": true
+        },
+        {
+          "id": 1057490426,
+          "name": "استيكر حماية لنك مطفي – iPhone 15 Pro",
+          "price": 100,
+          "image": "https://cdn.salla.sa/Zpqzp/0f34ccfe-8132-4a3a-9599-c5309da2601b-402.77777777778x500-3P9W2d1POxQBKSPI5rw7o9f1HIN5X0M7jRjQ6qpq.png",
+          "url": "https://linkstore-sa.com/استيكر-link-مطفي-iphone-15-pro/p1057490426",
+          "available": true
+        },
+        {
+          "id": 849370259,
+          "name": "استيكر حماية لنك مطفي خصوصي – iPhone 15 Pro",
+          "price": 69,
+          "image": "https://cdn.salla.sa/Zpqzp/d10c5dce-5e96-425f-8bda-2d87bc2efc5d-402.77777777778x500-P31nTedAhmqMooTRks9jMLgZRVxCbOBOWhbWiSFe.png",
+          "url": "https://linkstore-sa.com/استيكر-link-مطفي-خصوصي-iphone-15-pro/p849370259",
+          "available": true
+        }
+      ],
+      "lens": {
+        "id": 1080891410,
+        "name": "عدسات Link لحماية الكاميرا – iPhone 15 Pro",
+        "price": 69,
+        "image": "https://cdn.salla.sa/Zpqzp/251c9a28-aa83-488b-a152-56e2e66d83b0-500x500-1465qjefUVhm2HfWWu6t6cHXlYtqEGgZfDniyxaP.png",
+        "url": "https://linkstore-sa.com/عدسات-link-حماية-الكاميرا-iphone-15-pro/p1080891410",
+        "available": true,
+        "colorOptionId": 835691107,
+        "colors": [
+          {
+            "id": 478154047,
+            "name": "تيتانيوم"
+          },
+          {
+            "id": 1852648504,
+            "name": "أسود"
+          },
+          {
+            "id": 1744668987,
+            "name": "كحلي"
+          }
+        ]
+      }
+    },
+    "15pm": {
+      "label": "iPhone 15 Pro Max",
+      "screens": [
+        {
+          "id": 892251203,
+          "name": "استيكر حماية لنك لامع – iPhone 15 Pro Max",
+          "price": 69,
+          "image": "https://cdn.salla.sa/Zpqzp/aa5a8682-da95-4b36-a2f2-b5dfd380a042-414.28571428571x500-bgjcknbAQg7yIH3ZxhX1Ho0RltCv42rEOVUIPXZT.png",
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-iphone-15-pro-max/p892251203",
+          "available": true
+        },
+        {
+          "id": 1210087487,
+          "name": "استيكر حماية لنك لامع خصوصية – iPhone 15 Pro Max",
+          "price": 69,
+          "image": "https://cdn.salla.sa/Zpqzp/33cc68e9-d9ea-4524-8fb9-84af0658ee7d-402.77777777778x500-s7pDxkWxCAmxQUeFNHoP2HtuW2lzAhWZc3r43LrF.png",
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-خصوصية-iphone-15-pro-max/p1210087487",
+          "available": true
+        },
+        {
+          "id": 1346543815,
+          "name": "استيكر حماية لنك مطفي – iPhone 15 Pro Max",
+          "price": 100,
+          "image": "https://cdn.salla.sa/Zpqzp/e4724528-6198-4c36-849b-d290f4a35c64-402.77777777778x500-sCVfjrtEC0Ypib8fnPii5Hv0NfEeRDczPZ9X4oLy.png",
+          "url": "https://linkstore-sa.com/استيكر-link-مطفي-iphone-15-pro-max/p1346543815",
+          "available": true
+        },
+        {
+          "id": 1476061080,
+          "name": "استيكر حماية لنك مطفي خصوصي – iPhone 15 Pro Max",
+          "price": 69,
+          "image": "https://cdn.salla.sa/Zpqzp/0cf0f3fb-1aa9-4f5f-8963-6f881e962e3a-402.77777777778x500-y6WOmdnZ4sVPbeoBxNk2XJGXW39wfTEHrV9Xs2zX.png",
+          "url": "https://linkstore-sa.com/استيكر-link-مطفي-خصوصي-iphone-15-pro-max/p1476061080",
+          "available": true
+        }
+      ],
+      "lens": {
+        "id": 1699197877,
+        "name": "عدسات Link لحماية الكاميرا – iPhone 15 Pro Max",
+        "price": 69,
+        "image": "https://cdn.salla.sa/Zpqzp/5bce2609-a0b4-4606-b246-c619d9d94746-500x500-y2DwAzkbRTCajjQB65NdyfCy6uQQLzPk1kB3GK8C.png",
+        "url": "https://linkstore-sa.com/عدسات-link-حماية-الكاميرا-iphone-15-pro-max/p1699197877",
+        "available": true,
+        "colorOptionId": 1545370343,
+        "colors": [
+          {
+            "id": 322787845,
+            "name": "تيتانيوم"
+          },
+          {
+            "id": 1830451462,
+            "name": "أسود"
+          },
+          {
+            "id": 1521141249,
+            "name": "كحلي"
+          }
+        ]
+      }
+    },
+    "16p": {
+      "label": "iPhone 16 Pro",
+      "screens": [
+        {
+          "id": 2024654392,
+          "name": "استيكر حماية لنك لامع – iPhone 16 Pro",
+          "price": 129,
+          "image": "https://cdn.salla.sa/Zpqzp/aae72d80-84f3-4847-93b4-9e80934f8688-500x500-fDV26bvyGPTVaXxbI6u6Hky8jgSt6gZ6OENtZBHN.png",
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-iphone-16-pro/p2024654392",
+          "available": true
+        },
+        {
+          "id": 1136797177,
+          "name": "استيكر حماية لنك لامع خصوصي – iPhone 16 Pro",
+          "price": 129,
+          "image": "https://cdn.salla.sa/Zpqzp/ddde2304-5722-424d-b53c-e165d587909d-500x500-3yzL6hx9ew9j6mwoZKsO8BshuVmqGjZhDbgz15EO.png",
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-خصوصي-iphone-16-pro/p1136797177",
+          "available": true
+        },
+        {
+          "id": 2114342528,
+          "name": "استيكر حماية لنك مطفي خصوصي – iPhone 16 Pro",
+          "price": 129,
+          "image": "https://cdn.salla.sa/Zpqzp/683e7e13-4390-464f-a696-b9141f71d7e0-500x500-zlh2DPjanj7KizRH54wtVoICwTdTBb0C6LDUCtTn.png",
+          "url": "https://linkstore-sa.com/استيكر-link-مطفي-خصوصي-iphone-16-pro/p2114342528",
+          "available": true
+        }
+      ],
+      "lens": {
+        "id": 558624544,
+        "name": "عدسات Link لحماية الكاميرا – iPhone 16 Pro",
+        "price": 69,
+        "image": "https://cdn.salla.sa/Zpqzp/2bcf085a-9d50-47cc-aaf5-74d2130ab25b-500x500-pCWW9mK4WTRYdcTPNDCZy5pFVKEbHsIM1DLC2VhV.png",
+        "url": "https://linkstore-sa.com/عدسات-link-حماية-الكاميرا-iphone-16-pro/p558624544",
+        "available": true,
+        "colorOptionId": 2125474226,
+        "colors": [
+          {
+            "id": 145631313,
+            "name": "تيتانيوم"
+          },
+          {
+            "id": 1519073106,
+            "name": "أسود"
+          },
+          {
+            "id": 104691036,
+            "name": "ذهبي"
+          },
+          {
+            "id": 1343984733,
+            "name": "كحلي"
+          }
+        ]
+      }
+    },
+    "16pm": {
+      "label": "iPhone 16 Pro Max",
+      "screens": [
+        {
+          "id": 1983652667,
+          "name": "استيكر حماية لنك لامع – iPhone 16 Pro Max",
+          "price": 129,
+          "image": "https://cdn.salla.sa/Zpqzp/72a0de25-4b77-4a33-ad07-a542dbae8344-500x500-AwWMLhQ7I6czKluJReyvsSud8crxu0fBniQiJqVE.png",
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-iphone-16-pro-max/p1983652667",
+          "available": true
+        },
+        {
+          "id": 188719557,
+          "name": "استيكر حماية لنك لامع خصوصي – iPhone 16 Pro Max",
+          "price": 129,
+          "image": "https://cdn.salla.sa/Zpqzp/dc394da8-e41f-4622-8658-0a2cfde3ec3e-500x500-LDdxH7X6G4UvdKvW7LCn2ybe9izi647w3odvAjpB.png",
+          "url": "https://linkstore-sa.com/استيكر-link-لامع-خصوصي-iphone-16-pro-max/p188719557",
+          "available": true
+        },
+        {
+          "id": 1381761158,
+          "name": "استيكر حماية لنك مطفي خصوصي – iPhone 16 Pro Max",
+          "price": 129,
+          "image": "https://cdn.salla.sa/Zpqzp/fcb87fb6-169f-4eb1-a30e-a9b24e60494f-500x500-t7Kd9QIGOJjEmPZjF9A9bQnlNKHtIOznB33fQtF0.png",
+          "url": "https://linkstore-sa.com/استيكر-link-مطفي-خصوصي-iphone-16-pro-max/p1381761158",
+          "available": true
+        }
+      ],
+      "lens": {
+        "id": 1755802412,
+        "name": "عدسات Link لحماية الكاميرا – iPhone 16 Pro Max",
+        "price": 69,
+        "image": "https://cdn.salla.sa/Zpqzp/eda80dc3-c93d-4dc6-bde0-94f8aa7d9689-500x500-Ug5Xai0JPZpLmIGeTtxd6o7rgyW9V1LnkFYavtob.png",
+        "url": "https://linkstore-sa.com/عدسات-link-حماية-الكاميرا-iphone-16-pro-max/p1755802412",
+        "available": true,
+        "colorOptionId": 269137087,
+        "colors": [
+          {
+            "id": 1159794601,
+            "name": "تيتانيوم"
+          },
+          {
+            "id": 386805418,
+            "name": "أسود"
+          },
+          {
+            "id": 850422964,
+            "name": "ذهبي"
+          },
+          {
+            "id": 211717045,
+            "name": "كحلي"
+          }
+        ]
+      }
+    }
+  },
+  "accessories": [
+    {
+      "id": 387390654,
+      "name": "حامل Link المغناطيسي للسيارة – LUX",
+      "price": 69,
+      "image": "https://cdn.salla.sa/Zpqzp/75f2866a-e73a-441f-aff0-57af073887fb-500x500-UIC6zqHbtxGZJaJ08zPeanCmdE6PQfRFaZ1Qcm8E.png",
+      "url": "https://linkstore-sa.com/hml-link-lmgntysy-llsyr-lux/p387390654",
+      "available": true
+    },
+    {
+      "id": 346107022,
+      "name": "ستاند وشاحن لاسلكي للسيارة – Link",
+      "price": 69,
+      "image": "https://cdn.salla.sa/Zpqzp/e703b03c-7037-4a76-97a6-3882db79d562-500x500-yiwBNKbuX4hhwgOXFYjmp4uGoYWySX4WFypJzGCb.png",
+      "url": "https://linkstore-sa.com/stnd-wshhn-lslky-llsyr-link/p346107022",
+      "available": true
+    },
+    {
+      "id": 593829026,
+      "name": "حامل Link المغناطيسي للسيارة – YOYO 2IN1",
+      "price": 49,
+      "image": "https://cdn.salla.sa/Zpqzp/598433d1-c591-4e26-8353-025d9b2d1699-500x500-bhwnv3FNAxobTkYzYSd4bHRqcgGfMiItegnFV2Qe.png",
+      "url": "https://linkstore-sa.com/hml-link-lmgntysy-llsyr-yoyo-2in1/p593829026",
+      "available": true
+    },
+    {
+      "id": 2112678166,
+      "name": "شاحن لنك الجداري السريع 45W Type-C",
+      "price": 89,
+      "image": "https://cdn.salla.sa/Zpqzp/f8c9a963-d869-4122-a8b7-4db6036aacec-500x500-3DfGLBpE0wodjokWzgCV5mVc0yKUWuk3hLRPq7Kh.jpg",
+      "url": "https://linkstore-sa.com/shhn-link-ljdry-lsry-45w-type-c/p2112678166",
+      "available": true
+    },
+    {
+      "id": 2114039606,
+      "name": "وصلة شحن Link تايب سي × تايب سي | 2 م",
+      "price": 55,
+      "image": "https://cdn.salla.sa/Zpqzp/b0029e9c-e21b-4303-988f-364c3f1ef6c4-500x500-M2q0XB6V9I7GCfaFRhkPNJ8gZ5q2kKMerGIAqtjb.png",
+      "url": "https://linkstore-sa.com/cable-shhn-link-type-c-x-type-c-2-m/p2114039606",
+      "available": true
+    },
+    {
+      "id": 1380241917,
+      "name": "باور بنك Link مغناطيسي 3×1 – سعة 10000mAh",
+      "price": 119,
+      "image": "https://cdn.salla.sa/Zpqzp/29131435-87d1-45fb-bc26-cbec016bfb8e-500x500-am1iwYzjLxgL5m4Oy48th8XXWME8gYFVu0ttyY1T.jpg",
+      "url": "https://linkstore-sa.com/power-bank-link-mgntysy-3x1-s-10000mah/p1380241917",
+      "available": true
+    }
+  ]
+}
