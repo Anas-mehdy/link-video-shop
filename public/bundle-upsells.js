@@ -117,3 +117,26 @@
     setTimeout(() => observer.disconnect(), 15000);
   }).catch(() => {});
 })();
+
+/* Load iPhone 15/16 bundle companion UI on applicable product pages.
+   Kept separate from legacy Samsung bundle logic. */
+(function () {
+  'use strict';
+  if (window.__linkIphoneBundleScriptRequested) return;
+  const id = (location.pathname.match(/\/p(\d+)(?:\/|$)/) || [])[1];
+  if (!id) return;
+  const ids = new Set([
+    '337470571','2124241103','1159383903','2099185109',
+    '1333023403','91316023','2128231315','1624527035',
+    '1361761380','1290205417','1704574540','1182571171',
+    '450590506','1101033315','96081719','844016427',
+    '2035445448','63111629'
+  ]);
+  if (!ids.has(id)) return;
+  window.__linkIphoneBundleScriptRequested = true;
+  const script = document.createElement('script');
+  script.src = 'https://link-video-shop.vercel.app/iphone-bundle-upsells.js?v=20261026a';
+  script.async = true;
+  script.dataset.linkIphoneBundle = '1';
+  document.head.appendChild(script);
+})();
