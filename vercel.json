@@ -21,6 +21,10 @@
   },
   "rewrites": [
     {
+      "source": "/iphone-bundles",
+      "destination": "/iphone-bundles.html"
+    },
+    {
       "source": "/dashboard",
       "destination": "/dashboard.html"
     },
