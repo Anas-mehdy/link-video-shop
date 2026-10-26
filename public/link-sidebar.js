@@ -319,3 +319,29 @@
   else scan();
   var attempts=0,interval=setInterval(function(){if(scan()||++attempts>=12)clearInterval(interval);},1200);
 })();
+
+
+/* LINK_IPHONE_BUNDLE_SIDEBAR_FALLBACK_V1 */
+/* Fallback loader via the installed sidebar JS — safe if the product-videos loader already ran. */
+(function(){
+  'use strict';
+  const ids = new Set([
+    '337470571','2124241103','1159383903','2099185109',
+    '1333023403','91316023','2128231315','1624527035',
+    '1361761380','1290205417','1704574540','1182571171',
+    '450590506','1101033315','96081719','844016427',
+    '2035445448','63111629'
+  ]);
+  function mountLoader(){
+    const id=(location.pathname.match(/\/p(\d+)(?:\/|$)/)||[])[1];
+    if(!ids.has(id)||document.getElementById('link-iphone-bundle-loader'))return;
+    const script=document.createElement('script');
+    script.id='link-iphone-bundle-loader';
+    script.src='https://link-video-shop.vercel.app/iphone-bundle-upsells.js?v=20261026b';
+    script.async=true;
+    script.onerror=()=>console.error('[Link iPhone bundles] Script not loaded');
+    document.head.appendChild(script);
+  }
+  mountLoader();
+  window.addEventListener('pageshow',mountLoader);
+})();
