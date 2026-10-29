@@ -24,7 +24,9 @@ module.exports = async function handler(req, res) {
       if(action==='copy') return json(res,200,{ok:true,...await staffSales.copy(body.url,body.platform)});
       return json(res,400,{ok:false,error:'الإجراء غير صالح'});
     }
+    if(resource==='developer-api')return await require('../lib/developer-api').handle(req,res);
     await requireAdmin(req);
+    if(resource==='developer-keys')return await require('../lib/developer-api').admin(req,res);
     if(resource==='coupon-replies')return await require('../lib/coupon-replies').admin(req,res);
     if(resource==='preorders')return await require('../lib/preorders').admin(req,res);
     if(resource==='postpurchase')return await require('../lib/postpurchase').admin(req,res);
