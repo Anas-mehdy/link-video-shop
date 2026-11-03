@@ -16,7 +16,14 @@
     protection: '<path d="M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
   };
-  const pages = [['overview','نظرة عامة'],['orders','الطلبات'],['preorders','الحجز المسبق'],['customers','العملاء'],['staffsales','مبيعات خدمة العملاء'],['carts','السلات المتروكة'],['carthuman','متابعة السلات الكبيرة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['postpurchase','ما بعد البيع'],['automations','الأتمتة'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','الإعدادات']];
+  const pages = [['overview','الرئيسية'],['orders','الطلبات'],['preorders','الحجز المسبق'],['customers','العملاء'],['staffsales','مبيعات خدمة العملاء'],['carts','السلات المتروكة'],['carthuman','متابعة السلات الكبيرة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['postpurchase','ما بعد البيع'],['coupons','ردود أكواد الخصم'],['automations','متابعة السلات'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','مساحة العمل']];
+  const navigation = [
+    ['', ['overview']], ['المتجر', ['orders','customers','carts']],
+    ['الأتمتة', ['automations','carthuman','postpurchase','coupons']],
+    ['التسويق', ['ads','staffsales']], ['إدارة المحتوى', ['videos','protection']],
+    ['الحجز المسبق', ['preorders']], ['الإعدادات والتكاملات', ['integrations','whatsapp','settings','events']]
+  ];
+  paths.carthuman=paths.customers; paths.postpurchase=paths.orders; paths.preorders=paths.orders; paths.coupons=paths.automations;
   const svg = name => `<svg viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.overview}</svg>`;
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const fmt = value => value == null ? '—' : Number(value).toLocaleString('ar-SA-u-nu-latn');
@@ -37,7 +44,7 @@
   function empty(title, description, icon = 'events') { return `<div class="empty">${svg(icon)}<h3>${title}</h3><p>${description}</p></div>`; }
   function eventTable(events) {
     if (!events?.length) return empty('بانتظار أول حدث', 'ستظهر أحداث المتجر هنا بعد تفعيل الربط واستقبالها.');
-    return `<div class="table-wrap"><table><thead><tr><th>الحدث</th><th>الحالة</th><th>وقت الاستقبال</th></tr></thead><tbody>${events.map(e => `<tr><td><code dir="ltr">${esc(e.event_name)}</code></td><td><span class="badge ${e.status === 'processed' ? 'green' : 'amber'}">${e.status === 'processed' ? 'تمت المعالجة' : 'بانتظار المعالجة'}</span></td><td>${date(e.received_at)}</td></tr>`).join('')}</tbody></table></div>`;
+    return `<div class="table-wrap" tabindex="0" role="region" aria-label="جدول بيانات قابل للتمرير أفقيًا"><table><thead><tr><th>الحدث</th><th>الحالة</th><th>وقت الاستقبال</th></tr></thead><tbody>${events.map(e => `<tr><td><code dir="ltr">${esc(e.event_name)}</code></td><td><span class="badge ${e.status === 'processed' ? 'green' : 'amber'}">${e.status === 'processed' ? 'تمت المعالجة' : 'بانتظار المعالجة'}</span></td><td>${date(e.received_at)}</td></tr>`).join('')}</tbody></table></div>`;
   }
   const providerInfo = {
     salla:['سلة','المتجر والطلبات والعملاء','S'], meta:['Meta','فيسبوك وإنستغرام','∞'], tiktok:['TikTok','الإعلانات والمحتوى','♪'], snapchat:['Snapchat','الإعلانات والتحويلات','S'], whatsapp:['WhatsApp','المحادثات والمتابعة','W'],
@@ -54,13 +61,15 @@
   function home(result) {
     const d = result.data, salla = d.connections?.find(c => c.provider === 'salla');
     const connected = salla?.status === 'connected' && (!salla.token_expires_at || new Date(salla.token_expires_at) > new Date());
-    const metrics = [['الطلبات',d.orders,'طلبات آخر 30 يومًا','orders'],['العملاء',d.customers,'عملاء فترة آخر 30 يومًا','customers'],['السلات المتروكة',d.carts,'سلات آخر 30 يومًا، بجميع حالاتها','carts'],['المنتجات',d.products,'من كتالوج المتجر الحالي','carts'],['الفيديوهات',d.videos,'فيديوهات المتجر المسجلة','videos'],['قواعد الأتمتة',d.rules?.length,'تُشغّل في وضع الاختبار فقط','automations'],['سلة',null,connected ? 'وصل تفويض المتجر' : 'بانتظار تفعيل التطبيق','integrations']];
-    return heading('نظرة عامة','مرحبًا بك في مساحة لنك. هنا تبدأ متابعة متجرك.', '<button class="secondary" data-page="integrations">إدارة التكاملات ↗</button>') +
-      `<section class="welcome"><div><span class="eyebrow" style="color:#d7bde5">مساحة لنك الجديدة</span><h2>كل التفاصيل، أقرب إليك.</h2><p>أساس واحد يجمع إدارة الفيديوهات، أحداث المتجر، وقواعد المتابعة. نجهّز البيت لاستقبال بيانات سلة، ثم نوسّعه مع نمو متجرك.</p></div><button class="secondary" data-page="automations">استكشف الأتمتة ←</button></section>` +
-      (result.unavailable.length ? `<div class="notice warn">بعض البيانات غير متاحة حاليًا. ${result.unavailable.some(k => ['connections','events','rules'].includes(k)) ? 'تأكد من إعداد قاعدة بيانات اللوحة الجديدة.' : 'تحقق من اتصال قاعدة البيانات.'} الأرقام غير المتاحة تظهر بعلامة —.</div>` : '') +
-      `<section class="metrics">${metrics.map(([label,value,sub,icon]) => `<div class="metric"><div class="metric-top"><span>${label}</span><span class="metric-icon">${svg(icon)}</span></div><strong>${label === 'سلة' ? `<span style="font-size:20px">${connected ? 'متصل' : 'بانتظار الربط'}</span>` : fmt(value)}</strong><small>${sub}</small></div>`).join('')}</section>` +
-      `<div class="columns"><div><section class="panel"><div class="panel-header"><h3>آخر أحداث المتجر</h3><button class="text-button" data-page="events">عرض السجل ←</button></div>${d.events === null ? empty('السجل غير متاح','لم يكتمل إعداد سجل الأحداث بعد.') : eventTable(d.events)}</section><section class="panel"><div class="panel-header"><h3>أدوات المتجر</h3><span class="badge green">متاحة الآن</span></div><div class="form-row"><button class="secondary" data-page="videos">${svg('videos')} إدارة الفيديو شوب</button><button class="secondary" data-page="protection">${svg('protection')} إدارة حماية الهاتف</button></div></section></div><div><section class="panel"><div class="panel-header"><h3>حالة التكاملات</h3><span class="badge">${fmt(d.connections?.filter(c => c.status === 'connected' && (!c.token_expires_at || new Date(c.token_expires_at) > new Date())).length ?? 0)} متصل</span></div>${connectionRows(d.connections)}</section><section class="panel"><h3>خطوات الانطلاق</h3><div class="step done"><span class="step-number">✓</span><div><b>تجهيز مساحة الإدارة</b><small>الفيديو شوب والحماية داخل لوحة واحدة.</small></div></div><div class="step ${connected ? 'done' : ''}"><span class="step-number">${connected ? '✓' : '2'}</span><div><b>ربط تطبيق سلة</b><small>نستقبل التفويض والأحداث بعد إتمام التثبيت.</small></div></div><div class="step"><span class="step-number">3</span><div><b>تجربة الأتمتة ثم تشغيلها</b><small>نراجع نتائج الاختبار قبل ربط الإرسال الفعلي.</small></div></div></section></div></div>`;
+    const metrics = [['الطلبات',d.orders,'آخر 30 يومًا','orders'],['العملاء',d.customers,'آخر 30 يومًا','customers'],['السلات',d.carts,'آخر 30 يومًا، بجميع حالاتها','carts'],['المنتجات',d.products,'الكتالوج الحالي','integrations']];
+    return heading('الرئيسية','نظرة على نشاط المتجر، ثم انتقل إلى مهمتك.', '<button class="secondary" data-page="orders">عرض الطلبات ←</button>') +
+      `<section class="attention panel"><div><span class="eyebrow">حالة المتجر</span><h2>${connected ? 'تفويض سلة متصل' : 'اتصال سلة يحتاج انتباهك'}</h2><p class="muted">${connected ? 'الاتصال لا يعني اكتمال المزامنة أو تشغيل إرسال الرسائل. راجع حالة كل متابعة في قسم الأتمتة.' : 'راجع التكاملات للتحقق من التفويض. لن تبدأ المزامنة أو إرسال الرسائل بمجرد فتح اللوحة.'}</p></div><button class="secondary" data-page="integrations">مراجعة الاتصال ←</button></section>` +
+      (result.unavailable.length ? '<div class="notice warn" role="status">بعض البيانات غير متاحة. تظهر القيم غير المعروفة بعلامة —. جرّب تحديث البيانات أو راجع الاتصال.</div>' : '') +
+      `<section class="metrics" aria-label="ملخص النشاط">${metrics.map(([label,value,sub,icon])=>`<div class="metric"><div class="metric-top"><span>${label}</span><span class="metric-icon">${svg(icon)}</span></div><strong>${fmt(value)}</strong><small>${sub}</small></div>`).join('')}</section>` +
+      `<section class="panel"><div class="panel-header"><h2>ابدأ مهمتك</h2><span class="muted">وصول سريع</span></div><div class="task-grid">${[['orders','مراجعة الطلبات','ابحث عن طلب وتابع حالته'],['carthuman','متابعة السلات الكبيرة','راجع الحالات التي تحتاج متابعة'],['preorders','إدارة الحجوزات','الدفعات والمواعيد والتخصيص'],['videos','إدارة الفيديو شوب','راجع محتوى المتجر']].map(([id,title,description])=>`<button class="task-link" data-page="${id}">${svg(id)}<span><b>${title}</b><small>${description}</small></span><span aria-hidden="true">←</span></button>`).join('')}</div></section>` +
+      `<section class="panel"><div class="panel-header"><h2>آخر أحداث المتجر</h2><button class="text-button" data-page="events">عرض السجل ←</button></div>${d.events === null ? empty('السجل غير متاح','راجع الاتصال ثم أعد المحاولة.') : eventTable(d.events)}</section>`;
   }
+
   function staffSalesView(result) {
     const m=result.metrics||{}, employee=result.employee||{name:'غفران'};
     const rate=value=>`${Number(value||0).toLocaleString('ar-SA-u-nu-latn',{maximumFractionDigits:1})}%`;
@@ -75,12 +84,12 @@
         <div class="metric"><div class="metric-top"><span>المبيعات</span><span class="metric-icon">${svg('staffsales')}</span></div><strong style="font-size:24px">${money(m.sales,'SAR')}</strong><small>بعد استبعاد الحالات الملغاة/المسترجعة</small></div>
         <div class="metric"><div class="metric-top"><span>نسبة التحويل</span><span class="metric-icon">${svg('staffsales')}</span></div><strong>${rate(m.conversion_rate)}</strong><small>طلبات ÷ نسخ</small></div>
       </section>` +
-      `<section class="panel"><div class="panel-header"><h3>حسب المنصة</h3><span class="badge green">${esc(employee.name)}</span></div><div class="table-wrap"><table><thead><tr><th>المنصة</th><th>إنشاء</th><th>نسخ</th><th>طلبات</th><th>مبيعات</th><th>تحويل</th></tr></thead><tbody>${platformRows||'<tr><td colspan="6">لا توجد بيانات بعد.</td></tr>'}</tbody></table></div></section>` +
-      `<section class="panel"><div class="panel-header"><h3>آخر الطلبات المنسوبة</h3><span class="muted">آخر 30 يومًا</span></div>${orderRows?`<div class="table-wrap"><table><thead><tr><th>الطلب</th><th>المنصة</th><th>الحالة</th><th>الإجمالي</th><th>التتبع</th><th>التاريخ</th></tr></thead><tbody>${orderRows}</tbody></table></div>`:empty('لا توجد طلبات منسوبة بعد','ستظهر هنا الطلبات التي تحمل UTM الخاص بغفران.','staffsales')}</section>`;
+      `<section class="panel"><div class="panel-header"><h3>حسب المنصة</h3><span class="badge green">${esc(employee.name)}</span></div><div class="table-wrap" tabindex="0" role="region" aria-label="جدول بيانات قابل للتمرير أفقيًا"><table><thead><tr><th>المنصة</th><th>إنشاء</th><th>نسخ</th><th>طلبات</th><th>مبيعات</th><th>تحويل</th></tr></thead><tbody>${platformRows||'<tr><td colspan="6">لا توجد بيانات بعد.</td></tr>'}</tbody></table></div></section>` +
+      `<section class="panel"><div class="panel-header"><h3>آخر الطلبات المنسوبة</h3><span class="muted">آخر 30 يومًا</span></div>${orderRows?`<div class="table-wrap" tabindex="0" role="region" aria-label="جدول بيانات قابل للتمرير أفقيًا"><table><thead><tr><th>الطلب</th><th>المنصة</th><th>الحالة</th><th>الإجمالي</th><th>التتبع</th><th>التاريخ</th></tr></thead><tbody>${orderRows}</tbody></table></div>`:empty('لا توجد طلبات منسوبة بعد','ستظهر هنا الطلبات التي تحمل UTM الخاص بغفران.','staffsales')}</section>`;
   }
 
   function rulesView(rules) {
-    return heading('الأتمتة','قواعد متابعة المتجر، من الحدث إلى الإجراء.', '<button class="secondary" id="process-events">اختبار الأحداث المعلقة</button>') +
+    return heading('متابعة السلات','التذكيرات الآلية وحالة إرسالها، مع محاكاة منفصلة للمراجعة.', '<button class="secondary" id="process-events">اختبار الأحداث المعلقة</button>') +
       window.LinkCartFollowup.shell() +
       '<div class="notice">وضع الاختبار: تفعيل القاعدة يسجّل نتيجة محاكاة فقط. لا تُرسل رسائل ولا تُنفّذ تغييرات على المتجر. مدة الانتظار تظهر كتوقيت مقترح في سجل الاختبار.</div>' +
       `<div class="rule-grid">${rules.map(r => `<form class="rule-card" data-rule="${esc(r.id)}"><div class="rule-top"><div><h3>${esc(r.name)}</h3><code dir="ltr">${esc(r.event_name)}</code></div><span class="badge">اختبار فقط</span></div><p class="muted">عند وصول الحدث، نختبر القاعدة ونسجّل النتيجة.</p><div class="rule-edit"><label class="switch"><input name="enabled" type="checkbox" ${r.enabled ? 'checked' : ''}> تفعيل الاختبار</label><label>بعد <input name="delay" aria-label="مدة الانتظار بالدقائق" type="number" min="0" max="10080" value="${r.delay_minutes}" required> دقيقة</label><button class="primary" type="submit">حفظ</button></div></form>`).join('') || `<section class="panel">${empty('لا توجد قواعد','أضف أول قاعدة من النموذج أدناه.','automations')}</section>`}</div>` +
@@ -95,8 +104,8 @@
       carts: { headers:['السلة','العميل','الهاتف','الحالة','عدد المنتجات','الإجمالي','تاريخ الترك','آخر متابعة'], cells:r=>[esc(r.external_cart_id),esc(r.customer_name || '—'),`<span dir="ltr">${esc(r.phone || '—')}</span>`,esc(r.status),fmt(r.items_count),money(r.total_amount,r.currency),date(r.abandoned_at),date(r.last_contact_at)] },
     }[resource];
     const placeholder = resource==='orders' ? 'رقم الطلب أو مرجعه' : 'الاسم أو الهاتف أو البريد أو المعرّف';
-    const table = result.records.length ? `<div class="table-wrap"><table><thead><tr>${schema.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${result.records.map(r=>`<tr>${schema.cells(r).map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : empty(state.search ? 'لا توجد نتائج مطابقة' : 'لا توجد سجلات بعد',state.search ? 'جرّب اسمًا أو رقمًا آخر، أو امسح البحث.' : 'ستظهر البيانات المسجلة هنا عند وصولها إلى قاعدة البيانات.',resource);
-    return heading(title,'عرض البيانات الحالية المسجلة في المتجر.') + '<div class="notice">نعرض السجلات الموجودة في قاعدة البيانات. استقبال أحداث سلة وتجهيز المزامنة لا يزالان قيد الإعداد.</div>' +
+    const table = result.records.length ? `<div class="table-wrap" tabindex="0" role="region" aria-label="جدول بيانات قابل للتمرير أفقيًا"><table><thead><tr>${schema.headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${result.records.map(r=>`<tr>${schema.cells(r).map(c=>`<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>` : empty(state.search ? 'لا توجد نتائج مطابقة' : 'لا توجد سجلات بعد',state.search ? 'جرّب اسمًا أو رقمًا آخر، أو امسح البحث.' : 'ستظهر البيانات المسجلة هنا عند وصولها إلى قاعدة البيانات.',resource);
+    return heading(title,'عرض البيانات الحالية المسجلة في المتجر.') + '<div class="notice">نعرض السجلات الموجودة في قاعدة البيانات. المزامنة يدوية من صفحة التكاملات؛ فتح هذا القسم لا يبدأ مزامنة جديدة.</div>' +
       `<section class="panel"><form id="records-search" class="form-row"><div class="form-field"><label for="search-term">البحث</label><input id="search-term" name="search" maxlength="100" value="${esc(state.search)}" placeholder="${placeholder}"></div><button class="primary" type="submit">بحث</button><button class="secondary" type="button" id="clear-search">مسح البحث</button></form></section><section class="panel">${table}<div class="records-pagination"><button class="secondary" id="records-prev" ${result.page===1 ? 'disabled' : ''}>السابق</button><span>الصفحة ${fmt(result.page)} · ${fmt(result.records.length)} سجل</span><button class="secondary" id="records-next" ${result.has_more ? '' : 'disabled'}>التالي</button></div></section>`;
   }
   function bindContent() {
@@ -209,6 +218,7 @@
       }catch(e){toast(e.message);b.disabled=false;}
     });
     if (page==='ads') window.LinkAds.bind({navigate,toast});
+    if (page==='coupons') window.LinkCouponReplies.bind({api,toast});
     if (page==='whatsapp') window.LinkWhatsApp.bind({navigate,toast,api});
     if (page==='postpurchase') window.LinkPostPurchase.bind({navigate,toast,api});
     if (page==='carthuman') window.LinkCartHuman.bind({navigate,toast,api});
@@ -239,8 +249,20 @@
   async function loadRuns() {
     const target=$('runs'); if(!target)return;
     try { const {runs}=await api('runs'); if (!target.isConnected) return;
-      target.innerHTML = !runs.length ? empty('لا توجد نتائج اختبار','فعّل اختبار قاعدة، ثم عالج الأحداث المطابقة لها.','automations') : `<div class="table-wrap"><table><thead><tr><th>القاعدة</th><th>التوقيت المقترح</th><th>النتيجة</th></tr></thead><tbody>${runs.map(r=>`<tr><td>${esc(r.summary?.rule_name)}</td><td>${date(r.scheduled_for)}</td><td><span class="badge green">محاكاة · لم تُرسل رسالة</span></td></tr>`).join('')}</tbody></table></div>`;
+      target.innerHTML = !runs.length ? empty('لا توجد نتائج اختبار','فعّل اختبار قاعدة، ثم عالج الأحداث المطابقة لها.','automations') : `<div class="table-wrap" tabindex="0" role="region" aria-label="جدول بيانات قابل للتمرير أفقيًا"><table><thead><tr><th>القاعدة</th><th>التوقيت المقترح</th><th>النتيجة</th></tr></thead><tbody>${runs.map(r=>`<tr><td>${esc(r.summary?.rule_name)}</td><td>${date(r.scheduled_for)}</td><td><span class="badge green">محاكاة · لم تُرسل رسالة</span></td></tr>`).join('')}</tbody></table></div>`;
     }catch(e){toast(e.message);}
+  }
+  function organizePanels() {
+    const titles = {automations:/محاكاة|قاعدة|اختبار/, preorders:/توثيق اختيار الشحن|تحديثات العملاء/, integrations:/مزامنة آخر|ربط إعلانات/, postpurchase:/تجربة قالب|تجهيز المنتجات والعروض تلقائيًا/, carthuman:/إعدادات متقدمة/};
+    const pattern=titles[page];
+    if(pattern) $('content').querySelectorAll(':scope > section.panel').forEach(panel=>{
+      const title=panel.querySelector('h2,h3');
+      if(!title || !pattern.test(title.textContent))return;
+      const disclosure=document.createElement('details');disclosure.className='panel disclosure';
+      const summary=document.createElement('summary');summary.textContent=title.textContent;
+      panel.before(disclosure);disclosure.append(summary,panel);title.hidden=true;
+    });
+    $('content').querySelectorAll('.table-wrap').forEach(table=>{table.tabIndex=0;table.setAttribute('role','region');table.setAttribute('aria-label','جدول بيانات — يمكن التمرير أفقيًا');});
   }
   async function navigate(next) {
     page = pages.some(([id])=>id===next) ? next : 'overview';
@@ -248,10 +270,12 @@
     location.hash=page; setSidebar(false);
     $('nav').querySelectorAll('button').forEach(b=>{b.classList.toggle('active',b.dataset.page===page); b.setAttribute('aria-current',b.dataset.page===page?'page':'false');});
     const title=pages.find(([p])=>p===page)[1]; $('breadcrumb-title').textContent=title;
-    $('content').innerHTML='<div class="loading">جارٍ تحميل مساحة العمل…</div>';
+    $('content').setAttribute('aria-busy','true'); $('refresh').disabled=true;
+    $('content').innerHTML='<div class="loading" role="status">جارٍ تحميل مساحة العمل…</div>';
     try {
       let html;
       if (page==='overview') { overview=await api('overview'); html=home(overview); }
+      else if (page==='coupons') { html=heading('ردود أكواد الخصم','إعداد الرد التلقائي ومراجعة محاولاته. قبول المزود لا يؤكد التسليم.')+'<section class="panel"><div id="coupon-replies" role="region" aria-label="ردود أكواد الخصم">جارٍ تحميل الإعدادات…</div></section>'; }
       else if (page==='whatsapp') { html=window.LinkWhatsApp.render(await api('whatsapp')); }
       else if (page==='postpurchase') { html=window.LinkPostPurchase.render(await api('postpurchase')); }
       else if (page==='carthuman') { html=window.LinkCartHuman.render(await api('cart-human')); }
@@ -284,17 +308,19 @@
         if(message||tiktokMessage)history.replaceState(null,'',`${location.pathname}#integrations`);
       }
       else if (page==='videos' || page==='protection') { const url=page==='videos'?'/video-shop-admin':'/protection-admin'; html=heading(title,'أدوات المتجر الحالية داخل مساحة لنك.',`<a class="back-link" href="${url}" target="_blank" rel="noopener">فتح في صفحة مستقلة ↗</a>`)+`<iframe class="embed" title="${title}" src="${url}"></iframe>`; }
-      else if (page==='settings') { html=heading(title,'إعدادات مساحة العمل وتجهيز المرحلة التالية.')+`<section class="panel"><div class="settings-list"><div><span>المتجر</span><b>Link Store</b></div><div><span>معرّف المتجر</span><code>1829345766</code></div><div><span>المنطقة الزمنية للعرض</span><b>السعودية</b></div><div><span>المصادقة الحالية</span><b>${window.LinkAuth.mode==='supabase'?'Supabase Auth · حسابات مصرح لها':'رمز إدارة الفيديو شوب'}</b></div><div><span>تشغيل الأتمتة</span><span class="badge">اختبار فقط</span></div></div></section><section class="panel"><h3>الطلبات والعملاء والسلات</h3><p class="muted">تمت مراجعة أعمدة الجداول وإعداد عرض سجلاتها. الخطوة القادمة تفعيل تطبيق سلة وربط الأحداث والمزامنة بالجداول.</p></section>`; }
+      else if (page==='settings') { html=heading(title,'معلومات المتجر والوصول إلى أدوات الإدارة.')+`<section class="panel"><div class="settings-list"><div><span>المتجر</span><b>Link Store</b></div><div><span>معرّف المتجر</span><code>1829345766</code></div><div><span>المنطقة الزمنية للعرض</span><b>السعودية</b></div><div><span>المصادقة الحالية</span><b>${window.LinkAuth.mode==='supabase'?'Supabase Auth · حسابات مصرح لها':'رمز إدارة الفيديو شوب'}</b></div></div></section><section class="panel"><h3>أدوات الإدارة</h3><p class="muted">راجع الاتصال والتفويض من التكاملات. إعدادات كل متابعة تظهر في قسمها ولا تعني تشغيل المتابعات الأخرى.</p><a class="secondary" href="/developer-access.html">مفاتيح ربط التطبيقات ↗</a></section>`; }
       else { html=heading(title,'مساحة جاهزة لاستقبال بيانات المتجر.')+`<section class="panel">${empty('الربط في المرحلة التالية','الجدول موجود في قاعدة البيانات. سنربطه هنا بعد مراجعة أعمدته وتجهيز مزامنة سلة، لتظهر بيانات دقيقة وقابلة للاستخدام.',page)}</section>`; }
       if(id!==requestId || currentPage!==page)return;
-      $('content').innerHTML=html; bindContent();
-    }catch(e){if(id===requestId){$('content').innerHTML=heading(title,'')+`<section class="panel">${empty('تعذر تحميل هذا القسم',esc(e.message))}</section>`;}}
+      $('content').innerHTML=html; organizePanels(); bindContent();
+      $('content').querySelector('h1')?.setAttribute('tabindex','-1'); $('content').querySelector('h1')?.focus({preventScroll:true});
+    }catch(e){if(id===requestId){$('content').innerHTML=heading(title,'')+`<section class="panel">${empty('تعذر تحميل هذا القسم','تحقق من الاتصال ثم أعد المحاولة.')}<button class="secondary" id="retry-page">إعادة المحاولة</button><details class="error-details"><summary>تفاصيل الخطأ</summary><p>${esc(e.message)}</p></details></section>`; $('retry-page')?.addEventListener('click',()=>navigate(page));}}
+    finally { if(id===requestId){$('content').setAttribute('aria-busy','false');$('refresh').disabled=false;} }
   }
   async function enter() {
     overview=await api('overview'); if(window.LinkAuth.mode==='legacy')sessionStorage.setItem('lvs_admin',token); $('login').hidden=true; $('app').hidden=false;
     await navigate(location.hash.slice(1)||'overview');
   }
-  $('nav').innerHTML=pages.map(([id,label])=>`<button class="nav-button" data-page="${id}">${svg(id)}<span>${label}</span></button>`).join('');
+  $('nav').innerHTML=navigation.map(([label,ids])=>`<div class="nav-group">${label?`<p class="nav-caption">${label}</p>`:''}${ids.map(id=>`<button class="nav-button" data-page="${id}">${svg(id)}<span>${pages.find(p=>p[0]===id)[1]}</span></button>`).join('')}</div>`).join('');
   $('nav').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
   $('login-form').addEventListener('submit',async e=>{
     e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;$('login-error').textContent='';
