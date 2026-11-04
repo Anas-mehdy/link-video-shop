@@ -13,6 +13,37 @@
     return n;
   };
   const money = n => new Intl.NumberFormat('ar-SA-u-nu-latn',{maximumFractionDigits:2}).format(n)+' ر.س';
+  function priceAmount(value) {
+    const raw = value?.amount ?? value?.price ?? value;
+    if (typeof raw !== 'number' && (typeof raw !== 'string' || !raw.trim())) return null;
+    const amount = Number(raw);
+    return Number.isFinite(amount) ? amount : null;
+  }
+  async function refreshPrice(product, onUpdate) {
+    let response;
+    try {
+      response = await window.salla.product?.getDetails?.(product.id, ['options']);
+    } catch {
+      return; // Keep the catalog prices when Salla's storefront lookup is unavailable.
+    }
+    const live = response?.data?.product ?? response?.data ?? response?.product ?? response;
+    if (String(live?.id) !== String(product.id)) return;
+    const price = (live.is_on_sale ? priceAmount(live.sale_price) : null) ?? priceAmount(live.price);
+    if (price === null || price < 0) return;
+
+    for (const choice of product.choices || []) {
+      const option = Array.isArray(live.options) && live.options.find(o => String(o.id) === String(choice.id));
+      const details = option?.details ?? option?.values;
+      for (const value of choice.values) {
+        const detail = Array.isArray(details) && details.find(v => String(v.id) === String(value.id));
+        const extra = priceAmount(detail?.additional_price ?? detail?.price)
+          ?? (value.price ?? product.price) - product.price;
+        value.price = price + extra;
+      }
+    }
+    product.price = price;
+    onUpdate();
+  }
   function quantityPicker(name, available, onChange) {
     const box=el('div','','ld-quantity'), minus=el('button','−'), plus=el('button','+'), input=el('input');
     minus.type=plus.type='button'; input.type='number';input.min='1';input.step='1';input.value='1';
@@ -43,7 +74,9 @@
       const row=el('div','','ld-row'),image=el('img');image.src=p.image;image.alt='';image.loading='lazy';
       const copy=el('div','','ld-copy'),link=el('a',p.name);link.href=p.url;
       const notice=el('p','','ld-status');notice.setAttribute('role','status');
-      copy.append(link,el('p',money(p.price)),notice);
+      const price = el('p',money(p.price));
+      copy.append(link,price,notice);
+      refreshPrice(p, () => { price.textContent = money(p.price); });
       const add=el('button',p.available?'أضف للسلة':'غير متوفر');add.type='button';add.disabled=!p.available;
       const quantity=quantityPicker(p.name,p.available),actions=el('div','','ld-actions');actions.append(quantity.box,add);
       add.addEventListener('click',async()=>{
@@ -59,6 +92,7 @@
     section.setAttribute('aria-label','كمّل حماية جوالك');
     section.append(el('h2','كمّل حماية جوالك'),el('p','إضافات مناسبة لـ '+config.model+' — اختر حماية الشاشة وحماية الكاميرا التي تناسبك'));
     const controls = [], summary=el('p','','ld-summary'), status=el('p','','ld-status');
+    const mainProduct = {id:Number(id),price:config.price};
     status.setAttribute('role','status');status.setAttribute('aria-live','polite');
     const retry=el('button','أعد إضافة المنتجات التي لم تُضف');retry.type='button';retry.hidden=true;
     let pending=null,busy=false,failed=[];
@@ -78,6 +112,7 @@
       }
       const quantity=quantityPicker(p.name,p.available,update),actions=el('div','','ld-actions');actions.append(price,quantity.box);
       const control={product:p,row,input,price,pickers,quantity};controls.push(control);
+      refreshPrice(p, update);
       input.addEventListener('change',()=>{
         update();
       });
@@ -90,7 +125,7 @@
     }
     function update(){
       const raw=Number(form.querySelector('[name="quantity"]')?.value||1);
-      let total=config.price*(Number.isSafeInteger(raw)&&raw>0?raw:1), selected=0;
+      let total=mainProduct.price*(Number.isSafeInteger(raw)&&raw>0?raw:1), selected=0;
       for(const c of controls){
         c.row.classList.toggle('ld-selected',c.input.checked);
         c.pickers.forEach(p=>p.select.disabled=busy||!c.input.checked);c.quantity.disable(busy||!c.product.available);
@@ -148,9 +183,10 @@
     form.addEventListener('input',event=>{if(event.target.name==='quantity')update();});
     form.addEventListener('change',event=>{if(event.target.name==='quantity')update();});
     update();
+    refreshPrice(mainProduct, update);
     mountAccessories();return true;
   }
-  fetch(base+'/drip-upsells-config.json?v=2',{credentials:'omit'}).then(r=>r.ok?r.json():null).then(data=>{
+  fetch(base+'/drip-upsells-config.json?v=3',{credentials:'omit'}).then(r=>r.ok?r.json():null).then(data=>{
     const config=data?.products?.[id];if(!config)return;
     if(mount(config))return;
     const observer=new MutationObserver(()=>{if(mount(config))observer.disconnect();});

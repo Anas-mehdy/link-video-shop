@@ -201,7 +201,7 @@
     if (document.getElementById('link-drip-upsells-loader')) return;
     var script = document.createElement('script');
     script.id = 'link-drip-upsells-loader';
-    script.src = 'https://link-video-shop.vercel.app/drip-upsells.js?v=2';
+    script.src = 'https://link-video-shop.vercel.app/drip-upsells.js?v=3';
     script.async = true;
     document.head.appendChild(script);
   }
