@@ -160,6 +160,57 @@
 #link-sidebar-root .ls-empty{text-align:center;color:#8e8796;font-size:13px;padding:36px 15px}#link-sidebar-root .ls-count{background:#f4edfa;color:#6b1f91;padding:3px 8px;border-radius:100px;font-size:10px;font-weight:700}
 #link-sidebar-root .ls-corner{font-size:10px;color:#9d91a6;text-align:center;padding:11px 8px 15px}
 #link-sidebar-fallback{position:fixed;right:12px;bottom:100px;z-index:2147483090;background:#621c86;color:white;border:1px solid #ffffff88;border-radius:14px;box-shadow:0 5px 22px #2b173d36;padding:12px 13px;display:flex;align-items:center;gap:7px;font:inherit;font-size:12px;font-weight:700}
+/* Compact the Malak homepage trust section on small screens. */
+@media (max-width: 767px) {
+  section.s-block--features.trust-block {
+    padding-block: 14px;
+  }
+  section.trust-block > .container > .s-block__title {
+    margin: 0 0 9px;
+  }
+  section.trust-block .s-block__title h2 {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.4;
+  }
+  section.trust-block .s-block__title p,
+  section.trust-block .angel-feature p + p {
+    display: none;
+  }
+  section.trust-block > .container > .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    align-items: stretch;
+  }
+  section.trust-block .angel-feature {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 6px;
+    min-width: 0;
+    padding: 7px;
+    border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+    border-radius: 9px;
+  }
+  section.trust-block .angel-feature > :first-child {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 22px;
+  }
+  section.trust-block .angel-feature i {
+    font-size: 18px;
+    line-height: 1;
+  }
+  section.trust-block .angel-feature > :last-child {
+    min-width: 0;
+    margin: 0;
+  }
+  section.trust-block .angel-feature p {
+    margin: 0;
+    text-align: start;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
 @media (prefers-reduced-motion:reduce){#link-sidebar-root .ls-panel,#link-sidebar-root .ls-backdrop{transition:none}}
 `;document.head.appendChild(s);}
   function iconButton(name,label,cls){var b=el('button',cls);b.type='button';b.setAttribute('aria-label',label);b.innerHTML=svg(name);return b;}
