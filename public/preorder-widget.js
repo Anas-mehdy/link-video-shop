@@ -68,6 +68,7 @@
      if(!configResponse.ok)throw Error('bridge_config');const config=await configResponse.json();
      if(config.product_id!==productId||!/^\d+$/.test(config.schedule_source_id||'')||!Array.isArray(config.colors)||config.colors.length>20||config.colors.some(c=>!/^\d+$/.test(c.option_id||'')||c.booking_id!==null&&!/^\d+$/.test(c.booking_id||'')||!/^#[0-9a-f]{6}$/i.test(c.swatch||'')||!/^https:\/\//.test(c.image||'')))throw Error('bridge_config');
      if(config.colors.some(c=>c.booking_id&&!safeBookingURL(c)))throw Error('bridge_config');
+     if(!config.colors.some(c=>c.booking_id)){render([]);return;}
      bridgeConfig=config;
      // The theme supplies authoritative option state as details[].is_out.
      // Read that observed page contract first; the SDK projection can omit it.

@@ -8,7 +8,7 @@ async function harness({path='/p318533359',mode='',beforeAdd=false,items=[],fail
  if(nativeOptions){const el=document.createElement('salla-product-options');el.setAttribute('product-id','981596666');el.setAttribute('options',JSON.stringify(nativeOptions));document.querySelector('.product-form').appendChild(el);}
  delete window.__linkPreorderWidget;
  Object.defineProperty(document,'currentScript',{value:script});
- const timers=new Map(),events={},observers=[];let serial=0,calls=0,currentItems=items,data={ok:true,products};const colors=configOverride||JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json','utf8'));let stock=Object.fromEntries(colors.colors.map(c=>[c.option_id,true]));
+ const timers=new Map(),events={},observers=[];let serial=0,calls=0,currentItems=items,data={ok:true,products};const colors=configOverride||JSON.parse(fs.readFileSync(__dirname+'/fixtures/preorder-frame-colors.json','utf8'));let stock=Object.fromEntries(colors.colors.map(c=>[c.option_id,true]));
  window.salla={onReady:fn=>fn(),product:{getDetails:async()=>{if(stockFail)throw Error('offline');return {data:{id:981596666,options:[{values:Object.entries(stock).map(([id,out])=>({id,is_out_of_stock:out}))}]}};}},cart:{details:async()=>({data:{items:currentItems}}),event:{onItemAdded:fn=>events.add=fn,onItemRemoved:fn=>events.remove=fn}}};
  window.HTMLElement.prototype.scrollIntoView=function(){};
  const context={window,document,location:{pathname:path,href:'https://linkstore-sa.com'+path},URL,Intl,Date,matchMedia:()=>({matches:true}),fetch:async url=>{if(url.includes('/preorder-frame-colors.json'))return {ok:true,json:async()=>colors};calls++;if(fail)throw Error('offline');return {ok:true,json:async()=>data};},setTimeout:fn=>{timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id),MutationObserver:class{constructor(fn){observers.push(fn)}observe(){}disconnect(){}}};
@@ -39,7 +39,7 @@ test('mixed cart updates on removal, does not guard coupons, never uses cart-lin
 });
 test('public feed allows only sanitized schedule fields, hides drafts by default, rejects query injection',async()=>{
  const queries=[];let response;
- const context={module:{exports:{}},AbortSignal,Set,require:name=>name==='./preorder-consent-service'?{control:async()=>false,VERSION:'test',TEXT:'test'}:({MERCHANT_ID:1829345766,sb:async p=>{queries.push(p);return [{product_id:'318533359',product_name:'إطار',color:'بورغندي',status:'draft',ship_from:'2026-11-04',ship_by:'2026-11-06',revision:1,customer_phone:'PRIVATE',incoming_quantity:400}];},json:(_r,status,data,headers)=>response={status,data,headers}})};
+ const context={module:{exports:{}},AbortSignal,Set,require:name=>name.endsWith('preorder-frame-colors.json')?{retired_products:[]}:name==='./preorder-consent-service'?{control:async()=>false,VERSION:'test',TEXT:'test'}:({MERCHANT_ID:1829345766,sb:async p=>{queries.push(p);return [{product_id:'318533359',product_name:'إطار',color:'بورغندي',status:'draft',ship_from:'2026-11-04',ship_by:'2026-11-06',revision:1,customer_phone:'PRIVATE',incoming_quantity:400}];},json:(_r,status,data,headers)=>response={status,data,headers}})};
  vm.createContext(context);vm.runInContext(fs.readFileSync(__dirname+'/../lib/preorder-storefront.js','utf8'),context);
  const feed=context.module.exports.feed;
  await feed({query:{ids:'318533359&select=*'}},{});assert.equal(response.status,400);assert.equal(queries.length,0);
@@ -50,7 +50,7 @@ test('public feed allows only sanitized schedule fields, hides drafts by default
 test('delegated before-add mode keeps date card without a second checkbox or DOM guard',async()=>{const h=await harness({beforeAdd:true});assert.ok(h.document.querySelector('.link-preorder').textContent.includes('شحن طلبك المتوقع'));assert.equal(h.document.querySelector('[data-po-ack]'),null);const e=new h.window.Event('click',{bubbles:true,cancelable:true});h.document.querySelector('.product-form button').dispatchEvent(e);assert.equal(e.defaultPrevented,false);});
 test('catalog returns only complete active schedules, hides draft/closed, and fails on overflow, variants or duplicate active products',async()=>{
  const queries=[];let response,rows=[{...product,product_id:product.id,product_name:'الإطار',variant_id:''}];
- const context={module:{exports:{}},AbortSignal,Set,require:name=>name==='./preorder-consent-service'?{control:async()=>false,VERSION:'test',TEXT:'test'}:({MERCHANT_ID:1829345766,sb:async p=>{queries.push(p);return rows;},json:(_r,status,data,headers)=>response={status,data,headers}})};
+ const context={module:{exports:{}},AbortSignal,Set,require:name=>name.endsWith('preorder-frame-colors.json')?{retired_products:[]}:name==='./preorder-consent-service'?{control:async()=>false,VERSION:'test',TEXT:'test'}:({MERCHANT_ID:1829345766,sb:async p=>{queries.push(p);return rows;},json:(_r,status,data,headers)=>response={status,data,headers}})};
  vm.createContext(context);vm.runInContext(fs.readFileSync(__dirname+'/../lib/preorder-storefront.js','utf8'),context);const feed=context.module.exports.feed;
  await feed({query:{catalog:'1',preview:'1',ids:'inject&x'}},{});assert.equal(response.status,200);assert.equal(response.data.complete,true);assert.equal(response.data.preview,false);assert.equal(response.data.products.length,1);assert.ok(queries[0].includes('status=in.(open,paused)'));assert.ok(!JSON.stringify(response.data).includes('variant_id'));
  const first=rows[0];rows=[{...first,status:'draft'},{...first,product_id:'999',status:'closed'}];await feed({query:{catalog:'1'}},{});assert.equal(response.data.products.length,0);
@@ -69,7 +69,7 @@ test('frame bridge renders four colors, links only the active booking, and never
 test('frame bridge does not link paused/expired bookings, and removes a card when its native option is back in stock',async()=>{
  const paused=await harness({path:'/p981596666',products:[{...product,status:'paused'}]});assert.equal(paused.document.querySelectorAll('a.po-color-action').length,0);
  const expired=await harness({path:'/p981596666',products:[{...product,ship_from:'2020-01-01',ship_by:'2020-01-02'}]});assert.equal(expired.document.querySelectorAll('a.po-color-action').length,0);
- const h=await harness({path:'/p981596666'});const config=JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'));const stock=Object.fromEntries(config.colors.map(c=>[c.option_id,false]));
+ const h=await harness({path:'/p981596666'});const config=JSON.parse(fs.readFileSync(__dirname+'/fixtures/preorder-frame-colors.json'));const stock=Object.fromEntries(config.colors.map(c=>[c.option_id,false]));
  // A fresh page reads current native option stock, so fulfilled colors don't keep preorder cards.
  const source=code;const {window:w,document:d}=require('linkedom').parseHTML('<html><head></head><body><form class="product-form"></form></body></html>');delete w.__linkPreorderWidget;const s=d.createElement('script');s.src='https://link-video-shop.vercel.app/preorder-widget.js';s.dataset.beforeAdd='1';Object.defineProperty(d,'currentScript',{value:s});w.salla={onReady:f=>f(),product:{getDetails:async()=>({data:{id:981596666,options:[{values:Object.entries(stock).map(([id,out])=>({id,is_out_of_stock:out}))}]}})},cart:{event:{}}};const c={window:w,document:d,location:{pathname:'/p981596666',href:'https://salla.sa/linkstore122/p981596666'},URL,Intl,Date,fetch:async url=>({ok:true,json:async()=>url.includes('.json')?config:{ok:true,products:[product]}}),MutationObserver:class{observe(){}disconnect(){}},setTimeout:()=>1,clearTimeout:()=>{}};vm.createContext(c);vm.runInContext(source,c);for(let i=0;i<18;i++)await Promise.resolve();assert.equal(d.querySelector('.link-preorder'),null);
 });
@@ -93,7 +93,7 @@ test('observed Salla page options render cards even when SDK stock lookup fails'
 });
 
 test('all mapped booking colors become actionable only after their CRM batches are open',async()=>{
- const config=JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'));
+ const config=JSON.parse(fs.readFileSync(__dirname+'/fixtures/preorder-frame-colors.json'));
  const products=config.colors.map(c=>({...product,id:c.booking_id,color:c.name}));
  const h=await harness({path:'/p981596666',nativeOptions:JSON.parse(fs.readFileSync(__dirname+'/fixtures/frame-native-options.json')),products});
  assert.equal(h.document.querySelectorAll('a.po-color-action').length,4);
@@ -103,11 +103,17 @@ test('all mapped booking colors become actionable only after their CRM batches a
 });
 
 test('frame booking links require real store canonical URLs rather than bare product-id paths',async()=>{
- const config=JSON.parse(fs.readFileSync(__dirname+'/../public/preorder-frame-colors.json'));
+ const config=JSON.parse(fs.readFileSync(__dirname+'/fixtures/preorder-frame-colors.json'));
  const h=await harness({path:'/p981596666'});const href=h.document.querySelector('a.po-color-action').getAttribute('href');
  assert.equal(href,new URL(config.colors[0].booking_url).href);assert.notEqual(new URL(href).pathname,'/p318533359');
  for(const url of ['https://example.com/p318533359','javascript:alert(1)','https://linkstore-sa.com/wrong/p999']){
   const bad=structuredClone(config);bad.colors[0].booking_url=url;
   const blocked=await harness({path:'/p981596666',configOverride:bad});assert.equal(blocked.document.querySelectorAll('a.po-color-action').length,0);
  }
+});
+
+test('retired frame bridge no longer displays preorder cards or asks for a schedule',async()=>{
+ const h=await harness({path:'/p981596666',configOverride:require('../public/preorder-frame-colors.json')});
+ assert.equal(h.document.querySelector('.link-preorder'),null);
+ assert.equal(h.calls(),0);
 });
