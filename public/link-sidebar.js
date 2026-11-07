@@ -278,14 +278,16 @@
   function initVideoShop() {
     if (moveFollowBar()) return;
 
-    // Salla renders the HTML block inside its custom component after page load.
+    // Salla replaces its placeholder element when it renders the HTML block.
     const host = document.querySelector('salla-custom-component[component-name="html-content"][config*="lvs-tiktok-profile"]');
-    if (!host) return;
+    const block = host?.closest('section.s-block--bundle-html-content') ||
+      document.querySelector('section[component-id="956769247"], section[component-id="107949473"]');
+    if (!block) return;
 
     const observer = new MutationObserver(() => {
       if (moveFollowBar()) observer.disconnect();
     });
-    observer.observe(host, { childList: true, subtree: true });
+    observer.observe(block, { childList: true, subtree: true });
   }
 
   if (document.readyState === 'loading') {
