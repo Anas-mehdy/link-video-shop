@@ -256,6 +256,45 @@
   window.LinkSidebar={open:openMenu,close:closeMenu,version:'2026-10-12-test',canonicalCategoryCount:130,ignoredDuplicates:89};
 })();
 
+/* Move the homepage Video Shop follow bar below the video rail. */
+(function () {
+  'use strict';
+
+  function moveFollowBar() {
+    const wrap = document.querySelector('#link-video-shop > .lvs-wrap');
+    if (!wrap) return false;
+
+    const followBar = wrap.querySelector(':scope > .lvs-tiktok-profile');
+    const rail = wrap.querySelector(':scope > .lvs-rail');
+    if (!followBar || !rail) return false;
+
+    const next = rail.nextElementSibling;
+    const anchor = next?.matches('.lvs-hint') ? next : rail;
+    if (anchor.nextElementSibling !== followBar) anchor.after(followBar);
+    followBar.style.marginBlock = '16px 0';
+    return true;
+  }
+
+  function initVideoShop() {
+    if (moveFollowBar()) return;
+
+    // Salla renders the HTML block inside its custom component after page load.
+    const host = document.querySelector('salla-custom-component[component-name="html-content"][config*="lvs-tiktok-profile"]');
+    if (!host) return;
+
+    const observer = new MutationObserver(() => {
+      if (moveFollowBar()) observer.disconnect();
+    });
+    observer.observe(host, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initVideoShop, { once: true });
+  } else {
+    initVideoShop();
+  }
+})();
+
 /* LINK_HOME_DEVICE_CATEGORY_EXT_V1
  * Extend the existing Malak "اختر حسب جوالك" selector with two verified
  * active Salla categories. Do not replace the native widget or affect its
