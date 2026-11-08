@@ -297,6 +297,140 @@
   }
 })();
 
+/* Model labels and category shortcuts for the Malak homepage bundle grid. */
+(function () {
+  'use strict';
+
+  const bundles = new Map([
+    ['angel-product-1948753871', ['iPhone 18 Pro Max', '/iphone-18-pro-max/c634749937']],
+    ['angel-product-1558395701', ['iPhone 18 Pro', '/iphone-18-pro/c1486436379']],
+    ['angel-product-1073931571', ['iPhone 17 Pro Max', '/iphone-17-pro-max/c1970961949']],
+    ['angel-product-1079324876', ['iPhone 17 Pro', '/iphone-17-pro/c463298332']]
+  ]);
+
+  function addModelLinks(list) {
+    if (list.nextElementSibling?.matches('.link-iphone-bundle-nav')) return;
+
+    const nav = document.createElement('nav');
+    nav.className = 'link-iphone-bundle-nav';
+    nav.dir = 'rtl';
+    nav.setAttribute('aria-labelledby', 'link-iphone-bundle-nav-title');
+    nav.innerHTML = '<h3 id="link-iphone-bundle-nav-title">تسوّق حسب موديل الآيفون</h3>' +
+      '<p>بكجات، كفرات وقطع حماية لجوالك</p><div class="link-iphone-bundle-links"></div>';
+    const links = nav.querySelector('.link-iphone-bundle-links');
+
+    for (const [model, path] of bundles.values()) {
+      const link = document.createElement('a');
+      link.href = path;
+      const name = document.createElement('bdi');
+      name.dir = 'ltr';
+      name.textContent = model;
+      const arrow = document.createElement('span');
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '←';
+      link.append(name, arrow);
+      links.append(link);
+    }
+
+    list.after(nav);
+  }
+
+  function decorateCard(card, model) {
+    const image = card.querySelector(':scope > .s-product-card-image');
+    if (!image) return;
+
+    if (!card.querySelector(':scope > .link-iphone-bundle-model')) {
+      const label = document.createElement('div');
+      label.className = 'link-iphone-bundle-model';
+      label.dir = 'ltr';
+      label.textContent = model;
+      image.before(label);
+    }
+
+    const button = card.querySelector('salla-add-product-button');
+    const existingAction = card.querySelector('.link-iphone-bundle-action');
+    if (button?.getAttribute('product-status') !== 'sale') {
+      existingAction?.remove();
+      if (button?.hasAttribute('data-link-bundle-native')) {
+        button.hidden = false;
+        button.removeAttribute('data-link-bundle-native');
+      }
+      return;
+    }
+    if (existingAction) return;
+
+    const productLink = image.querySelector('a[href]');
+    if (!productLink) return;
+
+    const action = document.createElement('a');
+    action.className = 'link-iphone-bundle-action';
+    action.href = productLink.href;
+    action.textContent = 'اختر خيارات البكج';
+    action.setAttribute('aria-label', 'اختر خيارات بكج ' + model);
+    button.after(action);
+    button.setAttribute('data-link-bundle-native', '');
+    button.hidden = true;
+  }
+
+  function initIphoneBundles() {
+    const section = document.querySelector('section[component-id="1556783049"]');
+    if (!section || section.hasAttribute('data-link-iphone-bundles')) return;
+    section.setAttribute('data-link-iphone-bundles', '');
+
+    const style = document.createElement('style');
+    style.textContent = `
+[data-link-iphone-bundles] .link-iphone-bundle-model{flex:none;padding:8px 5px;margin:0;text-align:center;font-size:clamp(12px,3.2vw,15px);font-weight:800;line-height:1.35;color:#3b164d;background:#f7effb;border-bottom:1px solid #eadcf0}
+[data-link-iphone-bundles] .link-iphone-bundle-model~.s-product-card-content .s-product-card-category{display:none}
+[data-link-iphone-bundles] [data-link-bundle-native][hidden]{display:none!important}
+[data-link-iphone-bundles] .link-iphone-bundle-action{display:flex;min-height:44px;align-items:center;justify-content:center;text-align:center;padding:4px 6px;border:1px solid #702294;border-radius:7px;background:#fff;color:#5b197c;font-size:13px;font-weight:700;line-height:1.4;text-decoration:none}
+[data-link-iphone-bundles] .link-iphone-bundle-nav{max-width:680px;margin:16px auto 0;padding:14px;border:1px solid #e9dcee;border-radius:14px;background:#fbf8fd;color:#25172c}
+[data-link-iphone-bundles] .link-iphone-bundle-nav h3{margin:0;font-size:16px;font-weight:800;line-height:1.45}
+[data-link-iphone-bundles] .link-iphone-bundle-nav p{margin:3px 0 10px;color:#65576b;font-size:12px;line-height:1.5}
+[data-link-iphone-bundles] .link-iphone-bundle-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+[data-link-iphone-bundles] .link-iphone-bundle-links a{display:flex;min-height:44px;min-width:0;align-items:center;justify-content:space-between;gap:4px;padding:5px 8px;border:1px solid #e3d3ea;border-radius:8px;background:#fff;color:#4b2060;font-size:13px;font-weight:700;line-height:1.35;text-decoration:none}
+[data-link-iphone-bundles] .link-iphone-bundle-links bdi{min-width:0}
+[data-link-iphone-bundles] .link-iphone-bundle-links a span{flex:none;color:#74259a}
+[data-link-iphone-bundles] .link-iphone-bundle-links a:hover,[data-link-iphone-bundles] .link-iphone-bundle-action:hover{background:#f4eaf9}
+[data-link-iphone-bundles] .link-iphone-bundle-links a:focus-visible,[data-link-iphone-bundles] .link-iphone-bundle-action:focus-visible{outline:2px solid #702294;outline-offset:-3px}
+`;
+    document.head.append(style);
+
+    function sync() {
+      const list = section.querySelector('salla-products-list[source="selected"]');
+      const grid = list?.querySelector('.s-products-list-wrapper');
+      if (!grid) return;
+
+      const cards = new Map(Array.from(grid.children, card => [card.id, card]));
+      const matching = [...bundles.keys()].filter(id => cards.has(id));
+      if (!matching.length) return;
+
+      if (matching.length === grid.children.length) {
+        matching.forEach((id, index) => {
+          const card = cards.get(id);
+          const current = grid.children[index];
+          if (card === current) return;
+          if (grid.moveBefore) grid.moveBefore(card, current);
+          else grid.insertBefore(card, current);
+        });
+      }
+
+      matching.forEach(id => decorateCard(cards.get(id), bundles.get(id)[0]));
+      addModelLinks(list);
+    }
+
+    new MutationObserver(sync).observe(section, {
+      childList: true, subtree: true, attributes: true, attributeFilter: ['product-status']
+    });
+    sync();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initIphoneBundles, { once: true });
+  } else {
+    initIphoneBundles();
+  }
+})();
+
 /* LINK_HOME_DEVICE_CATEGORY_EXT_V1
  * Extend the existing Malak "اختر حسب جوالك" selector with two verified
  * active Salla categories. Do not replace the native widget or affect its
