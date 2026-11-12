@@ -58,13 +58,17 @@ function __linkByobMount(){
   return true;
 }
 
+
 (function(){
- if(!location.pathname.includes('/pages/lp1304367330/1852264485'))return;
- if(window.__linkByobBootstrapInstalled)return;
- window.__linkByobBootstrapInstalled=true;
- function init(){try{return __linkByobMount()===true}catch(err){console.error('[Link BYOB] init failed',err);return false}}
- if(init())return;
- var obs=new MutationObserver(function(){if(init())obs.disconnect()});
- obs.observe(document.documentElement,{childList:true,subtree:true});
- document.addEventListener('DOMContentLoaded',function(){if(init())obs.disconnect()},{once:true});
+  if(window.__linkByobBootstrapInstalled) return;
+  window.__linkByobBootstrapInstalled=true;
+  function init(){
+    try{return __linkByobMount()===true}
+    catch(err){console.error('[Link BYOB] init failed',err);return false}
+  }
+  if(init()) return;
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init,{once:true});
+  var observer=new MutationObserver(function(){if(init())observer.disconnect()});
+  observer.observe(document.documentElement,{childList:true,subtree:true});
+  window.addEventListener('load',function(){if(init())observer.disconnect()},{once:true});
 })();
