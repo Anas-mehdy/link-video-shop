@@ -173,7 +173,7 @@ function linkBundleMountCatalog(root, grid, tabs, entries) {
       #lnk-byob .workspace,#lnk-byob .catalog{overflow:visible}
       #lnk-byob .catalog{scroll-margin-block-start:calc(var(--sticky-top) + 10px)}
       #lnk-byob .lb-toolbar{
-        display:block;position:sticky;inset-block-start:var(--sticky-top);z-index:14;
+        display:block;position:sticky;inset-block-start:var(--sticky-top);z-index:8;
         margin-block:12px 10px;padding:8px 10px 2px;border:1px solid var(--line);
         border-radius:13px;background:#fcfaff;box-shadow:0 4px 14px #32164814
       }
@@ -468,7 +468,8 @@ function linkBundleMountMobile(root, tabs, list) {
 
   const home = list.parentElement;
   const compact = window.matchMedia('(max-width: 820px)');
-  const header = document.getElementById('mainnav');
+  const navigation = document.getElementById('mainnav');
+  const header = navigation?.querySelector('.header-inner') || navigation;
   toggle.addEventListener('click', () => {
     if (sheet.open || !compact.matches) return;
     sheetFeedback.before(list);
@@ -487,7 +488,9 @@ function linkBundleMountMobile(root, tabs, list) {
     frame = requestAnimationFrame(() => {
       frame = undefined;
       const visibleHeader = header?.getBoundingClientRect();
-      const top = visibleHeader && visibleHeader.top < 12 ? Math.max(0, visibleHeader.bottom) : 0;
+      const pinned = navigation?.classList.contains('fixed-header') && getComputedStyle(header).position === 'fixed';
+      const top = pinned ? header.offsetHeight :
+        visibleHeader && visibleHeader.top < 12 ? Math.max(0, visibleHeader.bottom) : 0;
       root.style.setProperty('--lb-header-bottom', Math.round(top) + 'px');
       document.body.style.setProperty('--lb-dock-height', Math.ceil(dock.getBoundingClientRect().height) + 'px');
     });
@@ -501,6 +504,10 @@ function linkBundleMountMobile(root, tabs, list) {
     const resize = new ResizeObserver(measure);
     resize.observe(dock);
     if (header) resize.observe(header);
+  }
+  if (navigation) {
+    const navigationState = new MutationObserver(measure);
+    navigationState.observe(navigation, { attributes: true, attributeFilter: ['class'] });
   }
   measure();
   return { toolbar, compact, sheet, sheetTotal, sheetFeedback, close };
