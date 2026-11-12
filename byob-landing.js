@@ -80,6 +80,11 @@ function linkBundleReadPrice(value) {
   return Number(value && typeof value === 'object' ? value.amount : value);
 }
 
+function linkBundleProductApi() {
+  const salla = window.salla;
+  return typeof salla?.product?.getDetails === 'function' ? salla.product : salla?.api?.product;
+}
+
 function linkBundleColorKey(value) {
   return String(value).trim().replace(/[أإآ]/g, 'ا').replace(/ى/g, 'ي');
 }
@@ -149,26 +154,29 @@ function linkBundleMountCatalog(root, grid, tabs, entries) {
 
   function refresh(variants) {
     const id = variants[0].id;
-    const api = window.salla?.product;
+    const api = linkBundleProductApi();
     if (catalogReads.has(id) || typeof api?.getDetails !== 'function') return;
     const request = Promise.resolve().then(() => api.getDetails(id, ['options'])).then(result => {
       const detail = result?.data?.product || result?.data;
       if (!detail || result.success === false || (detail.id && Number(detail.id) !== id)) return;
-      const actualPrice = linkBundleReadPrice(detail.price);
-      const available = actualPrice === linkBundlePrice &&
-        (detail.is_available === true || (detail.is_available !== false && detail.status === 'sale' &&
-          (Number(detail.quantity) > 0 || detail.unlimited_quantity === true)));
+      const actualPrice = linkBundleReadPrice(detail.base_currency_price ?? detail.price);
+      const available = actualPrice === linkBundlePrice && detail.is_out_of_stock !== true && detail.is_available !== false &&
+        (detail.is_out_of_stock === false || detail.is_available === true ||
+          (detail.status === 'sale' && (Number(detail.quantity) > 0 || detail.unlimited_quantity === true)));
       const options = Array.isArray(detail.options) ? detail.options : [];
       for (const entry of variants) {
         if (entry.requiresColor) {
-          const option = options.find(candidate => Array.isArray(candidate.values) &&
-            candidate.values.some(value => linkBundleColorKey(value.name) === linkBundleColorKey(entry.color)));
-          const value = option?.values.find(candidate => linkBundleColorKey(candidate.name) === linkBundleColorKey(entry.color));
-          if (option && value && Number(option.id) > 0 && Number(value.id) > 0 && options.length === 1) {
+          const option = options.length === 1 ? options[0] : null;
+          const values = option?.details || option?.values || [];
+          const value = values.find(candidate => linkBundleColorKey(candidate.name) === linkBundleColorKey(entry.color));
+          if (option && value && Number(option.id) > 0 && Number(value.id) > 0) {
             entry.options = { [option.id]: value.id };
             const sku = detail.skus?.find?.(candidate => candidate.related_option_values?.some(id => Number(id) === Number(value.id)));
             entry.limit = sku && sku.unlimited_quantity !== true ? Math.max(0, Number(sku.stock_quantity) || 0) : linkBundleMaximum;
-            const stockConfirmed = value.is_out_of_stock === false || (value.is_out_of_stock !== true && Boolean(sku));
+            const availability = Object.values(value.skus_availability || {});
+            const stockConfirmed = value.is_out !== true && value.is_out_of_stock !== true &&
+              (availability.length ? availability.some(Boolean) :
+                value.is_out === false || value.is_out_of_stock === false || Boolean(sku));
             entry.available = available && stockConfirmed && entry.limit > 0 &&
               (!sku?.price || linkBundleReadPrice(sku.price) === linkBundlePrice);
           } else {
@@ -301,7 +309,7 @@ function linkBundleMountCatalog(root, grid, tabs, entries) {
   if ('IntersectionObserver' in window) {
     observer = new IntersectionObserver(changes => {
       for (const { isIntersecting, target } of changes) {
-        if (isIntersecting && typeof window.salla?.product?.getDetails === 'function') {
+        if (isIntersecting && typeof linkBundleProductApi()?.getDetails === 'function') {
           cards.find(card => card.card === target).checkCurrentModel();
           observer.unobserve(target);
         }
