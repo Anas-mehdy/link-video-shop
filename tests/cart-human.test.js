@@ -72,13 +72,36 @@ test('Database routing >300, exact boundary, history, approval, replies, optouts
  assert.equal((await db.query('select crm_claim_cart_delivery(1829345766) r')).rows[0].r.idle,'no_due');
  assert.equal((await db.query('select status from crm_cart_deliveries where cart_id=$1',[rise])).rows[0].status,'cancelled');
 
+ // Cutover preserves history, never drains old cancellations, and accepts a fresh update.
+ await db.query('delete from crm_cart_second_deliveries where cart_id=$1',[drop.c]);
+ await install('crm-cart-unified-automation.sql');await install('crm-cart-unified-automation.sql');
+ assert.equal((await claim(rise)).blocked,'unified_automation');
+ assert.equal((await db.query('select crm_claim_cart_delivery(1829345766) r')).rows[0].r.idle,'no_due');
+ await db.exec("update test_clock set t='2026-10-19T09:02:00Z'");
+ await db.query('update abandoned_carts set crm_source_at=public.delivery_now() where id in ($1,$2)',[rise,fresh]);
+ await db.exec("update test_clock set t='2026-10-19T10:03:00Z'");
+ const unified=(await db.query('select crm_claim_cart_delivery(1829345766) r')).rows[0].r;
+ assert.equal(unified.phone,'966599999993');
+ await db.query("select crm_finish_cart_delivery($1,$2,'accepted','989')",[unified.id,unified.attempt_token]);
+ assert.equal((await db.query('select crm_claim_cart_delivery(1829345766) r')).rows[0].r.idle,'no_due');
+ await db.exec("update test_clock set t='2026-10-19T18:04:00Z'");
+ const reminders=[];
+ for(let i=0;i<12;i++){
+   const next=(await db.query('select crm_claim_cart_second(1829345766) r')).rows[0].r;
+   if(next.idle)break;
+   reminders.push(next);
+   await db.query("select crm_finish_cart_second($1,$2,'accepted','990')",[next.id,next.attempt_token]);
+ }
+ assert.equal(reminders.find(r=>r.phone==='966599999993')?.discount_amount,20);
+ assert.ok(!reminders.some(r=>[human.phone,h.phone,opt.phone,bought.phone,drop.phone].includes(r.phone)));
+
+
  }finally{await db.close();}
 });
 test('Dashboard lists human carts, escapes customer data and disables unapproved sends',()=>{
  const vm=require('node:vm'),ctx={window:{}};vm.runInNewContext(fs.readFileSync(__dirname+'/../public/dashboard-cart-human.js','utf8'),ctx);
  const html=ctx.window.LinkCartHuman.render({storage_ready:true,server_ready:true,configuration:{template_approved:false},previous_second:[],queue:[{id:record.id,customer_name:'<script>bad</script>',amount:350,reason:'ready',items:[{name:'<img>',quantity:1}]}]});
  assert.ok(html.includes('&lt;script&gt;'));assert.ok(html.includes('&lt;img&gt;'));assert.match(html,/data-human-send="[^"]+" disabled/);
- const dashboard=fs.readFileSync(__dirname+'/../public/dashboard.js','utf8');assert.equal(dashboard.match(/\['carthuman','متابعة السلات الكبيرة'\]/g).length,1);
 });
 test('Feedback validates inputs, scopes writes, and never calls sender',async()=>{
  const {saveFeedback}=require('../lib/cart-human');let calls=[];
