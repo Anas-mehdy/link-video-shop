@@ -100,6 +100,7 @@ body{font-size:16px;line-height:1.65}button,input,select,textarea{font:inherit}t
 .panel-header>label{min-width:0;max-width:100%;display:grid;gap:8px}
 #preorder-filter{width:100%;min-width:0;text-overflow:ellipsis}
 @media(max-width:760px){.panel-header>label{width:100%}}
+.auth-startup{display:grid;align-content:center;justify-items:center;gap:12px;min-height:100dvh;padding:24px;text-align:center}
 /* Give long Arabic names/product descriptions a readable column at all widths. */
 .table-wrap td:nth-child(2){min-width:180px}
 .table-wrap table:has(th:nth-child(5)){min-width:960px}

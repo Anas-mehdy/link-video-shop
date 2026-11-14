@@ -35,7 +35,7 @@
     const res = await window.LinkAuth.fetch(`/api/crm-admin?resource=${resource}`, { ...options, headers: { Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, cache:'no-store' });
     let data;
     try { data = await res.json(); } catch { throw new Error('تعذر قراءة استجابة الخادم'); }
-    if (res.status === 401) { token = ''; sessionStorage.removeItem('lvs_admin'); $('app').hidden = true; $('login').hidden = false; throw new Error('رمز الإدارة غير صحيح أو انتهت الجلسة'); }
+    if (res.status === 401) { showLogin('رمز الإدارة غير صحيح أو انتهت الجلسة'); throw Object.assign(new Error('رمز الإدارة غير صحيح أو انتهت الجلسة'),{status:401}); }
     if (!res.ok || !data.ok) throw Object.assign(new Error(data.error || 'تعذر تحميل البيانات'),{retryable:data.retryable,retry_after:data.retry_after,provider_status:data.provider_status});
     return data;
   }
@@ -317,8 +317,14 @@
     }catch(e){if(id===requestId){$('content').innerHTML=heading(title,'')+`<section class="panel">${empty('تعذر تحميل هذا القسم','تحقق من الاتصال ثم أعد المحاولة.')}<button class="secondary" id="retry-page">إعادة المحاولة</button><details class="error-details"><summary>تفاصيل الخطأ</summary><p>${esc(e.message)}</p></details></section>`; $('retry-page')?.addEventListener('click',()=>navigate(page));}}
     finally { if(id===requestId){$('content').setAttribute('aria-busy','false');$('refresh').disabled=false;} }
   }
+  function showLogin(message='') {
+    token='';sessionStorage.removeItem('lvs_admin');$('app').hidden=true;$('auth-startup').hidden=true;$('login').hidden=false;$('login-error').textContent=message;
+  }
   async function enter() {
-    overview=await api('overview'); if(window.LinkAuth.mode==='legacy')sessionStorage.setItem('lvs_admin',token); $('login').hidden=true; $('app').hidden=false;
+    if(window.LinkAuth.mode==='legacy'){
+      await api('overview');sessionStorage.setItem('lvs_admin',token);
+    }
+    $('auth-startup').hidden=true;$('login').hidden=true;$('app').hidden=false;
     await navigate(location.hash.slice(1)||'overview');
   }
   $('nav').innerHTML=navigation.map(([label,ids])=>`<div class="nav-group">${label?`<p class="nav-caption">${label}</p>`:''}${ids.map(id=>`<button class="nav-button" data-page="${id}">${svg(id)}<span>${pages.find(p=>p[0]===id)[1]}</span></button>`).join('')}</div>`).join('');
@@ -328,7 +334,8 @@
     try{await window.LinkAuth.init();if(window.LinkAuth.mode==='supabase'){const result=await window.LinkAuth.login($('login-email').value.trim(),$('login-password').value);token='session';$('user-avatar').textContent=(result.user.email||'L').slice(0,1).toUpperCase();$('user-avatar').title=result.user.email;$('login-password').value='';}else token=$('admin-token').value.trim();await enter();$('admin-token').value='';}catch(error){$('login-error').textContent=error.message;}finally{b.disabled=false;}
   });
   $('logout').addEventListener('click',async()=>{try{await window.LinkAuth.logout();location.reload();}catch(e){toast(e.message);}});
-  window.addEventListener('link-auth-expired',()=>{token='';$('app').hidden=true;$('login').hidden=false;$('login-error').textContent='انتهت الجلسة؛ سجّل الدخول مجدداً';});
+  window.addEventListener('link-auth-expired',()=>showLogin('انتهت الجلسة؛ سجّل الدخول مجدداً'));
+  $('auth-retry').addEventListener('click',()=>location.reload());
   $('refresh').addEventListener('click',()=>{if(page==='ads')window.LinkAds.invalidate();navigate(page);});
   const mobileMenu=window.matchMedia('(max-width:760px)');
   function setSidebar(open,restoreFocus=false){
@@ -362,8 +369,14 @@
   window.LinkAuth.init().then(async mode=>{
     $('account-login').hidden=mode!=='supabase';$('legacy-login').hidden=mode==='supabase';$('admin-token').required=mode==='legacy';$('login-email').required=mode==='supabase';$('login-password').required=mode==='supabase';
     $('login-note').textContent=mode==='supabase'?'الدخول متاح للحسابات المصرح لها بإدارة لنك فقط.':'الدخول الحالي يعمل حتى إكمال إعداد حسابات Supabase.';
-    if(mode==='supabase'){token='';try{const result=await window.LinkAuth.session();token='session';$('user-avatar').textContent=(result.user.email||'L').slice(0,1).toUpperCase();$('user-avatar').title=result.user.email;await enter();}catch(e){if(e.status!==401)$('login-error').textContent=e.message;}}
-    else if(token)await enter();
-  }).catch(e=>{$('login-error').textContent=e.message;});
+    if(mode==='supabase'){
+      token='';const result=await window.LinkAuth.session();token='session';$('user-avatar').textContent=(result.user.email||'L').slice(0,1).toUpperCase();$('user-avatar').title=result.user.email;
+      await enter();
+    }else if(token)await enter();
+    else showLogin();
+  }).catch(e=>{
+    if(e.status===401||e.status===403){if($('login').hidden)showLogin(e.status===403?e.message:'');return;}
+    $('auth-status').textContent='تعذر فتح لوحة التحكم. تحقق من الاتصال ثم أعد المحاولة.';$('auth-retry').hidden=false;
+  });
 })();
 

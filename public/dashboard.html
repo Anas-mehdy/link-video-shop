@@ -4,11 +4,16 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="dark"><title>لنك | لوحة إدارة المتجر</title>
   <script src="/dashboard-preorders.js?v=20261018-consent-items" defer></script>
-  <link rel="stylesheet" href="/dashboard.css?v=20261102-workspace"><script src="/dashboard-auth.js" defer></script><script src="/dashboard-ads.js?v=20261007-tiktok-reports" defer></script><script src="/dashboard-coupon-replies.js?v=20261021" defer></script><script src="/dashboard-whatsapp.js?v=20261021-coupons" defer></script><script src="/dashboard-cart-followup.js?v=20261113-unified-carts" defer></script><script src="/dashboard-postpurchase.js?v=20261011-purchase-schedule" defer></script><script src="/dashboard.js?v=20261114-month-to-date" defer></script>
+  <link rel="stylesheet" href="/dashboard.css?v=20261114-session-startup"><script src="/dashboard-auth.js" defer></script><script src="/dashboard-ads.js?v=20261007-tiktok-reports" defer></script><script src="/dashboard-coupon-replies.js?v=20261021" defer></script><script src="/dashboard-whatsapp.js?v=20261021-coupons" defer></script><script src="/dashboard-cart-followup.js?v=20261113-unified-carts" defer></script><script src="/dashboard-postpurchase.js?v=20261011-purchase-schedule" defer></script><script src="/dashboard.js?v=20261114-session-startup" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#content">تجاوز إلى المحتوى</a>
-  <section id="login" class="login-shell">
+  <main id="auth-startup" class="auth-startup">
+    <p id="auth-status" role="status">جارٍ فتح لوحة التحكم…</p>
+    <button id="auth-retry" class="secondary" type="button" hidden>إعادة المحاولة</button>
+    <noscript>فعّل JavaScript لفتح لوحة التحكم.</noscript>
+  </main>
+  <section id="login" class="login-shell" hidden>
     <div class="login-brand"><span class="brand-mark">L<span>↗</span></span><p>متجرك، في مكان واحد.</p><h1>مساحة لنك لإدارة<br>العلاقات والنمو</h1><p>المنتجات، الفيديوهات، والتكاملات.<br>متابعة واضحة لمهام متجرك اليومية.</p><div class="brand-orbit"></div></div>
     <form id="login-form" class="login-card"><span class="eyebrow">LINK STORE</span><h2>أهلًا بك في لنك</h2><p class="muted">سجّل دخولك إلى لوحة إدارة المتجر</p><div id="account-login" hidden><label for="login-email">البريد الإلكتروني</label><input id="login-email" type="email" autocomplete="username" placeholder="name@example.com"><label for="login-password">كلمة المرور</label><input id="login-password" type="password" autocomplete="current-password"></div><div id="legacy-login"><label for="admin-token">رمز الإدارة الحالي</label><input id="admin-token" type="password" autocomplete="current-password" required placeholder="أدخل رمز إدارة الفيديو شوب"></div><button class="primary" type="submit">الدخول إلى اللوحة <span>←</span></button><p id="login-error" class="error" role="alert"></p><small id="login-note" class="muted">جارٍ التحقق من إعدادات الدخول…</small></form>
   </section>
