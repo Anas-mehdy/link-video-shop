@@ -16,11 +16,11 @@
     protection: '<path d="M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/>',
     settings: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
   };
-  const pages = [['overview','الرئيسية'],['orders','الطلبات'],['preorders','الحجز المسبق'],['customers','العملاء'],['staffsales','مبيعات خدمة العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['postpurchase','ما بعد البيع'],['coupons','ردود أكواد الخصم'],['automations','متابعة السلات'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','مساحة العمل']];
+  const pages = [['overview','الرئيسية'],['orders','الطلبات'],['preorders','الحجز المسبق'],['customers','العملاء'],['staffsales','خدمة العملاء'],['carts','السلات المتروكة'],['ads','إحصائيات الإعلانات'],['whatsapp','واتساب'],['postpurchase','ما بعد البيع'],['coupons','ردود أكواد الخصم'],['automations','متابعة السلات'],['integrations','التكاملات'],['events','سجل الأحداث'],['videos','الفيديو شوب'],['protection','حماية الهاتف'],['settings','مساحة العمل']];
   const navigation = [
     ['', ['overview']], ['المتجر', ['orders','customers','carts']],
     ['الأتمتة', ['automations','postpurchase','coupons']],
-    ['التسويق', ['ads','staffsales']], ['إدارة المحتوى', ['videos','protection']],
+    ['خدمة العملاء', ['staffsales']], ['التسويق', ['ads']], ['إدارة المحتوى', ['videos','protection']],
     ['الحجز المسبق', ['preorders']], ['الإعدادات والتكاملات', ['integrations','whatsapp','settings','events']]
   ];
   paths.postpurchase=paths.orders; paths.preorders=paths.orders; paths.coupons=paths.automations;
@@ -74,20 +74,13 @@
 
   function staffSalesView(result) {
     const m=result.metrics||{}, employee=result.employee||{name:'غفران'};
-    const rate=value=>`${Number(value||0).toLocaleString('ar-SA-u-nu-latn',{maximumFractionDigits:1})}%`;
-    const platformRows=(result.platforms||[]).map(p=>`<tr><td>${esc(p.label)}</td><td>${fmt(p.generated)}</td><td>${fmt(p.copies)}</td><td>${fmt(p.orders)}</td><td>${money(p.sales,'SAR')}</td><td>${rate(p.conversion_rate)}</td></tr>`).join('');
+    const platformRows=(result.platforms||[]).map(p=>`<tr><td>${esc(p.label)}</td><td>${fmt(p.generated)}</td><td>${fmt(p.copies)}</td><td>${fmt(p.orders)}</td><td>${money(p.sales,'SAR')}</td></tr>`).join('');
     const orderRows=(result.recent_orders||[]).map(o=>`<tr><td>${esc(o.reference||o.id||'—')}</td><td>${esc(o.platform||'—')}</td><td>${esc(o.status||'—')}</td><td>${money(o.amount,o.currency)}</td><td>${o.matched_copy?'<span class="badge green">مطابق للنسخة</span>':'<span class="badge">UTM منسوب</span>'}</td><td>${date(o.ordered_at)}</td></tr>`).join('');
-    return heading('مبيعات خدمة العملاء',`متابعة مبيعات ${esc(employee.name)} المنسوبة للروابط التي تُرسل للعملاء.`, '<a class="back-link" href="/ghofran-links" target="_blank" rel="noopener">فتح أداة الروابط ↗</a>') +
-      '<div class="notice">نسبة التحويل هنا = عدد الطلبات المنسوبة لغفران ÷ عدد مرات نسخ الرابط. كل ضغطة «نسخ» تنشئ utm_term فريدًا لربط الطلب بالنسخة قدر الإمكان.</div>' +
-      `<section class="metrics">
-        <div class="metric"><div class="metric-top"><span>روابط تم إنشاؤها</span><span class="metric-icon">${svg('staffsales')}</span></div><strong>${fmt(m.generated)}</strong><small>آخر ${fmt(result.days)} يومًا</small></div>
-        <div class="metric"><div class="metric-top"><span>مرات النسخ</span><span class="metric-icon">${svg('staffsales')}</span></div><strong>${fmt(m.copies)}</strong><small>الروابط التي جُهزت للإرسال</small></div>
-        <div class="metric"><div class="metric-top"><span>الطلبات</span><span class="metric-icon">${svg('orders')}</span></div><strong>${fmt(m.orders)}</strong><small>${fmt(m.matched_orders)} منها مطابقة لمعرّف نسخة</small></div>
-        <div class="metric"><div class="metric-top"><span>المبيعات</span><span class="metric-icon">${svg('staffsales')}</span></div><strong style="font-size:24px">${money(m.sales,'SAR')}</strong><small>بعد استبعاد الحالات الملغاة/المسترجعة</small></div>
-        <div class="metric"><div class="metric-top"><span>نسبة التحويل</span><span class="metric-icon">${svg('staffsales')}</span></div><strong>${rate(m.conversion_rate)}</strong><small>طلبات ÷ نسخ</small></div>
-      </section>` +
-      `<section class="panel"><div class="panel-header"><h3>حسب المنصة</h3><span class="badge green">${esc(employee.name)}</span></div><div class="table-wrap" tabindex="0" role="region" aria-label="جدول بيانات قابل للتمرير أفقيًا"><table><thead><tr><th>المنصة</th><th>إنشاء</th><th>نسخ</th><th>طلبات</th><th>مبيعات</th><th>تحويل</th></tr></thead><tbody>${platformRows||'<tr><td colspan="6">لا توجد بيانات بعد.</td></tr>'}</tbody></table></div></section>` +
-      `<section class="panel"><div class="panel-header"><h3>آخر الطلبات المنسوبة</h3><span class="muted">آخر 30 يومًا</span></div>${orderRows?`<div class="table-wrap" tabindex="0" role="region" aria-label="جدول بيانات قابل للتمرير أفقيًا"><table><thead><tr><th>الطلب</th><th>المنصة</th><th>الحالة</th><th>الإجمالي</th><th>التتبع</th><th>التاريخ</th></tr></thead><tbody>${orderRows}</tbody></table></div>`:empty('لا توجد طلبات منسوبة بعد','ستظهر هنا الطلبات التي تحمل UTM الخاص بغفران.','staffsales')}</section>`;
+    return `<details class="panel"><summary>المبيعات المنسوبة لروابط الخدمة · آخر ${fmt(result.days)} يومًا</summary>
+      <p>${fmt(m.matched_orders)} طلبًا مطابقًا لرمز تتبّع · ${fmt(m.orders)} طلبًا منسوبًا إجمالًا · ${money(m.sales,'SAR')} إجماليًا بعد استبعاد الإلغاءات والاسترجاعات.</p>
+      <p class="muted">عدد نسخ الروابط لا يبيّن كم عميل فتح الرابط.</p><a class="back-link" href="/ghofran-links" target="_blank" rel="noopener">فتح أداة الروابط ↗</a>
+      <div class="table-wrap"><table><thead><tr><th>المنصة</th><th>إنشاء</th><th>نسخ</th><th>طلبات</th><th>مبيعات</th></tr></thead><tbody>${platformRows||'<tr><td colspan="5">لا توجد بيانات بعد.</td></tr>'}</tbody></table></div>
+      <h3>آخر الطلبات المنسوبة · ${esc(employee.name)}</h3>${orderRows?`<div class="table-wrap"><table><thead><tr><th>الطلب</th><th>المنصة</th><th>الحالة</th><th>الإجمالي</th><th>التتبع</th><th>التاريخ</th></tr></thead><tbody>${orderRows}</tbody></table></div>`:empty('لا توجد طلبات منسوبة بعد','ستظهر هنا الطلبات التي تحمل رمز تتبع الخدمة.','staffsales')}</details>`;
   }
 
   function rulesView(rules) {
@@ -111,6 +104,7 @@
       `<section class="panel"><form id="records-search" class="form-row"><div class="form-field"><label for="search-term">البحث</label><input id="search-term" name="search" maxlength="100" value="${esc(state.search)}" placeholder="${placeholder}"></div><button class="primary" type="submit">بحث</button><button class="secondary" type="button" id="clear-search">مسح البحث</button></form></section><section class="panel">${table}<div class="records-pagination"><button class="secondary" id="records-prev" ${result.page===1 ? 'disabled' : ''}>السابق</button><span>الصفحة ${fmt(result.page)} · ${fmt(result.records.length)} سجل</span><button class="secondary" id="records-next" ${result.has_more ? '' : 'disabled'}>التالي</button></div></section>`;
   }
   function bindContent() {
+    if(page==='staffsales')window.LinkServiceMonitor.bind({api});
     $('salla-sync-start')?.addEventListener('click',async e=>{
       const button=e.currentTarget,target=$('salla-sync-progress'),stageInput=$('salla-sync-resource'),pageInput=$('salla-sync-page');
       const stages=[['customers','العملاء'],['orders','الطلبات'],['carts','السلات المتروكة'],['events','الأحداث السابقة'],['finish','الإحصائيات']];
@@ -282,7 +276,12 @@
       else if (page==='postpurchase') { html=window.LinkPostPurchase.render(await api('postpurchase')); }
       else if (page==='preorders') { html=window.LinkPreorders.render(await window.LinkPreorders.load(api)); }
       else if (page==='ads') { html=await window.LinkAds.load(token); }
-      else if (page==='staffsales') { html=staffSalesView(await api('staff-sales')); }
+      else if (page==='staffsales') {
+        const [monitor,sales]=await Promise.allSettled([api('service-monitor'),api('staff-sales')]);
+        html=heading('خدمة العملاء','متابعة المحادثات وأداء الرد ورحلة العميل من مكان واحد.')+
+          window.LinkServiceMonitor.render(monitor.value)+
+          (sales.status==='fulfilled'?staffSalesView(sales.value):'<p class="notice warn">تعذر تحميل مبيعات الخدمة. جرّب تحديث الصفحة.</p>');
+      }
       else if (recordState[page]) { const state=recordState[page]; html=recordsView(page,await api(`${page}&${new URLSearchParams({page:state.page,search:state.search})}`)); }
       else if (page==='automations') { const {rules}=await api('rules'); html=rulesView(rules); }
       else if (page==='events') { const {events}=await api('events'); html=heading(title,'كل حدث يصل إلى اللوحة، مع حالته ووقت استقباله.')+`<section class="panel">${eventTable(events)}</section>`; }

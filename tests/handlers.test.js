@@ -128,3 +128,22 @@ test('record queries only select columns present in the supplied merchant schema
     for(const name of [...config.select.split(','),...config.search])assert.ok(columns.has(name),`${config.table}.${name}`);
   }
 });
+test('service monitor reads only as administrator and reports database outages', async t=>{
+  t.after(()=>delete process.env.CRM_SERVICE_MONITOR_ENABLED);
+  let calls=0;
+  global.fetch=async(url, opts)=>{ calls++;assert.ok(url.includes('/crm_service_monitor_messages?'));assert.equal(opts.method,undefined);return new Response('[]');};
+  const query={resource:'service-monitor'};
+  assert.equal((await call(admin,'GET','Bearer wrong',null,query)).statusCode,401);
+  assert.equal((await call(admin,'POST','Bearer admin-secret',null,query)).statusCode,405);
+  assert.equal(calls,0);
+  assert.deepEqual((await call(admin,'GET','Bearer admin-secret',null,query)).body,{ok:true,monitor_disabled:true});
+  assert.equal(calls,0);
+  process.env.CRM_SERVICE_MONITOR_ENABLED='true';
+  const res=await call(admin,'GET','Bearer admin-secret',null,query);
+  assert.equal(res.statusCode,200);
+  assert.equal(res.body.recorded_from,null);
+  assert.deepEqual(res.body.conversations,[]);
+  assert.equal(calls,2);
+  global.fetch=async()=>new Response('{}',{status:503});
+  assert.equal((await call(admin,'GET','Bearer admin-secret',null,query)).statusCode,503);
+});
