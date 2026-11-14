@@ -1,13 +1,15 @@
 // Local review server. Never deploy this server; it only serves synthetic fixtures.
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),{execFileSync}=require('node:child_process');
 const fixture=require('../tests/fixtures/service-monitor'),insights=require('../tests/fixtures/service-insights');
-const root=path.resolve(__dirname,'..'),base='97ac65bb12fb28c612d78b6f8202acbdd95d9dfd';
+const root=path.resolve(__dirname,'..'),base='46e893186e64ab9750d9826176426d27595cc7ba';
 const saved=new Map();
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png'};
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url,'http://localhost');
+ const legacy=url.searchParams.get('scenario')==='legacy'||new URL(req.headers.referer||'http://localhost').searchParams.get('scenario')==='legacy';
+ const report=legacy?insights.legacyReport:insights.report;
  if(url.pathname==='/'){
-  res.setHeader('Content-Type',types['.html']);res.end('<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>معاينة خدمة العملاء</title><style>body{background:#0e111a;color:#f0edf6;font:18px system-ui;max-width:850px;margin:70px auto;padding:24px;line-height:2}a{color:#c5a0ff;display:block;margin:20px 0;padding:20px;border:1px solid #303446;border-radius:12px}small{color:#adb0c2}</style><h1>خدمة العملاء · قبل وبعد</h1><p>معاينة محلية ببيانات وهمية فقط. لا يوجد اتصال بسلة أو واتساب أو OpenAI.</p><a href="/before/dashboard#staffsales">قبل التحسين ←</a><a href="/after/dashboard#staffsales">بعد التحسين ←</a><small>جرّب الفلاتر، التنقل بين المحادثات، تحليل الرحلة والانتقال للرسالة المرجعية. المحادثة #3 تعرض مطابقة ملتبسة و#4 تعذّر بيانات سلة.</small></html>');return;
+  res.setHeader('Content-Type',types['.html']);res.end('<!doctype html><html lang="ar" dir="rtl"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>معاينة خدمة العملاء</title><style>body{background:#0e111a;color:#f0edf6;font:18px system-ui;max-width:850px;margin:70px auto;padding:24px;line-height:2}a{color:#c5a0ff;display:block;margin:20px 0;padding:20px;border:1px solid #303446;border-radius:12px}small{color:#adb0c2}</style><h1>خدمة العملاء · قبل وبعد</h1><p>معاينة محلية ببيانات وهمية فقط. لا يوجد اتصال بسلة أو واتساب أو OpenAI.</p><a href="/before/dashboard?scenario=legacy#staffsales">قبل · 26 محادثة و3 تحليلات قديمة ←</a><a href="/after/dashboard?scenario=legacy#staffsales">بعد · ملخص وخطوة تالية ←</a><a href="/after/dashboard#staffsales">تجربة حالة بها تحسينات مقترحة ←</a><small>جرّب الفلاتر، التنقل بين المحادثات، تحليل الرحلة والانتقال للرسالة المرجعية. المحادثة #3 تعرض مطابقة ملتبسة و#4 تعذّر بيانات سلة.</small></html>');return;
  }
  const before=url.pathname.startsWith('/before/'),prefix=before?'/before':'/after',pathname=url.pathname.replace(/^\/(before|after)/,'');
  if(pathname.startsWith('/api/')){
@@ -17,9 +19,9 @@ const server=http.createServer(async(req,res)=>{
   else if(resource==='staff-sales')data=fixture.sales;
   else if(resource==='service-monitor'&&req.method==='POST'){
    await new Promise(resolve=>setTimeout(resolve,1000));saved.set(id,fixture.analysis);data={ok:true,analysis:fixture.analysis};
-  }else if(resource==='service-monitor'&&url.searchParams.get('view')==='insights'){try{data=insights.report(Object.fromEntries(url.searchParams));}catch(error){res.writeHead(400,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:false,error:error.message}));return;}}
-  else if(resource==='service-monitor'&&id){data=insights.journey(id);data.outcome=insights.report().conversations.find(c=>c.id===id)?.outcome;if(saved.has(id))data.analysis={...data.analysis,analysis:saved.get(id),state:'complete'};await new Promise(resolve=>setTimeout(resolve,350));}
-  else if(resource==='service-monitor')data={...fixture.overview,today:{...fixture.overview.today,contacts:18},month:{...fixture.overview.month,contacts:18}};
+  }else if(resource==='service-monitor'&&url.searchParams.get('view')==='insights'){try{data=report(Object.fromEntries(url.searchParams));}catch(error){res.writeHead(400,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:false,error:error.message}));return;}}
+  else if(resource==='service-monitor'&&id){data=insights.journey(id);data.outcome=report().conversations.find(c=>c.id===id)?.outcome;if(legacy&&['1','2','3'].includes(id))data.analysis={...data.analysis,analysis:fixture.analysis,state:'complete'};if(saved.has(id))data.analysis={...data.analysis,analysis:saved.get(id),state:'complete'};await new Promise(resolve=>setTimeout(resolve,350));}
+  else if(resource==='service-monitor')data=legacy?{...fixture.overview,today:{...fixture.overview.today,contacts:26},month:{...fixture.overview.month,contacts:26},conversations:report().conversations,conversation_total:26}:{...fixture.overview,today:{...fixture.overview.today,contacts:18},month:{...fixture.overview.month,contacts:18}};
   else{res.writeHead(404);res.end('{"ok":false,"error":"مسار خارج نطاق المعاينة"}');return;}
   res.setHeader('Content-Type','application/json');res.end(JSON.stringify(data));return;
  }

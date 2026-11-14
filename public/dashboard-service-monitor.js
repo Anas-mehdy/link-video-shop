@@ -150,8 +150,8 @@ function bind({api}){
   drill.context=context;supportCases.clear();context.cases.forEach(c=>supportCases.set(c.id,c));
   list.innerHTML=context.cases.map(caseButton).join('')+'<div id="service-empty-filter" class="service-empty" role="status" hidden>لا توجد حالات مطابقة ضمن الحالات الداعمة.</div>';
   buttons=[...list.querySelectorAll('[data-service-conversation]')];filter='all';updateFilters();selection();list.scrollTop=0;
-  const banner=root.querySelector('.service-supporting');banner.hidden=false;banner.innerHTML='<b>'+esc(context.label)+'</b><p>'+number(context.cases.length)+' حالات داعمة · <bdi>'+esc(context.period?.from)+'</bdi> إلى <bdi>'+esc(context.period?.to)+'</bdi></p><button type="button" class="secondary" data-service-restore>العودة إلى القائمة الأصلية →</button>';
-  root.querySelector('#service-list-count').textContent=number(context.cases.length)+' محادثة داعمة';root.querySelector('.service-review .service-count').textContent=number(context.cases.length);
+  const banner=root.querySelector('.service-supporting');banner.hidden=false;banner.innerHTML='<b>'+esc(context.label)+'</b><p>'+number(context.cases.length)+(context.kind==='manual'?' محادثات للتحليل اليدوي · <bdi>':' حالات داعمة · <bdi>')+esc(context.period?.from)+'</bdi> إلى <bdi>'+esc(context.period?.to)+'</bdi></p><button type="button" class="secondary" data-service-restore>العودة إلى القائمة الأصلية →</button>';
+  root.querySelector('#service-list-count').textContent=number(context.cases.length)+(context.kind==='manual'?' محادثة للتحليل اليدوي':' محادثة داعمة');root.querySelector('.service-review .service-count').textContent=number(context.cases.length);
   if(selected&&cache.has(selected)){const content=target.querySelector('.service-journey-content');if(content){content.innerHTML=journey(cache.get(selected),supportCases.get(selected),context);if(inflight.has(selected))analysisLoading(content);}}
   root.querySelector('#service-insights').open=false;
   root.querySelector('.service-review').scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});list.focus({preventScroll:true});

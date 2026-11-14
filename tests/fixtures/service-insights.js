@@ -34,3 +34,16 @@ function dataset(){
 }
 function report(query={}){const period=periodFor(query,new Date('2026-11-14T20:00:00Z'));return {ok:true,...aggregate({period,...dataset()},new Date('2026-11-14T20:00:00Z'))};}
 module.exports={dataset,report,journey,stamp,phone};
+// Requested review case: 26 conversations, 3 legacy analyses, no classified patterns.
+function legacyReport(query={}){
+ const data=dataset();
+ for(let n=19;n<=26;n++){
+  const id=String(n),d=journey(id);
+  data.messages.push(...d.messages.map(m=>({...m,conversation_id:id,contact_phone:phone(n),contact_name:'عميل تجريبي '+id})));
+ }
+ data.analyses=['1','2','3'].map(id=>({conversation_id:id,created_at:stamp(18),fingerprint:'c'.repeat(64),state:'complete',result:structuredClone(base.analysis)}));
+ data.orders=[];data.copied=[];
+ const now=new Date('2026-11-14T20:00:00Z');
+ return {ok:true,...aggregate({period:periodFor(query,now),...data},now)};
+}
+module.exports.legacyReport=legacyReport;
