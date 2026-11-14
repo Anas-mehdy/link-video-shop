@@ -62,6 +62,28 @@ test('overview uses exact HEAD counts and excludes connection secrets',async()=>
   };
   const res=await call(admin,'GET','Bearer admin-secret');assert.equal(res.statusCode,200);assert.equal(res.body.data.products,464);assert.equal(res.body.data.events,null);assert.deepEqual(res.body.unavailable,['events']);assert.equal(res.headers['Cache-Control'],'no-store');
 });
+test('overview rolls over at Riyadh midnight on the first and counts only the new month',async t=>{
+  t.mock.timers.enable({apis:['Date'],now:new Date('2026-12-31T20:59:59Z')});
+  const dates={products:'created_at',orders:'ordered_at',customers:'crm_scope_at',abandoned_carts:'abandoned_at'};
+  let observed={};
+  global.fetch=async(url,opts)=>{
+    if(opts.method!=='HEAD')return new Response('[]');
+    const {pathname,searchParams}=new URL(url), table=pathname.split('/').pop();
+    observed[table]=searchParams.getAll(dates[table]);
+    const n=dates[table]&&observed[table][0]==='gte.2027-01-01T00:00:00+03:00'?0:7;
+    return new Response(null,{headers:{'content-range':`*/${n}`}});
+  };
+  const dec=await call(admin,'GET','Bearer admin-secret');
+  assert.deepEqual(dec.body.period,{start:'2026-12-01T00:00:00+03:00',end:'2026-12-31T20:59:59.000Z',time_zone:'Asia/Riyadh'});
+  assert.deepEqual(observed.orders,['gte.2026-12-01T00:00:00+03:00','lte.2026-12-31T20:59:59.000Z']);
+  t.mock.timers.tick(1000);
+  observed={};
+  const jan=await call(admin,'GET','Bearer admin-secret');
+  assert.deepEqual(jan.body.period,{start:'2027-01-01T00:00:00+03:00',end:'2026-12-31T21:00:00.000Z',time_zone:'Asia/Riyadh'});
+  for(const table of Object.keys(dates))assert.deepEqual(observed[table],['gte.2027-01-01T00:00:00+03:00','lte.2026-12-31T21:00:00.000Z']);
+  assert.deepEqual([jan.body.data.orders,jan.body.data.customers,jan.body.data.carts,jan.body.data.products],[0,0,0,0]);
+  assert.deepEqual(observed.video_shop_videos,[]);
+});
 test('rule updates are scoped, validated and cannot switch to live mode',async()=>{
   let captured;
   global.fetch=async(url,opts)=>{captured={url,body:JSON.parse(opts.body)};return new Response('[{"id":"ok"}]',{status:200});};

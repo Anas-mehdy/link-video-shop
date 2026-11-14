@@ -1,4 +1,4 @@
-const { sb, json, requireAdmin, MERCHANT_ID, noCache, errorResponse, bodyObject, countRows, fail } = require('../lib/crm');
+const { sb, json, requireAdmin, MERCHANT_ID, noCache, errorResponse, bodyObject, countRows, currentMonthPeriod, fail } = require('../lib/crm');
 const RULE_EVENTS = new Set(['abandoned.cart','order.created','order.status.updated','customer.created']);
 const { resources, listRecords } = require('../lib/crm-records');
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -56,15 +56,16 @@ module.exports = async function handler(req, res) {
     if (resource === 'whatsapp' && req.method === 'PUT') return json(res,200,{ok:true,...await require('../lib/whatsapp-workspace').save(bodyObject(req))});
     if (resource === 'staff-sales' && req.method === 'GET') return json(res,200,{ok:true,...await require('../lib/staff-sales').stats(30)});
     if (req.method === 'GET' && resource === 'overview') {
+      const period = currentMonthPeriod();
       const results = await Promise.allSettled([
-        countRows('products'), countRows('video_shop_videos'), countRows('orders'), countRows('customers'), countRows('abandoned_carts'),
+        countRows('products', period), countRows('video_shop_videos'), countRows('orders', period), countRows('customers', period), countRows('abandoned_carts', period),
         sb(`crm_connections?merchant_id=eq.${MERCHANT_ID}&select=provider,status,authorized_at,token_expires_at,updated_at`),
         sb(`crm_event_inbox?merchant_id=eq.${MERCHANT_ID}&select=id,event_name,status,received_at,occurred_at&order=received_at.desc&limit=8`),
         sb(`crm_automation_rules?merchant_id=eq.${MERCHANT_ID}&select=id,name,event_name,enabled,delay_minutes,mode&order=created_at.asc`),
       ]);
       const names = ['products','videos','orders','customers','carts','connections','events','rules'];
       const data = Object.fromEntries(names.map((key, i) => [key, results[i].status === 'fulfilled' ? results[i].value : null]));
-      return json(res, 200, { ok: true, merchant_id: MERCHANT_ID, data, unavailable: names.filter((_, i) => results[i].status === 'rejected') });
+      return json(res, 200, { ok: true, merchant_id: MERCHANT_ID, period, data, unavailable: names.filter((_, i) => results[i].status === 'rejected') });
     }
     if (req.method === 'GET' && Object.hasOwn(resources, resource)) {
       return json(res, 200, { ok: true, ...await listRecords(resource, req.query || {}) });
