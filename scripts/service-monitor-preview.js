@@ -1,7 +1,7 @@
 // Local review server. Never deploy this server; it only serves synthetic fixtures.
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path'),{execFileSync}=require('node:child_process');
-const fixture=require('../tests/fixtures/service-monitor');
-const root=path.resolve(__dirname,'..'),base='f5ab86f32d7351d3679109f3b58ebb04d6a68668';
+const fixture=require('../tests/fixtures/service-monitor'),insights=require('../tests/fixtures/service-insights');
+const root=path.resolve(__dirname,'..'),base='97ac65bb12fb28c612d78b6f8202acbdd95d9dfd';
 const saved=new Map();
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.png':'image/png'};
 const server=http.createServer(async(req,res)=>{
@@ -17,8 +17,9 @@ const server=http.createServer(async(req,res)=>{
   else if(resource==='staff-sales')data=fixture.sales;
   else if(resource==='service-monitor'&&req.method==='POST'){
    await new Promise(resolve=>setTimeout(resolve,1000));saved.set(id,fixture.analysis);data={ok:true,analysis:fixture.analysis};
-  }else if(resource==='service-monitor'&&id){data=fixture.journey(id);if(saved.has(id))data.analysis={...data.analysis,analysis:saved.get(id),state:'complete'};await new Promise(resolve=>setTimeout(resolve,350));}
-  else if(resource==='service-monitor')data=fixture.overview;
+  }else if(resource==='service-monitor'&&url.searchParams.get('view')==='insights'){try{data=insights.report(Object.fromEntries(url.searchParams));}catch(error){res.writeHead(400,{'Content-Type':'application/json'});res.end(JSON.stringify({ok:false,error:error.message}));return;}}
+  else if(resource==='service-monitor'&&id){data=insights.journey(id);data.outcome=insights.report().conversations.find(c=>c.id===id)?.outcome;if(saved.has(id))data.analysis={...data.analysis,analysis:saved.get(id),state:'complete'};await new Promise(resolve=>setTimeout(resolve,350));}
+  else if(resource==='service-monitor')data={...fixture.overview,today:{...fixture.overview.today,contacts:18},month:{...fixture.overview.month,contacts:18}};
   else{res.writeHead(404);res.end('{"ok":false,"error":"مسار خارج نطاق المعاينة"}');return;}
   res.setHeader('Content-Type','application/json');res.end(JSON.stringify(data));return;
  }

@@ -2,7 +2,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {chromium}=require(process.env.LINK_PLAYWRIGHT_MODULE||'playwright');
 const server=require('../scripts/service-monitor-preview'),fixture=require('./fixtures/service-monitor');
-const out=path.resolve(__dirname,'../artifacts/service-monitor');fs.mkdirSync(out,{recursive:true});
+const out=path.resolve(__dirname,process.env.LINK_SERVICE_ARTIFACTS||'../artifacts/service-monitor');fs.mkdirSync(out,{recursive:true});
 const shown=(page,selector)=>page.locator(selector).first().waitFor({state:'visible'});
 test('customer service review on desktop and mobile',async t=>{
  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
@@ -17,7 +17,7 @@ test('customer service review on desktop and mobile',async t=>{
   });
   await t.test('desktop summary, selection and filters',async()=>{
    await page.setViewportSize({width:1440,height:1050});await go();
-   assert.deepEqual(await page.locator('.service-metrics strong').allTextContents(),['24','63','8']);
+   assert.deepEqual(await page.locator('.service-metrics strong').allTextContents(),['18','63','8']);
    await page.screenshot({path:out+'/after-desktop.png',fullPage:true});
    await page.locator('[data-service-filter="waiting"]').click();assert.equal(await page.locator('.service-case:visible').count(),8);
    await page.locator('[data-service-conversation="1"]').click();await shown(page,'.service-timeline');
