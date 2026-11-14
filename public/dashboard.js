@@ -260,6 +260,7 @@
     $('content').querySelectorAll('.table-wrap').forEach(table=>{table.tabIndex=0;table.setAttribute('role','region');table.setAttribute('aria-label','جدول بيانات — يمكن التمرير أفقيًا');});
   }
   async function navigate(next) {
+    window.LinkServiceMonitor?.unbind();
     if(next==='carthuman')next='automations';
     page = pages.some(([id])=>id===next) ? next : 'overview';
     const currentPage=page, id=++requestId;
@@ -278,7 +279,7 @@
       else if (page==='ads') { html=await window.LinkAds.load(token); }
       else if (page==='staffsales') {
         const [monitor,sales]=await Promise.allSettled([api('service-monitor'),api('staff-sales')]);
-        html=heading('خدمة العملاء','متابعة المحادثات وأداء الرد ورحلة العميل من مكان واحد.')+
+        html=heading('خدمة العملاء','مراجعتك اليومية للمحادثات، من أول رسالة إلى رحلة الشراء.')+
           window.LinkServiceMonitor.render(monitor.value)+
           (sales.status==='fulfilled'?staffSalesView(sales.value):'<p class="notice warn">تعذر تحميل مبيعات الخدمة. جرّب تحديث الصفحة.</p>');
       }
