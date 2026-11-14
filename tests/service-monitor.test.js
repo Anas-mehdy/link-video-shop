@@ -1,6 +1,6 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {project,summarize,journey}=require('../lib/service-monitor');
-const stamp='2026-11-14T08:00:00Z';
+const stamp='2026-11-14T11:00:00Z';
 test('service projection accepts only public messages and distinguishes employee identity from automation',()=>{
  const body={event:'message_created',private:false,message_type:'outgoing',conversation:{id:42,meta:{sender:{phone_number:'+966500000000'}}},sender:{id:66,type:'user'}};
  const record={p_message_id:'51',p_occurred_at:stamp};
@@ -12,9 +12,9 @@ test('service projection accepts only public messages and distinguishes employee
 });
 test('today and month count independently and automation does not stop waiting for a verified reply',()=>{
  const event=(id,actor,occurred_at)=>({conversation_id:id,actor,occurred_at});
- const rows=[event('1','customer','2026-11-13T08:00:00Z'),event('2','customer',stamp),
- event('2','automation','2026-11-14T08:05:00Z'),event('1','unverified','2026-11-14T08:08:00Z'),event('2','employee','2026-11-14T08:20:00Z')];
- const s=summarize(rows,['2026-11-14T00:00:00+03:00','2026-11-01T00:00:00+03:00'],Date.parse('2026-11-14T09:00:00Z'));
+ const rows=[event('1','customer','2026-11-13T11:00:00Z'),event('2','customer',stamp),
+ event('2','automation','2026-11-14T11:05:00Z'),event('1','unverified','2026-11-14T11:08:00Z'),event('2','employee','2026-11-14T11:20:00Z')];
+ const s=summarize(rows,['2026-11-14T00:00:00+03:00','2026-11-01T00:00:00+03:00'],Date.parse('2026-11-14T12:00:00Z'));
  assert.equal(s.today.contacts,1);assert.equal(s.month.contacts,2);
  assert.equal(s.today.median_minutes,20);assert.equal(s.today.automation,1);
  assert.equal(s.conversations[0].pending_since,rows[0].occurred_at);
