@@ -42,3 +42,10 @@ test('unauthorized admins cannot mint upload grants; replacement keeps products 
  assert.equal(writes.some(([p])=>p.startsWith('video_shop_video_products')),false);
  }finally{global.fetch=original;}
 });
+
+test('Storage v2 response uses root content_type with empty user metadata',async()=>{
+ const original=global.fetch;
+ global.fetch=async()=>({ok:true,json:async()=>({size:51618305,content_type:'video/mp4',metadata:{}})});
+ try{assert.match(await media.verifiedMedia(path,merchant),/object\/public/);}
+ finally{global.fetch=original;}
+});
