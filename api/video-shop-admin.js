@@ -1,3 +1,4 @@
+const media = require('../lib/video-media');
 const { sb, json, cors, requireAdmin, extractTikTokId, MERCHANT_ID } = require('../lib/supabase');
 
 async function hydrate(videos) {
@@ -12,6 +13,11 @@ async function hydrate(videos) {
   return videos.map(v=>({...v, product_ids:grouped[v.id] || [], product_names:Object.fromEntries((grouped[v.id] || []).map(id=>[String(id),names[String(id)]||('منتج #'+id)]))}));
 }
 
+function storeLink(value){
+  let u;try{u=new URL(value)}catch{throw Object.assign(Error('رابط العرض غير صالح'),{statusCode:400})}
+  if(u.protocol!=='https:'||u.hostname!=='linkstore-sa.com'||u.username||u.password)throw Object.assign(Error('استخدم رابط صفحة من متجر لنك'),{statusCode:400});
+  return u.href;
+}
 module.exports = async function handler(req, res) {
   cors(req, res);
   if (req.method === 'OPTIONS') return json(res, 204, {});
@@ -19,6 +25,9 @@ module.exports = async function handler(req, res) {
   try {
     await requireAdmin(req);
 
+    if (req.method === 'POST' && req.body?.action === 'upload') {
+      return json(res,200,{ok:true,...await media.signUpload(req.body,MERCHANT_ID)},{'Cache-Control':'no-store'});
+    }
     if (req.method === 'GET') {
       const videos = await sb(`video_shop_videos?merchant_id=eq.${MERCHANT_ID}&order=sort_order.asc&select=*`);
       return json(res, 200, {ok:true, videos:await hydrate(videos || [])});
@@ -27,13 +36,13 @@ module.exports = async function handler(req, res) {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     if (req.method === 'POST') {
       const tiktokId = extractTikTokId(body.tiktok_url);
-      if (!tiktokId || !body.title) return json(res, 400, {ok:false,error:'TikTok URL and title are required'});
+      if ((!tiktokId && !body.media_path) || !String(body.title||'').trim()) return json(res, 400, {ok:false,error:'أدخل العنوان وارفع الفيديو أو أضف رابط TikTok'});
 
       const payload = [{
         merchant_id: MERCHANT_ID,
         title: String(body.title).trim(),
         badge: body.badge ? String(body.badge).trim() : null,
-        tiktok_url: String(body.tiktok_url).trim(),
+        tiktok_url: tiktokId ? String(body.tiktok_url).trim() : null,
         tiktok_video_id: tiktokId,
         thumbnail_url: body.thumbnail_url || null,
         description: body.description || null,
@@ -41,6 +50,15 @@ module.exports = async function handler(req, res) {
         is_active: body.is_active !== false
       }];
 
+      if(body.media_path) {
+        payload[0].media_url=await media.verifiedMedia(body.media_path,MERCHANT_ID);
+        payload[0].media_path=body.media_path;
+      }
+      if(body.poster_path){
+        payload[0].thumbnail_url=await media.verifiedMedia(body.poster_path,MERCHANT_ID,true);
+        payload[0].poster_path=body.poster_path;
+      }
+      if(body.cta_url)payload[0].cta_url=storeLink(body.cta_url);
       const created = await sb('video_shop_videos', {
         method:'POST',
         headers:{Prefer:'return=representation'},
@@ -63,8 +81,20 @@ module.exports = async function handler(req, res) {
       const id = String(body.id || '');
       if (!id) return json(res, 400, {ok:false,error:'id is required'});
 
+      if(!/^[0-9a-f-]{36}$/i.test(id))return json(res,400,{ok:false,error:'Invalid id'});
+      const owned=await sb('video_shop_videos?id=eq.'+id+'&merchant_id=eq.'+MERCHANT_ID+'&select=id');
+      if(!owned?.length)return json(res,404,{ok:false,error:'Video not found'});
       const update = {};
-      for (const key of ['title','badge','thumbnail_url','description','sort_order','is_active']) {
+      if(body.media_path){
+        update.media_url=await media.verifiedMedia(body.media_path,MERCHANT_ID);
+        update.media_path=body.media_path;
+      }
+      if(body.poster_path){
+        update.thumbnail_url=await media.verifiedMedia(body.poster_path,MERCHANT_ID,true);
+        update.poster_path=body.poster_path;
+      }
+      if(Object.hasOwn(body,'cta_url'))update.cta_url=body.cta_url?storeLink(body.cta_url):null;
+      for (const key of ['title','badge','description','sort_order','is_active']) {
         if (Object.prototype.hasOwnProperty.call(body,key)) update[key] = body[key];
       }
       if (body.tiktok_url) {

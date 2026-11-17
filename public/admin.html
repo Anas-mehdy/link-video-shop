@@ -32,19 +32,30 @@ button{border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:poin
 
 <div id="app" class="wrap hidden">
   <div class="top">
-    <div><h1>Video Shop</h1><div class="sub">إضافة وترتيب وربط فيديوهات TikTok بمنتجات Link Store</div></div>
+    <div><h1>Video Shop</h1><div class="sub">ارفع فيديوهاتك، عاينها واربطها بمنتجات المتجر</div></div>
     <div class="row"><a class="ghost" href="/dashboard" style="text-decoration:none;border-radius:11px;padding:11px 15px">لوحة لنك</a><a class="ghost" style="text-decoration:none;border-radius:11px;padding:11px 15px;font-weight:800" href="/protection-admin">إدارة حماية الهاتف</a><button class="ghost" onclick="logout()">خروج</button></div>
   </div>
 
   <div class="card">
     <h3 id="formHeading" style="margin-top:0">إضافة فيديو</h3>
-    <div class="grid">
-      <div><label>رابط TikTok</label><input id="tiktok" placeholder="https://www.tiktok.com/@link.60/video/..."></div>
-      <div><label>العنوان</label><input id="title" placeholder="اسم الفيديو / المنتج"></div>
-      <div><label>الشارة</label><input id="badge" placeholder="🔥 الأكثر طلبًا"></div>
-      <div><label>الترتيب</label><input id="sort" type="number" value="10"></div>
+    <div style="margin-bottom:16px">
+      <label for="mediaFile">رفع فيديو جديد أو استبدال الملف الحالي</label>
+      <input id="mediaFile" type="file" accept="video/mp4,video/webm" onchange="VideoUpload.choose()">
+      <p class="sub">حتى 50 MB. يُفضّل MP4 بترميز H.264. يبدأ الرفع عند الحفظ. استبدال الملف يحافظ على المنتجات والترتيب.</p>
+      <video id="mediaPreview" hidden controls playsinline preload="metadata" style="width:100%;max-height:360px;background:#000;border-radius:12px"></video>
+      <label for="posterFile">غلاف اختياري (JPG أو WebP، حتى 2 MB)</label>
+      <input id="posterFile" type="file" accept="image/jpeg,image/webp">
+      <progress id="mediaProgress" hidden max="100" style="width:100%"></progress>
+      <div id="uploadStatus" class="status" role="status" aria-live="polite"></div>
+      <details style="margin-top:12px"><summary>رابط TikTok للفيديوهات القديمة</summary><label for="tiktok">رابط TikTok (اختياري عند رفع ملف)</label><input id="tiktok" dir="ltr" placeholder="https://www.tiktok.com/@link.60/video/..."></details>
     </div>
-    <div style="margin-top:12px"><label>الوصف</label><textarea id="desc"></textarea></div>
+    <div class="grid">
+      <div><label for="cta">رابط عرض من المتجر (اختياري)</label><input id="cta" type="url" dir="ltr" placeholder="https://linkstore-sa.com/..."></div>
+      <div><label for="title">العنوان</label><input id="title" placeholder="اسم الفيديو / المنتج"></div>
+      <div><label for="badge">الشارة</label><input id="badge" placeholder="🔥 الأكثر طلبًا"></div>
+      <div><label for="sort">الترتيب</label><input id="sort" type="number" value="10"></div>
+    </div>
+    <div style="margin-top:12px"><label for="desc">الوصف</label><textarea id="desc"></textarea></div>
     <div style="margin-top:12px">
       <div class="row" style="justify-content:space-between"><label>ابحث عن المنتجات واربطها بالفيديو</label><button id="syncProducts" class="ghost" onclick="syncProducts()">مزامنة المنتجات من سلة</button></div>
       <div id="productSyncStatus" class="status" role="status" aria-live="polite" style="margin:8px 0">المزامنة يدوية عند الضغط فقط. البحث يستخدم المنتجات المحفوظة.</div>
@@ -66,6 +77,7 @@ button{border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:poin
   </div>
 </div>
 
+<script src="/video-upload.js"></script>
 <script>
 let TOKEN=sessionStorage.getItem('lvs_admin')||'';
 let selected=[];
@@ -123,8 +135,8 @@ function renderSelected(){
 
 function cancelEdit(){
   if(saving)return;
-  editingId=null;originalProductIds=[];selected=[];renderSelected();
-  ['tiktok','title','badge','desc','productSearch'].forEach(id=>document.getElementById(id).value='');
+  editingId=null;originalProductIds=[];selected=[];renderSelected();VideoUpload.reset();
+  ['tiktok','title','badge','desc','productSearch','cta'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('sort').value='10';
   document.getElementById('searchResults').innerHTML='';
   document.getElementById('formHeading').textContent='إضافة فيديو';
@@ -137,8 +149,9 @@ function editVideo(id){
   const v=videosById.get(id);if(!v)return;
   if(editingId&&!confirm('ترك التعديلات الحالية وفتح الفيديو الآخر؟'))return;
   cancelEdit();editingId=id;
-  const values={tiktok:v.tiktok_url||('https://www.tiktok.com/@link.60/video/'+v.tiktok_video_id),title:v.title,badge:v.badge,desc:v.description,sort:v.sort_order};
+  const values={tiktok:v.tiktok_url||'',title:v.title,badge:v.badge,desc:v.description,sort:v.sort_order,cta:v.cta_url};
   Object.entries(values).forEach(([key,value])=>document.getElementById(key).value=value??'');
+  VideoUpload.fill(v);
   originalProductIds=(v.product_ids||[]).map(String);
   selected=originalProductIds.map(id=>({external_product_id:id,name:v.product_names?.[id]||('منتج #'+id)}));
   renderSelected();
@@ -151,20 +164,23 @@ function editVideo(id){
 async function createVideo(){
   if(saving)return;
   const s=document.getElementById('formStatus');
-  if(!val('title')||!val('tiktok')){s.textContent='أدخل عنوان الفيديو ورابط TikTok';return}
+  if(!val('title')||(!val('tiktok')&&!VideoUpload.hasVideo())){s.textContent='أدخل العنوان واختر فيديو قابلًا للتشغيل أو رابط TikTok';return}
+  if(VideoUpload.checking()){s.textContent='انتظر اكتمال فحص الفيديو';return}
   if(!Number.isFinite(Number(val('sort')))){s.textContent='الترتيب غير صحيح';return}
-  const body={tiktok_url:val('tiktok'),title:val('title'),badge:val('badge'),description:val('desc'),sort_order:Number(val('sort')||0)};
+  const body={tiktok_url:val('tiktok'),title:val('title'),badge:val('badge'),description:val('desc'),sort_order:Number(val('sort')||0),cta_url:val('cta')};
   const ids=selected.map(x=>String(x.external_product_id));
   if(!editingId||JSON.stringify(ids)!==JSON.stringify(originalProductIds))body.product_ids=ids.map(Number);
   if(editingId)body.id=editingId;else body.is_active=true;
   const editing=!!editingId;
   saving=true;document.getElementById('saveVideo').disabled=true;document.getElementById('cancelEdit').disabled=true;
+  document.getElementById('mediaFile').disabled=true;document.getElementById('posterFile').disabled=true;
   s.textContent='جارٍ الحفظ...';
   try{
+    Object.assign(body,await VideoUpload.prepare(api));
     await api('/api/video-shop-admin',{method:editing?'PATCH':'POST',body:JSON.stringify(body)});
     saving=false;cancelEdit();s.textContent=editing?'تم حفظ التعديلات':'تمت إضافة الفيديو';await loadVideos();
   }catch(e){s.textContent='تعذر الحفظ: '+e.message}
-  finally{saving=false;document.getElementById('saveVideo').disabled=false;document.getElementById('cancelEdit').disabled=false}
+  finally{saving=false;document.getElementById('mediaFile').disabled=false;document.getElementById('posterFile').disabled=false;document.getElementById('saveVideo').disabled=false;document.getElementById('cancelEdit').disabled=false}
 }
 async function loadVideos(){
   const box=document.getElementById('videos');box.innerHTML='جاري التحميل...';
@@ -172,8 +188,8 @@ async function loadVideos(){
     const j=await api('/api/video-shop-admin');
     videosById=new Map((j.videos||[]).map(v=>[v.id,v]));
     box.innerHTML=(j.videos||[]).map(v=>`<div class="video">
-      <img class="thumb" src="${v.thumbnail_url||''}" onerror="this.style.opacity=.15">
-      <div><div class="name">${esc(v.title)}</div><div class="meta">TikTok ${v.tiktok_video_id} • ترتيب ${v.sort_order} • منتجات: ${(v.product_ids||[]).join(', ')||'بدون'}</div><span class="pill">${v.is_active?'ظاهر':'مخفي'} ${esc(v.badge||'')}</span></div>
+      <img class="thumb" src="${esc(v.thumbnail_url||'')}" onerror="this.style.opacity=.15">
+      <div><div class="name">${esc(v.title)}</div><div class="meta">${v.media_url?'فيديو مرفوع':'TikTok '+esc(v.tiktok_video_id)} • ترتيب ${v.sort_order} • منتجات: ${(v.product_ids||[]).join(', ')||'بدون'}</div><span class="pill">${v.is_active?'ظاهر':'مخفي'} ${esc(v.badge||'')}</span></div>
       <div class="actions row">
         <button class="ghost" onclick="editVideo('${v.id}')">تعديل</button>
         <button class="ghost" onclick="toggleVideo('${v.id}',${!v.is_active})">${v.is_active?'إخفاء':'إظهار'}</button>

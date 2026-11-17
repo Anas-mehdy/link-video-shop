@@ -54,7 +54,7 @@
     let feed;
     try { feed = await json(BASE + '/api/video-shop-feed'); } catch (_) { return; }
     if (token !== generation || !feed.ok || !Array.isArray(feed.videos)) return;
-    const videos = feed.videos.filter(v => /^\d+$/.test(String(v.tiktok_video_id)) &&
+    const videos = feed.videos.filter(v => (v.media_url || /^\d+$/.test(String(v.tiktok_video_id))) &&
       Array.isArray(v.products) && v.products.some(p => String(p.id) === ctx.id));
     if (!videos.length) return;
     const host = el('section');
@@ -88,6 +88,7 @@
     const top = el('div', '', 'top'), title = el('span'), close = el('button', '✕', 'close');
     close.type = 'button'; close.setAttribute('aria-label', 'إغلاق الفيديو');
     top.append(title, close);
+    const native=el('video');native.controls=true;native.playsInline=true;native.preload='none';native.hidden=true;native.style.cssText='width:100%;max-height:65dvh;background:#000';
     const player = el('iframe');
     player.title = 'فيديو المنتج على TikTok';
     player.allow = 'autoplay; fullscreen; encrypted-media; picture-in-picture';
@@ -97,16 +98,20 @@
     nav.hidden = videos.length < 2;
     if (videos.length < 2) nav.style.display = 'none';
     const buy = el('button', 'رجوع لاختيار المنتج', 'buy'); buy.type = 'button';
-    dialog.append(top, player, nav, buy); root.append(dialog);
+    dialog.append(top, player, native, nav, buy); root.append(dialog);
     let index = 0, trigger, priorOverflow = '';
     function load(i) {
       index = (i + videos.length) % videos.length;
       const video = videos[index];
       title.textContent = video.title || 'شوفها على الواقع';
       count.textContent = (index + 1) + ' / ' + videos.length;
-      player.src = 'https://www.tiktok.com/player/v1/' + video.tiktok_video_id + '?controls=1&autoplay=1&rel=0&description=0&music_info=0';
+      native.pause();native.removeAttribute('src');native.load();
+      player.removeAttribute('src');player.hidden=!!video.media_url;player.style.display=video.media_url?'none':'block';native.hidden=!video.media_url;
+      if(video.media_url){native.poster=video.thumbnail_url||'';native.src=video.media_url;native.play().catch(()=>{});}
+      else player.src = 'https://www.tiktok.com/player/v1/' + video.tiktok_video_id + '?controls=1&autoplay=1&rel=0&description=0&music_info=0';
     }
     function stop() {
+      native.pause();native.removeAttribute('src');native.load();
       player.removeAttribute('src');
       document.body.style.overflow = priorOverflow;
       trigger?.focus({ preventScroll: true });

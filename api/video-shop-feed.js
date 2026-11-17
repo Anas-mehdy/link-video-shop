@@ -8,7 +8,7 @@ module.exports = async function handler(req, res) {
 
   try {
     const videos = await sb(
-      `video_shop_videos?merchant_id=eq.${MERCHANT_ID}&is_active=eq.true&order=sort_order.asc&select=id,title,badge,tiktok_url,tiktok_video_id,thumbnail_url,description,sort_order`
+      `video_shop_videos?merchant_id=eq.${MERCHANT_ID}&is_active=eq.true&order=sort_order.asc&select=id,title,badge,tiktok_url,tiktok_video_id,thumbnail_url,description,sort_order,media_url,cta_url`
     );
 
     if (!Array.isArray(videos) || !videos.length) {
@@ -59,6 +59,8 @@ module.exports = async function handler(req, res) {
         title: v.title,
         badge: v.badge,
         description: v.description,
+        media_url: v.media_url || null,
+        cta_url: v.cta_url || null,
         tiktok_url: v.tiktok_url,
         tiktok_video_id: v.tiktok_video_id,
         thumbnail_url: v.thumbnail_url || vProducts[0]?.image || null,
