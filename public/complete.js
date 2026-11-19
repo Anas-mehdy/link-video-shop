@@ -14,8 +14,7 @@ function renderCashback(d){
  document.title='تسوّق برصيدك | لنك';
  $('protection-tagline').hidden=true;$('cashback-home').hidden=false;
  $('protection-hero').hidden=true;$('protection-benefits').hidden=true;
- $('cashback-title').textContent=state==='preview'?'معاينة صفحة الكاش باك':state==='expired'?'اطّلع على رصيدك في لنك':'الكاش باك انضاف لمحفظتك';
- $('cashback-copy').textContent=state==='preview'?'هكذا تظهر صفحة الرسالة بعد تأكيد الإيداع. ما تم إرسال أي رسالة.':'سجّل دخولك لمتجر لنك وشوف رصيدك المتاح لطلبك الجاي.';
+ $('cashback-title').textContent=state==='credited'?'الكاش باك انضاف لمحفظتك':'اطّلع على رصيدك في لنك';
  $('cashback-banner').hidden=false;
  $('browse-title').textContent=d.model?'اختيارات تناسب '+d.model:'اختيارات من لنك';
  $('browse-copy').textContent='اختر اللي يناسبك، وتقدر تستخدم رصيدك المتاح في المتجر عند الدفع.';

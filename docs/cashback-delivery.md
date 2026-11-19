@@ -21,8 +21,8 @@ token. The banner links to the sign-in-protected wallet and does not show a bala
 The page shows complements first and all available products from Salla's
 accessories, accessory subcategories and accessory-bundle categories underneath.
 Catalog cards open the native product page. The model or accessories
-category stays available as a browse link. Preview tokens are labeled as such
-and do not assert a deposit. Old protection links keep their original view.
+category stays available as a browse link. Preview tokens show the same shopping layout with neutral wallet copy and
+do not assert a deposit. Old protection links keep their original view.
 
 The authenticated WhatsApp worker checks cashback on even UTC minutes only.
 Claims are unique per order and wallet movement. Up to 10 provider attempts per

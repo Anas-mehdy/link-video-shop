@@ -35,9 +35,10 @@ test('all accessory types and bundles appear with no quota, including a previous
  assert.deepEqual(landing.cards(products,landing.context(ambiguous)).map(x=>x.id),['4']);
 });
 test('the wallet sits above recommendations, fallback opens native product, and old pages keep banner hidden',async()=>{
- for(const cashback of [false,true]){
+ for(const state of [null,'credited','preview','expired']){
+  const cashback=state!==null;
   const {window,document}=parseHTML(fs.readFileSync(__dirname+'/../public/complete.html','utf8'));
-  const token='x'.repeat(100),payload={ok:true,model:'iPhone 18 Pro Max',owned_components:['case'],products:[{id:'2',name:'عدسات',component:'lens',price:59,url:'https://linkstore-sa.com/lens/p2',link_only:cashback}],...(cashback?{cashback:{state:'credited'},browse:{url:'https://linkstore-sa.com/iphone-18-pro-max/c1913975646',kind:'model'}}:{})};
+  const token='x'.repeat(100),payload={ok:true,model:'iPhone 18 Pro Max',owned_components:['case'],products:[{id:'2',name:'عدسات',component:'lens',price:59,url:'https://linkstore-sa.com/lens/p2',link_only:cashback}],...(cashback?{cashback:{state},browse:{url:'https://linkstore-sa.com/iphone-18-pro-max/c1913975646',kind:'model'}}:{})};
   vm.runInNewContext(fs.readFileSync(__dirname+'/../public/complete.js','utf8'),{window,parent:window,document,URL,URLSearchParams,location:{search:'',pathname:'/complete/'+token},fetch:async()=>({ok:true,json:async()=>payload})});
   await new Promise(resolve=>setImmediate(resolve));
   assert.equal(document.getElementById('cashback-banner').hidden,!cashback);
@@ -48,7 +49,11 @@ test('the wallet sits above recommendations, fallback opens native product, and 
   assert.equal(home.getAttribute('href'),'https://linkstore-sa.com/');
   assert.equal(home.getAttribute('target'),'_top');
   assert.equal(document.querySelector('#protection-tagline').hidden,cashback);
-  if(cashback){assert.match(document.getElementById('cashback-title').textContent,/انضاف/);assert.equal(document.querySelector('.cashback-product-link').getAttribute('href'),payload.products[0].url);}
+  if(cashback){
+   assert.equal(document.getElementById('cashback-title').textContent,state==='credited'?'الكاش باك انضاف لمحفظتك':'اطّلع على رصيدك في لنك');
+   assert.doesNotMatch(document.getElementById('cashback-banner').textContent,/معاينة|ما تم إرسال/);
+   assert.equal(document.querySelector('.cashback-product-link').getAttribute('href'),payload.products[0].url);
+  }
   else assert.equal(document.querySelector('[data-add]').dataset.add,'2');
  }
 });
