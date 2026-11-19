@@ -51,3 +51,16 @@ button:disabled{opacity:.55;cursor:wait}.footnote{font-size:13px;color:#827689}
  main{padding-inline:12px}.cards{gap:8px}.card-body{padding:9px}
  .add-one{font-size:12px}.add-one span{display:none}.product-link{font-size:10px}
 }
+
+/* Cashback content is only visible after the server validates a cashback link. */
+.cashback-banner[hidden],.cashback-browse[hidden],#protection-benefits[hidden]{display:none}
+.cashback-banner{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:34px 38px;border-radius:26px;background:linear-gradient(120deg,#291238,#51007a);color:#fff}
+.cashback-kicker{display:inline-block;border-radius:999px;background:#ffffff20;padding:4px 12px;font-size:14px;font-weight:750}
+.cashback-banner h1{margin:8px 0 4px;font-size:clamp(24px,4vw,38px);line-height:1.3}
+.cashback-banner p{margin:8px 0 0;color:#f2e8fa}
+.cashback-wallet{min-height:46px;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#51007a;border-radius:12px;padding:10px 18px;font-weight:800;white-space:nowrap}
+.cashback-wallet:hover{background:#f3eafa}
+.cashback-browse{margin:28px 0;text-align:center}
+.cashback-browse a{display:inline-block;background:#eee6f4;border-radius:12px;padding:12px 18px;color:#51007a;font-weight:750}
+.cashback-product-link{margin-top:auto}
+@media(max-width:620px){.cashback-banner{align-items:stretch;flex-direction:column;padding:22px;gap:14px}.cashback-banner p{font-size:15px}.cashback-wallet{align-self:flex-start}}

@@ -6,17 +6,16 @@ const {destination,payload,tick,approve}=require('../lib/cashback-delivery');
 const orderId='11111111-1111-4111-8111-111111111111',customer='22222222-2222-4222-8222-222222222222',event='33333333-3333-4333-8333-333333333333',phone='966550000001';
 const env={ETISALNA_API_ACCESS_TOKEN:'mock',CRM_ENCRYPTION_KEY:'aa'.repeat(32),WHATSAPP_AUTOMATION_ENABLED:'true'};
 const order={id:orderId,customer_id:customer,status_slug:'delivered',source_payload:{customer:{mobile:phone},items:[{name:'كفر دريب iPhone 18 Pro Max'}]}};
-test('choose compatible stock-backed page; fall back to verified model, then accessories',async()=>{
- const pageData=async()=>({products:[{id:'1'}],live_stock_checked:true});
- const target=await destination(order,{pageData,environment:env});
- assert.equal(target.kind,'personal');assert.match(target.suffix,/^#link-complete=[-_A-Za-z0-9]+$/);
- const base=await destination(order,{pageData:async()=>({products:[]})});
- assert.equal(base.suffix,'iphone-18-pro-max/c1913975646');
- assert.equal((await destination({source_payload:{items:[{name:'بكج حماية iPhone 18 Pro Max'}]}},{pageData:async()=>({products:[]})})).kind,'accessories');
- const {whatsapp_template:t}=payload('اسم اختبار',phone,base).message;
+test('all sends and previews point to the cashback page through the approved dynamic suffix',()=>{
+ const target=destination(order,{environment:env,expiresAt:new Date(Date.now()+60000).toISOString()});
+ assert.equal(target.kind,'cashback');assert.match(target.suffix,/^#link-complete=[-_A-Za-z0-9]{80,300}$/);
+ const preview=destination(order,{environment:env,preview:true});
+ assert.notEqual(preview.suffix,target.suffix);
+ assert.throws(()=>destination(order,{environment:env,expiresAt:new Date(Date.now()-60000).toISOString()}),/صلاحية/);
+ const {whatsapp_template:t}=payload('اسم اختبار',phone,target).message;
  assert.equal(t.name,'link_cashback_delivered_ar');
  assert.deepEqual(t.components.map(x=>[x.type,x.index,x.parameters[0].text??x.parameters[0].payload]),[
-  ['body',undefined,'اسم اختبار'],['button','0','unsubscribe'],['button','1',base.suffix]
+  ['body',undefined,'اسم اختبار'],['button','0','unsubscribe'],['button','1',target.suffix]
  ]);
 });
 test('paused worker makes no send; opted out/expired jobs cancel before claim; uncertain sends are not retried',async()=>{

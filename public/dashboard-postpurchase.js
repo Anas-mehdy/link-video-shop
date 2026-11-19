@@ -29,7 +29,7 @@ function bindCashback(api,toast){
  if(!box)return;
  const statuses={queued:'بانتظار الإرسال',sending:'محاولة محفوظة',accepted:'قبله المزود · التسليم غير مؤكد',rejected:'رفضه المزود',unknown:'نتيجة غير مؤكدة',cancelled:'لم يُرسل'};
  const reasons={already_contacted:'سبقت محاولة ما بعد البيع',optout:'ألغى العميل الاشتراك',consent_missing:'لا توجد موافقة واتساب',credit_expired:'انتهت صلاحية الرصيد',delivery_not_recent:'خرج الحدث من نطاق آخر 7 أيام',phone_mismatch:'رقم الهاتف تغيّر',order_not_delivered:'الطلب لم يعد مسلّمًا',paused:'الإرسال موقوف'};
- const destinations={personal:'اقتراحات مخصصة',model:'قسم موديل الجوال',accessories:'الإكسسوارات'};
+ const destinations={cashback:'صفحة الكاش باك',personal:'اقتراحات مخصصة',model:'قسم موديل الجوال',accessories:'الإكسسوارات'};
  const call=(method,body)=>api('delivery-cashback',{method,body:JSON.stringify(body)});
  let loading=false;
  async function refresh(){
