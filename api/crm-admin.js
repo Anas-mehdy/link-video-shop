@@ -29,6 +29,7 @@ module.exports = async function handler(req, res) {
     if(resource==='developer-keys')return await require('../lib/developer-api').admin(req,res);
     if(resource==='coupon-replies')return await require('../lib/coupon-replies').admin(req,res);
     if(resource==='preorders')return await require('../lib/preorders').admin(req,res);
+    if(resource==='delivery-cashback')return await require('../lib/cashback-delivery').admin(req,res);
     if(resource==='postpurchase')return await require('../lib/postpurchase').admin(req,res);
     if(resource==='cart-human')return require('../lib/cart-human').admin(req,res);
     if(resource==='whatsapp-second')return require('../lib/cart-reminder-two').admin(req,res);

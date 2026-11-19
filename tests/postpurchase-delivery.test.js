@@ -43,6 +43,7 @@ test('existing worker preserves odd-minute cart ticks and falls back when afters
  let carts=0,aftersales=0;const modules={
  '../lib/crm':{noCache:()=>{},requireWorker:()=>{},json:(_,status,result)=>result,errorResponse:(_,e)=>{throw e}},
  '../lib/whatsapp-delivery':{readiness:()=>({ready:true}),tick:async()=>{carts++;return {sent:false,reason:'cart_tick'}}},
+ '../lib/cashback-delivery':{tick:async()=>({worked:false})},
  '../lib/salla-sync':{processEvents:async()=>{}},
  '../lib/postpurchase-delivery':{tick:async()=>{aftersales++;return {worked,mode:'postpurchase'}}},
  '../lib/etisalna-labels':{recoverOne:async()=>({worked:false})}};

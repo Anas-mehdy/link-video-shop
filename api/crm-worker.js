@@ -7,6 +7,11 @@ module.exports = async function handler(req, res) {
     requireWorker(req);
     if(req.query?.action==='preorders')return json(res,200,{ok:true,...await require('../lib/preorders').tick()});
     if(req.query?.action==='whatsapp-delivery'){
+      // Keep odd-minute cart priority. Cashback uses the same authenticated worker.
+      if(new Date().getUTCMinutes()%2===0){
+        try{const cashback=await require('../lib/cashback-delivery').tick();if(cashback.worked)return json(res,200,{ok:true,...cashback});}
+        catch(e){console.error('cashback_worker_failed',/^[A-Za-z0-9_]{1,32}$/.test(String(e.code||''))?String(e.code):'unclassified');}
+      }
       if(!require('../lib/whatsapp-delivery').readiness().ready)return json(res,200,{ok:true,...await require('../lib/whatsapp-delivery').tick()});
       // Repair at most one local batch first; this path never fetches Salla.
       await require('../lib/salla-sync').processEvents(undefined,{localOnly:true});
