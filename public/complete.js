@@ -1,7 +1,7 @@
 (()=>{'use strict';
 const $=id=>document.getElementById(id),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const labels={case:'الكفرات',screen:'حماية الشاشة',lens:'حماية العدسات',camera_frame:'مسطح وإطار الكاميرا',accessories:'إكسسوارات تكمل استخدامك'};
-const descriptions={case:'اختر الستايل اللي يناسبك.',screen:'شفاف أو خصوصية، اختر اللي يناسب استخدامك.',lens:'تفاصيل تكمل حماية كاميراتك.',camera_frame:'خيارات لحماية منطقة الكاميرا.',accessories:'اختيارات عملية لطلبك الجاي.'};
+const labels={case:'الكفرات',screen:'حماية الشاشة',lens:'حماية العدسات',camera_frame:'مسطح وإطار الكاميرا',accessories:'كل الإكسسوارات المتاحة'};
+const descriptions={case:'اختر الستايل اللي يناسبك.',screen:'شفاف أو خصوصية، اختر اللي يناسب استخدامك.',lens:'تفاصيل تكمل حماية كاميراتك.',camera_frame:'خيارات لحماية منطقة الكاميرا.',accessories:'شواحن وكيابل وحوامل وسماعات وبكجات.'};
 const money=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2})+' ريال';
 const params=new URLSearchParams(location.search),storeOrigin=params.get('store_origin'),inStore=parent!==window&&params.get('storefront')==='1'&&['https://linkstore-sa.com','https://www.linkstore-sa.com','https://salla.sa'].includes(storeOrigin);
 let cartPending=null;

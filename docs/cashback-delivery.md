@@ -18,8 +18,9 @@ with the prefix `https://linkstore-sa.com/`. Use dashboard link preview before
 enabling; the active Salla theme must support the existing personal-page loader.
 The button always opens the cashback page using an encrypted cashback-purpose
 token. The banner links to the sign-in-protected wallet and does not show a balance.
-The page prefers complements with fresh saved stock; fallback cards are selected
-from the saved catalog and open the native product page. The model or accessories
+The page shows complements first and all available products from Salla's
+accessories, accessory subcategories and accessory-bundle categories underneath.
+Catalog cards open the native product page. The model or accessories
 category stays available as a browse link. Preview tokens are labeled as such
 and do not assert a deposit. Old protection links keep their original view.
 

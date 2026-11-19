@@ -4,7 +4,7 @@ const {seal,read}=require('../lib/postpurchase-landing'),landing=require('../lib
 const now=Date.parse('2026-11-19T12:00:00Z'),environment={CRM_ENCRYPTION_KEY:'11'.repeat(32)};
 const order={id:'11111111-1111-4111-8111-111111111111',status_slug:'delivered',customer_id:null,source_payload:{items:[{product_id:1,name:'كفر دريب iPhone 18 Pro Max'}]}};
 const p=(id,name,extra={})=>({external_product_id:String(id),name,status:'sale',is_available:true,url:'https://linkstore-sa.com/product/p'+id,price:70,currency:'SAR',...extra});
-const products=[p(1,'كفر دريب iPhone 18 Pro Max'),p(2,'عدسات iPhone 18 Pro Max'),p(3,'حماية شاشة iPhone 18 Pro'),p(4,'شاحن جداري'),p(5,'حماية شاشة iPhone 18 Pro Max',{is_available:false}),p(6,'حامل سيارة',{url:'https://wrong.example/cart'}),p(7,'اصنع بكجك شاحن'),p(8,'كيبل شحن',{price:0})];
+const products=[p(1,'كفر دريب iPhone 18 Pro Max'),p(2,'عدسات iPhone 18 Pro Max'),p(3,'حماية شاشة iPhone 18 Pro'),p(4,'شاحن جداري',{category_refs:[{parent_id:1359428650}]}),p(5,'حماية شاشة iPhone 18 Pro Max',{is_available:false}),p(6,'حامل سيارة',{url:'https://wrong.example/cart',category_refs:[{id:1359428650}]}),p(7,'اصنع بكجك شاحن',{category_refs:[{id:1359428650}]}),p(8,'كيبل شحن',{price:0,category_refs:[{id:1359428650}]})];
 const database=async path=>path.startsWith('orders?')?[order]:path.startsWith('products?')?products:assert.fail(path);
 test('special token selects cashback view and adapts to credit expiry without exposing wallet data',async()=>{
  const token=seal(order.id,{environment,now,cashback:{creditUntil:now+60000}});
@@ -20,9 +20,17 @@ test('special token selects cashback view and adapts to credit expiry without ex
  await assert.rejects(read(plain,{database,environment,now}),e=>e.statusCode===404);
  await assert.rejects(read(token,{database:async()=>[{...order,status_slug:'cancelled'}],environment,now}),e=>e.statusCode===404);
 });
-test('full bundle and ambiguous models switch to generic accessories; previously bought accessory type is omitted',()=>{
- const bundle={source_payload:{items:[{name:'بكج الحماية المتكامل iPhone 18 Pro Max'},{name:'شاحن جداري'}]}};
- assert.deepEqual(landing.cards(products,landing.context(bundle)),[]);
+test('all accessory types and bundles appear with no quota, including a previously bought accessory',()=>{
+ const bundle={source_payload:{items:[{name:'بكج الحماية المتكامل iPhone 18 Pro Max'},{product_id:4,name:'شاحن جداري'}]}};
+ const extras=Array.from({length:9},(_,i)=>p(20+i,'شاحن '+i,{category_refs:[{id:1359428650}]}));
+ extras.push(p(29,'بكج شاحن وكيبل',{category_refs:[{id:'736910490'}]}));
+ extras.push(p(30,'مسكة لنك',{category_refs:[{id:'1359428650'}]}));
+ const all=landing.cards([...products,...extras],landing.context(bundle));
+ assert.equal(all.length,12);
+ assert.ok(all.some(x=>x.id==='4')&&all.some(x=>x.id==='29')&&all.some(x=>x.id==='30'));
+ assert.ok(all.every(x=>x.component==='accessories'&&x.link_only));
+ // A recommendation from the existing engine still comes first; general cards remain available.
+ assert.deepEqual(landing.cards(products,landing.context(order),{includeComplements:false}).map(x=>x.id),['4']);
  const ambiguous={source_payload:{items:[{name:'كفر iPhone 18 Pro و iPhone 18 Pro Max'}]}};
  assert.deepEqual(landing.cards(products,landing.context(ambiguous)).map(x=>x.id),['4']);
 });
