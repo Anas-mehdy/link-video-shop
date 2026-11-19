@@ -43,6 +43,11 @@ test('the wallet sits above recommendations, fallback opens native product, and 
   assert.equal(document.getElementById('cashback-banner').hidden,!cashback);
   assert.equal(document.getElementById('protection-hero').hidden,cashback);
   assert.equal(document.querySelector('#cashback-wallet').getAttribute('target'),'_top');
+  const home=document.querySelector('header #cashback-home');
+  assert.equal(home.hidden,!cashback);
+  assert.equal(home.getAttribute('href'),'https://linkstore-sa.com/');
+  assert.equal(home.getAttribute('target'),'_top');
+  assert.equal(document.querySelector('#protection-tagline').hidden,cashback);
   if(cashback){assert.match(document.getElementById('cashback-title').textContent,/انضاف/);assert.equal(document.querySelector('.cashback-product-link').getAttribute('href'),payload.products[0].url);}
   else assert.equal(document.querySelector('[data-add]').dataset.add,'2');
  }

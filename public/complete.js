@@ -12,6 +12,7 @@ function selection(){const selected=products.filter(p=>picked.has(p.id)),total=s
 function renderCashback(d){
  const state=d.cashback.state;
  document.title='تسوّق برصيدك | لنك';
+ $('protection-tagline').hidden=true;$('cashback-home').hidden=false;
  $('protection-hero').hidden=true;$('protection-benefits').hidden=true;
  $('cashback-title').textContent=state==='preview'?'معاينة صفحة الكاش باك':state==='expired'?'اطّلع على رصيدك في لنك':'الكاش باك انضاف لمحفظتك';
  $('cashback-copy').textContent=state==='preview'?'هكذا تظهر صفحة الرسالة بعد تأكيد الإيداع. ما تم إرسال أي رسالة.':'سجّل دخولك لمتجر لنك وشوف رصيدك المتاح لطلبك الجاي.';

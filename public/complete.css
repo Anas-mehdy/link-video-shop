@@ -64,3 +64,7 @@ button:disabled{opacity:.55;cursor:wait}.footnote{font-size:13px;color:#827689}
 .cashback-browse a{display:inline-block;background:#eee6f4;border-radius:12px;padding:12px 18px;color:#51007a;font-weight:750}
 .cashback-product-link{margin-top:auto}
 @media(max-width:620px){.cashback-banner{align-items:stretch;flex-direction:column;padding:22px;gap:14px}.cashback-banner p{font-size:15px}.cashback-wallet{align-self:flex-start}}
+.cashback-home[hidden]{display:none}
+.cashback-home{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;padding:8px 13px;border:1px solid #d9c7e4;border-radius:12px;background:white;color:#51007a;font-size:15px;font-weight:750;white-space:nowrap;margin-left:32px}
+.cashback-home:hover{background:#f3eafa;border-color:#a988be}
+@media(max-width:600px){.cashback-home{margin-left:0;font-size:14px;padding-inline:10px}}
