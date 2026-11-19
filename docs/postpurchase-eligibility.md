@@ -8,4 +8,12 @@ The report reads the existing shared stock cache. Every proposed product must ha
 
 The UI loads this local report upon opening the postpurchase page and has a refresh button. It displays counts over the full review and the first 200 rows with eligible candidates first. Raw phone numbers are not returned, only their last four digits.
 
-No Salla requests, outbound messages, SQL changes, worker changes or campaign activation occur. A production sender still needs durable claims, cooldown history, batch scheduling and a final live eligibility recheck before provider IO. The older offer preview remains available for test selection and retains its existing behavior.
+Reviewing eligibility does not call Salla or a message provider. The older offer preview remains available for test selection.
+
+## Targeted offers
+
+The same review shows one targeted result per verified phone from delivered, single-item orders in its 30-day window. A verified Slim purchase maps to the standalone camera flat for the same model. A screen protector or camera flat purchase maps to Slim for the same model. The four models are iPhone 17 Pro, 17 Pro Max, 18 Pro and 18 Pro Max. Orders in the review window, including bundles and multi-item orders, are considered when checking what the customer already bought. The standard Slim is preferred when its stock is confirmed alongside MagSafe; MagSafe is a fallback when it has the better stock state.
+
+`CRM_POSTPURCHASE_TARGETED_MODE=hold` removes qualifying phones from the current automated dispatch before candidate selection, including other orders for the same number. It reserves the audience even while an offer is delayed, unavailable or requires review. With the variable unset, the new journey is visible in the review while current dispatch stays in its existing mode. This version only previews targeted offers. Any later targeted sender should require marketing consent, use the existing durable delivery and stock checks, and reserve the audience before choosing a message.
+
+The existing `link_postpurchase_complement_ar` product template in `lib/postpurchase-test-send.js` already accepts the customer name, purchased product, recommended product, image and product URL suffix. Confirm its status in Etisalna before reuse. Both product names can include the exact model, so one template can cover all four models and both offers. If separate wording is wanted, one marketing template per offer type is enough with the model in a body variable.

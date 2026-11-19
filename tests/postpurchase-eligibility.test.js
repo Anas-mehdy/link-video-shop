@@ -32,3 +32,76 @@ test('live ledger blocks prior attempts and phone cooldown; test sends are not p
  let r=await evaluate(context([order(1)],{deliveries:[{external_order_id:'1',phone:'905350215375',attempted_at:new Date(now).toISOString()}]}),{now});assert.equal(r.counts.already_attempted,1);assert.equal(r.eligible_customers,0);
  r=await evaluate(context([order(1)],{deliveries:[{external_order_id:'99',phone:'905350215375',attempted_at:new Date(now-5*86400000).toISOString()}]}),{now});assert.equal(r.counts.cooldown,1);
 });
+
+const day=86400000;
+const stock=(product_id,available=true)=>({product_id,state:'checked',available,checked_at:new Date(now-3600000).toISOString()});
+const sold=(external_product_id,name)=>({external_product_id,name,status:'sale',is_available:true});
+const bought=(product_id,name)=>({product_id,name});
+
+test('targeted offers match the exact four Salla models and treat standard and MagSafe purchases as Slim',async()=>{
+ for(const [model,slim,magSafe,camera] of [
+  ['iPhone 17 Pro','1356124795','1128190372','346332705'],
+  ['iPhone 17 Pro Max','508035157','2043217838','457870329'],
+  ['iPhone 18 Pro','321208074','1142994364','1236296988'],
+  ['iPhone 18 Pro Max','1724249566','474220781','1936666261']
+ ]){
+  const slimName=`كفر سليم شفاف ${model}`,magSafeName=`كفر Link Slim MagSafe ${model}`,cameraName=`مسطح حماية Link ${model}`;
+  const live=[sold(slim,slimName),sold(magSafe,magSafeName),sold(camera,cameraName)];
+  const stockRows=[stock(slim),stock(magSafe),stock(camera)];
+  for(const [item,kind,id] of [[bought(slim,slimName),'camera_flat',camera],[bought(magSafe,magSafeName),'camera_flat',camera],
+   [bought(camera,cameraName),'slim_case',slim],[bought('55',`استيكر حماية ${model}`),'slim_case',slim]]){
+   const r=await evaluate(context([order(1,8,'delivered',item)],{live,stockRows}),{now});
+   const row=r.targeted.rows[0];
+   assert.deepEqual([row.model,row.kind,row.offer.id,row.reason],[model,kind,id,'review_ready']);
+  }
+  const r=await evaluate(context([order(1,8,'delivered',bought(camera,cameraName))],{live,stockRows:[stock(slim,false),stock(magSafe)]}),{now});
+  assert.equal(r.targeted.rows[0].offer.id,magSafe);
+ }
+});
+
+test('targeted preview leaves legacy dispatch intact; hold filters the entire verified phone before choosing a legacy candidate',async()=>{
+ const model='iPhone 17 Pro Max';
+ const slimOrder=order(2,1,'delivered',bought('508035157',`كفر Link Slim ${model}`));
+ const legacy=order(1);
+ legacy.customer_id='33333333-3333-4333-8333-333333333333';
+ const other=order(3);
+ other.customer_id='44444444-4444-4444-8444-444444444444';
+ other.source_payload.customer.mobile='+966500123457';
+ const params=context([legacy,slimOrder,other]);
+ params.customers.push({...params.customers[0],id:legacy.customer_id},{id:other.customer_id,normalized_phone:'966500123457'});
+ let r=await evaluate(params,{now});
+ assert.equal(r.targeted.mode,'preview');
+ assert.equal(r.targeted.rows[0].reason,'delay');
+ assert.deepEqual(r.rows.filter(x=>x.eligible).map(x=>x.external_order_id),['1','3']);
+ r=await evaluate(params,{now,targetedMode:'hold'});
+ assert.equal(r.targeted.mode,'hold');
+ assert.equal(r.rows.find(x=>x.external_order_id==='1').reason,'targeted_customer');
+ assert.deepEqual(r.rows.filter(x=>x.eligible).map(x=>x.external_order_id),['3']);
+ assert.ok(!JSON.stringify(r.targeted).includes('905350215375'));
+ slimOrder.source_payload.customer.mobile='+966500987654';
+ r=await evaluate(params,{now,targetedMode:'hold'});
+ assert.equal(r.targeted.customers,0);
+ assert.equal(r.rows.find(x=>x.external_order_id==='1').eligible,true);
+});
+
+test('targeted offer checks purchases across the window, paused stock, opt-outs, and previous attempts',async()=>{
+ const model='iPhone 18 Pro Max',slim='1724249566',camera='1936666261';
+ const slimOrder=order(1,8,'delivered',bought(slim,`كفر سليم ${model}`));
+ const cameraName=`مسطح الكاميرا ${model}`;
+ const extra={live:[sold(camera,cameraName)],stockRows:[stock(camera)]};
+ const bundle=order(2,15,'delivered',bought('68',`بكج حماية ${model} + مسطح كاميرا + كفر`));
+ let r=await evaluate(context([slimOrder,bundle],extra),{now});
+ assert.equal(r.targeted.rows[0].reason,'already_owned');
+ const unrelated=order(3,2,'delivered',bought('1236296988','مسطح الكاميرا iPhone 18 Pro'));
+ r=await evaluate(context([slimOrder,unrelated],extra),{now});
+ assert.equal(r.targeted.rows[0].offer.id,camera);
+ const unavailable={...extra,stockRows:[stock(camera,false)]};
+ const legacy=order(4);
+ r=await evaluate(context([slimOrder,legacy],unavailable),{now,targetedMode:'hold'});
+ assert.equal(r.targeted.rows[0].reason,'no_stock');
+ assert.equal(r.rows.find(x=>x.external_order_id==='4').reason,'targeted_customer');
+ r=await evaluate(context([slimOrder],{...extra,optouts:[{phone:'905350215375'}]}),{now});
+ assert.equal(r.targeted.rows[0].reason,'optout');
+ r=await evaluate(context([slimOrder],{...extra,deliveries:[{external_order_id:'99',phone:'905350215375',attempted_at:new Date(now-day).toISOString()}]}),{now});
+ assert.equal(r.targeted.rows[0].reason,'cooldown');
+});
