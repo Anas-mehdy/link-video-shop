@@ -32,6 +32,7 @@ function bindCashback(api,toast){
  const destinations={cashback:'صفحة الكاش باك',personal:'اقتراحات مخصصة',model:'قسم موديل الجوال',accessories:'الإكسسوارات'};
  const call=(method,body)=>api('delivery-cashback',{method,body:JSON.stringify(body)});
  let loading=false;
+ const testRequests=new Map();
  async function refresh(){
   if(loading)return;loading=true;refreshButton.disabled=true;
   try{
@@ -47,7 +48,12 @@ function bindCashback(api,toast){
     <label><input name="verified" type="checkbox" required> تحققت من أن حركة كاش باك دائنة تخص هذا الطلب</label>
     <button class="secondary" id="cb-preview" type="button">معاينة الرابط</button><button class="primary" type="submit">تأكيد الإيداع وإضافة للطابور</button>
     <div id="cb-preview-result" role="status"></div></form>
-    <p class="muted">يُشترط وجود موافقة واتساب مسجلة للعميل. لا يتم تعديل الرصيد من هذا القسم.</p></details>
+    <p class="muted">يُشترط وجود موافقة واتساب مسجلة للعميل. لا يتم تعديل الرصيد من هذا القسم.</p>
+    <details><summary>إرسال قالب تجريبي</summary><form id="cb-test-form" class="pp-grid">
+    <label>رقم الاختبار المهيأ<input name="phone" inputmode="tel" dir="ltr" autocomplete="off" required></label>
+    <label>الاسم في الرسالة<input name="name" maxlength="80" value="اختبار لنك" required></label>
+    <button class="secondary" type="submit">أرسل القالب لرقم الاختبار</button><p id="cb-test-result" role="status"></p>
+    </form></details></details>
     <details class="pp-inner"><summary>سجل الإرسال (${r.rows.length})</summary><div class="table-wrap" tabindex="0" role="region" aria-label="سجل إرسال الكاش باك"><table><thead><tr><th>معرّف الطلب</th><th>الحالة</th><th>الوجهة</th><th>آخر محاولة</th></tr></thead><tbody>${r.rows.map(x=>`<tr><td>${esc(x.external_order_id)}</td><td>${esc(statuses[x.status]||x.status)}${reasons[x.reason]?' · '+esc(reasons[x.reason]):''}</td><td>${esc(destinations[x.destination]||'—')}</td><td>${esc(date(x.attempted_at)||'—')}</td></tr>`).join('')||'<tr><td colspan="4">لا توجد محاولات بعد.</td></tr>'}</tbody></table></div></details>`;
    const form=box.querySelector('#cb-approve');
    form.elements.order.addEventListener('change',()=>{box.querySelector('#cb-preview-result').textContent='';});
@@ -59,6 +65,20 @@ function bindCashback(api,toast){
      const p=await call('POST',{action:'preview',order_id});if(form.elements.order.value!==order_id)return;
      const u=new URL(p.url);if(u.origin!=='https://linkstore-sa.com')throw Error('رابط المتجر غير صالح');
      const a=document.createElement('a');a.href=u.href;a.target='_blank';a.rel='noopener';a.textContent='فتح '+(destinations[p.kind]||'رابط المتجر');result.replaceChildren(a);
+    }catch(err){result.textContent=err.message;}finally{btn.disabled=false;}
+   };
+   const testForm=box.querySelector('#cb-test-form');
+   testForm.onsubmit=async e=>{
+    e.preventDefault();
+    const order_id=form.elements.order.value, test_phone=testForm.elements.phone.value.trim(),test_name=testForm.elements.name.value.trim();
+    const result=box.querySelector('#cb-test-result'),btn=testForm.querySelector('button');
+    if(!order_id){result.textContent='اختر طلبًا لاستخدام رابطه التجريبي.';return;}
+    const key=order_id+':'+test_phone;
+    if(!testRequests.has(key))testRequests.set(key,crypto.randomUUID());
+    btn.disabled=true;result.textContent='جارٍ إرسال القالب التجريبي…';
+    try{
+     const r=await call('POST',{action:'test-send',order_id,test_phone,test_name,request_id:testRequests.get(key),confirm_test:true});
+     result.textContent=r.status==='accepted'?'قبل اتصالنا رسالة الاختبار. تحقّق من وصولها بواتساب.':r.status==='rejected'?'رفض اتصالنا إرسال القالب (HTTP '+r.provider_code+').':r.status==='duplicate'?'سُجلت محاولة لهذا الاختبار. لم تُعد.':'نتيجة محاولة الاختبار غير مؤكدة. لم تُعد.';
     }catch(err){result.textContent=err.message;}finally{btn.disabled=false;}
    };
    form.onsubmit=async e=>{

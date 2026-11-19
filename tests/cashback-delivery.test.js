@@ -85,3 +85,29 @@ test('SQL joins actual order ID, ignores non-delivered events, prevents double c
   assert.equal((await db.query("select has_table_privilege('authenticated','crm_cashback_candidates','SELECT') val")).rows[0].val,false);
  }finally{await db.close();}
 });
+test('one test send to the server allowlist uses the cashback template and a preview link without enabling live delivery',async()=>{
+ const {sendTest}=require('../lib/cashback-delivery');
+ const testId='44444444-4444-4444-8444-444444444444',body={order_id:orderId,request_id:testId,test_phone:'+'+phone,test_name:'اختبار',confirm_test:true};
+ const environment={...env,WHATSAPP_TEST_PHONE:phone,WHATSAPP_AUTOMATION_ENABLED:'false'};
+ let claimed=false,sends=0;
+ const database=async(path,options)=>{
+  if(path.startsWith('crm_cashback_candidates?'))return [{external_order_id:'789'}];
+  if(path==='crm_postpurchase_test_sends'){
+   if(claimed)throw Object.assign(new Error('duplicate'),{statusCode:409});
+   claimed=true;assert.equal(JSON.parse(options.body).offer_product_id,'cashback');return null;
+  }
+  if(path.startsWith('crm_postpurchase_test_sends?')){assert.equal(JSON.parse(options.body).status,'accepted');return null;}
+  assert.fail(path);
+ };
+ const request=async(url,options)=>{
+  sends++;assert.ok(claimed);
+  const msg=JSON.parse(options.body);assert.equal(msg.contact.phone_number,'+'+phone);
+  assert.equal(msg.message.whatsapp_template.name,'link_cashback_delivered_ar');
+  assert.match(msg.message.whatsapp_template.components[2].parameters[0].text,/^#link-complete=[a-zA-Z0-9_-]+$/);
+  return {status:201,json:async()=>({message_id:42})};
+ };
+ await assert.rejects(sendTest({...body,test_phone:'+966550000000'},{database,environment,request}),/لا يطابق/);
+ assert.equal((await sendTest(body,{database,environment,request})).status,'accepted');
+ assert.equal((await sendTest(body,{database,environment,request})).status,'duplicate');
+ assert.equal(sends,1);
+});
