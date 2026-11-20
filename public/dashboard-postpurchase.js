@@ -23,7 +23,7 @@ function deliveryReport(r){
  const statuses={accepted:'قبله المزود · التسليم غير مؤكد',unknown:'نتيجة غير مؤكدة · لا إعادة تلقائية',sending:'محاولة محفوظة · لا إعادة تلقائية',rejected:'رفضه المزود',cancelled:'ألغيت قبل الإرسال'};
  return `<p><b>${r.enabled?'الإرسال التلقائي مفعّل':'الإرسال التلقائي موقوف'}</b>${r.server_ready?'':' · إعدادات الخادم تحتاج مراجعة'}</p><button class="${r.enabled?'secondary':'primary'}" type="button" id="pp-delivery-toggle" ${!r.server_ready&&!r.enabled?'disabled':''}>${r.enabled?'إيقاف إرسال ما بعد البيع':'تفعيل الإرسال للزبائن'}</button><details class="delivery-log"><summary>سجل محاولات الإرسال (${r.queue.length}) · ${r.queue.filter(x=>x.status==='unknown').length} نتيجة غير مؤكدة</summary><div class="table-wrap" tabindex="0" role="region" aria-label="جدول بيانات قابل للتمرير أفقيًا"><table><thead><tr><th>الطلب</th><th>الموديل</th><th>آخر محاولة</th><th>النتيجة</th><th>معرّف الرسالة</th></tr></thead><tbody>${r.queue.map(x=>`<tr><td>${esc(x.external_order_id)}</td><td>${esc(x.model)}</td><td>${esc(date(x.attempted_at))}</td><td>${esc(statuses[x.status]||x.status)}</td><td>${esc(x.provider_message_id||'—')}</td></tr>`).join('')||'<tr><td colspan="5">لا توجد محاولات إرسال للزبائن بعد.</td></tr>'}</tbody></table></div></details>`;
 }
-const cashbackPanel='<section class="panel"><h3>الكاش باك بعد التوصيل</h3><p class="muted">قالب link_cashback_delivered_ar · تُجهّز الرسالة تلقائيًا عند وصول «تم التوصيل» لطلب جديد لدى عميل لديه موافقة واتساب مسجّلة. ما تحتاج تأكيد يدوي.</p><button class="secondary" id="cb-refresh" type="button">تحديث سجل الكاش باك</button><div id="cb-status" aria-live="polite">جارٍ تحميل حالة الكاش باك…</div></section>';
+const cashbackPanel='<section class="panel"><h3>الكاش باك بعد التوصيل</h3><p class="muted">قالب link_cashback_delivered_ar · تُرسل الرسالة تلقائيًا عند وصول «تم التوصيل» من سلة. تُستبعد الأرقام التي ألغت الاشتراك.</p><button class="secondary" id="cb-refresh" type="button">تحديث سجل الكاش باك</button><div id="cb-status" aria-live="polite">جارٍ تحميل حالة الكاش باك…</div></section>';
 function bindCashback(api,toast){
  const box=document.getElementById('cb-status'),refreshButton=document.getElementById('cb-refresh');
  if(!box)return;
@@ -39,13 +39,13 @@ function bindCashback(api,toast){
    const r=await api('delivery-cashback');if(!box.isConnected)return;
    if(!r.storage_ready){box.textContent='سجل الكاش باك يحتاج تجهيز قاعدة البيانات.';return;}
    const seen=new Set(r.rows.map(x=>x.order_id)),unreviewed=r.candidates.filter(x=>!seen.has(x.order_id));
-   box.innerHTML=`<p><b>${r.enabled?'الإرسال مفعّل':'الإرسال موقوف'}</b>${r.server_ready?'':' · إعدادات واتساب غير جاهزة'}</p><button class="secondary" id="cb-toggle" type="button" ${!r.enabled&&!r.server_ready?'disabled':''}>${r.enabled?'إيقاف الإرسال':'تشغيل للطلبات المؤكدة'}</button>
+   box.innerHTML=`<p><b>${r.enabled?'الإرسال مفعّل':'الإرسال موقوف'}</b>${r.server_ready?'':' · إعدادات واتساب غير جاهزة'}</p><button class="secondary" id="cb-toggle" type="button" ${!r.enabled&&!r.server_ready?'disabled':''}>${r.enabled?'إيقاف الإرسال':'تشغيل الإرسال التلقائي'}</button>
     <details class="pp-inner"><summary>طلبات توصيل حديثة (${unreviewed.length})</summary>
     <form id="cb-approve" class="pp-grid">
-    <label>الطلب<select name="order" required><option value="">اختر الطلب</option>${unreviewed.map(x=>`<option value="${esc(x.order_id)}">${esc(x.order_reference||x.external_order_id)} · ${esc(x.customer_name||'بدون اسم')} · ${esc(date(x.delivered_at))}${x.consent_recorded?'':' · لا توجد موافقة واتساب'}</option>`).join('')}</select></label>
+    <label>الطلب<select name="order" required><option value="">اختر الطلب</option>${unreviewed.map(x=>`<option value="${esc(x.order_id)}">${esc(x.order_reference||x.external_order_id)} · ${esc(x.customer_name||'بدون اسم')} · ${esc(date(x.delivered_at))}</option>`).join('')}</select></label>
     <button class="secondary" id="cb-preview" type="button">معاينة الرابط</button>
     <div id="cb-preview-result" role="status"></div></form>
-    <p class="muted">يُشترط وجود موافقة واتساب مسجلة للعميل. لا يتم تعديل الرصيد من هذا القسم.</p>
+    <p class="muted">تُستخدم هذه الطلبات لمعاينة الرابط أو إرسال تجربة إلى رقم الاختبار.</p>
     <details><summary>إرسال قالب تجريبي</summary><form id="cb-test-form" class="pp-grid">
     <label>رقم الاختبار المهيأ<input name="phone" inputmode="tel" dir="ltr" autocomplete="off" required></label>
     <label>الاسم في الرسالة<input name="name" maxlength="80" value="اختبار لنك" required></label>
@@ -80,7 +80,7 @@ function bindCashback(api,toast){
    };
    form.onsubmit=e=>e.preventDefault();
    box.querySelector('#cb-toggle').onclick=async e=>{
-    const enabled=!r.enabled;if(enabled&&!confirm('تشغيل إرسال قالب الكاش باك تلقائيًا للطلبات الجديدة المسلّمة التي لديها موافقة واتساب؟'))return;
+    const enabled=!r.enabled;if(enabled&&!confirm('تشغيل إرسال قالب الكاش باك تلقائيًا لأحداث التوصيل الجديدة؟'))return;
     const btn=e.currentTarget;btn.disabled=true;
     try{await call('PUT',{action:'configure',enabled,confirm_live:enabled});await refresh();}
     catch(err){toast(err.message);}finally{btn.disabled=false;}

@@ -2,7 +2,7 @@ const test=require('node:test');
 const {strict:assert}=require('node:assert');
 const fs=require('node:fs');
 const {PGlite}=require('@electric-sql/pglite');
-const {destination,payload,tick,approve}=require('../lib/cashback-delivery');
+const {destination,payload,tick,onDelivery,approve}=require('../lib/cashback-delivery');
 const orderId='11111111-1111-4111-8111-111111111111',customer='22222222-2222-4222-8222-222222222222',event='33333333-3333-4333-8333-333333333333',phone='966550000001';
 const env={ETISALNA_API_ACCESS_TOKEN:'mock',CRM_ENCRYPTION_KEY:'aa'.repeat(32),WHATSAPP_AUTOMATION_ENABLED:'true'};
 const order={id:orderId,customer_id:customer,status_slug:'delivered',source_payload:{customer:{mobile:phone},items:[{name:'كفر دريب iPhone 18 Pro Max'}]}};
@@ -45,6 +45,43 @@ test('paused worker makes no send; opted out/expired jobs cancel before claim; u
   assert.equal(status,{paused:'queued',optout:'cancelled',expired:'cancelled',timeout:'unknown',accepted:'accepted'}[mode]);
  }
 });
+test('automatic event sends without a consent lookup and rechecks opt-outs after the claim',async()=>{
+ for(const unsubscribed of [false,true]){
+  let optoutReads=0,sends=0,queued=true,claimed=false,status;
+  const database=async(path,options)=>{
+   if(path.startsWith('crm_cashback_control?'))return [{enabled:true}];
+   if(path==='rpc/crm_cashback_enqueue_delivery'){
+    assert.deepEqual(JSON.parse(options.body),{p_event_id:event});
+    return queued?{queued:1,order_id:orderId}:{queued:0,order_id:null};
+   }
+   if(path.startsWith('crm_cashback_deliveries?')){
+    if(options?.method==='PATCH'){status=JSON.parse(options.body);return null;}
+    assert.ok(path.includes('order_id=eq.'+orderId));
+    assert.ok(path.includes('event_id,evidence_ref'));
+    return [{order_id:orderId,event_id:event,evidence_ref:'delivered:'+event,phone,expires_at:new Date(Date.now()+60000).toISOString()}];
+   }
+   if(path.startsWith('crm_cashback_candidates?'))return [{order_id:orderId}];
+   if(path.startsWith('orders?'))return [order];
+   if(path.startsWith('customers?'))return [{name:'اختبار',normalized_phone:phone}];
+   if(path.startsWith('crm_whatsapp_optouts?')){optoutReads++;return unsubscribed&&claimed?[{}]:[];}
+   if(path.startsWith('crm_pp_deliveries?'))return [];
+   if(path==='rpc/crm_cashback_claim'){queued=false;claimed=true;return event;}
+   assert.fail(path);
+  };
+  const request=async(_,options)=>{
+   sends++;assert.ok(claimed);
+   assert.equal(JSON.parse(options.body).message.whatsapp_template.name,'link_cashback_delivered_ar');
+   return {status:201,json:async()=>({message_id:1})};
+  };
+  const deps={database,request,environment:env};
+  await onDelivery(event,deps);
+  assert.equal((await onDelivery(event,deps)).reason,'not_enqueued');
+  assert.equal(sends,unsubscribed?0:1);
+  assert.equal(optoutReads,2);
+  assert.equal(status.status,unsubscribed?'cancelled':'accepted');
+  assert.equal(status.reason,unsubscribed?'optout':'provider_accepted');
+ }
+});
 test('admin cannot approve a delivery event without evidence and registered consent',async()=>{
  await assert.rejects(approve({order_id:orderId,confirm_deposit:false},{database:async()=>{throw Error('unexpected read')}}),/معرّف الحركة/);
  await assert.rejects(approve({order_id:orderId,confirm_deposit:true,evidence_ref:'98',expires_at:new Date(Date.now()+60000).toISOString()},{database:async path=>{
@@ -81,14 +118,24 @@ test('SQL joins actual order ID, ignores non-delivered events, prevents double c
   assert.equal((await enqueue()).queued,0); // event from before activation
   const fresh='55555555-5555-4555-8555-555555555555';
   await db.query(`insert into crm_event_inbox select $1,merchant_id,event_name,payload,now(),now(),now() from crm_event_inbox where id=$2`,[fresh,event]);
-  assert.equal((await enqueue(fresh)).queued,0); // no opt-in
-  await db.exec(`insert into crm_whatsapp_consents values(1829345766,'${phone}');insert into crm_whatsapp_optouts values(1829345766,'${phone}')`);
-  assert.equal((await enqueue(fresh)).queued,0);
+  assert.equal((await enqueue(fresh)).queued,0); // previous consent gate
+  await db.exec(fs.readFileSync(__dirname+'/../crm-cashback-optout-only.sql','utf8'));
+  assert.equal((await enqueue(fresh)).queued,0); // no backfill when applying the migration
+  const afterCutover='66666666-6666-4666-8666-666666666666';
+  await db.query(`insert into crm_event_inbox select $1,merchant_id,event_name,payload,now(),now(),now() from crm_event_inbox where id=$2`,[afterCutover,event]);
+  await db.exec(`insert into crm_whatsapp_optouts values(1829345766,'${phone}')`);
+  assert.equal((await enqueue(afterCutover)).queued,0);
   await db.exec('delete from crm_whatsapp_optouts');
-  assert.deepEqual(await enqueue(fresh),{queued:1,order_id:orderId});
-  assert.equal((await enqueue(fresh)).queued,0);
+  assert.deepEqual(await enqueue(afterCutover),{queued:1,order_id:orderId});
+  assert.equal((await enqueue(afterCutover)).queued,0);
   assert.equal((await enqueue(null)).queued,0);
   const claim=async()=> (await db.query('select crm_cashback_claim($1,$2,$3) token',[orderId,phone,'cashback'])).rows[0].token;
+  await db.exec("update crm_cashback_deliveries set evidence_ref='98'");
+  assert.equal(await claim(),null); // manual evidence still requires recorded consent
+  await db.exec(`update crm_cashback_deliveries set evidence_ref='delivered:'||event_id::text;
+   insert into crm_whatsapp_optouts values(1829345766,'${phone}')`);
+  assert.equal(await claim(),null); // unsubscribe received after enqueue
+  await db.exec('delete from crm_whatsapp_optouts');
   assert.match(await claim(),/^[a-f0-9-]{36}$/);assert.equal(await claim(),null);
   await assert.rejects(db.query("insert into crm_pp_deliveries values(1829345766,$1,'sending')",[orderId]),e=>e.code==='P0CBK');
   assert.equal((await db.query("select has_table_privilege('authenticated','crm_cashback_candidates','SELECT') val")).rows[0].val,false);

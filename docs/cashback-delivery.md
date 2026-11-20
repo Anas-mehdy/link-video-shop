@@ -5,12 +5,15 @@ Only projected `order.status.updated` events for delivered orders from the last
 seven days appear in **ما بعد البيع → الكاش باك بعد التوصيل**. The nested order
 ID is used, not the event's own data ID. Duplicate events appear once per order.
 
-Install the base CRM schemas and `crm-cashback-auto-delivered.sql`, and set the
-automatic start date after deploying. No n8n workflow change is required.
+Install the base CRM schemas and `crm-cashback-auto-delivered.sql`. After deploying
+the matching sender, apply `crm-cashback-optout-only.sql` once to enable the new
+eligibility rule and start with new delivery events. No n8n workflow change is required.
 This store uses a newly delivered event as its configured cashback trigger;
 the payload does not contain an independent wallet credit. Orders are queued
-without manual approval, but only with recorded WhatsApp opt-in and no opt-out.
-Events before the automatic start time are excluded. No wallet writes are made.
+without manual approval or a lookup of the CRM consent list. Unsubscribed numbers
+are blocked at enqueue and checked again before sending. Events before the automatic
+start time are excluded. Manual approvals retain their existing checks. No wallet
+writes are made.
 
 The approved Arabic Marketing template is `link_cashback_delivered_ar`:
 one name in the body, unsubscribe quick reply at index 0, dynamic URL at index 1
