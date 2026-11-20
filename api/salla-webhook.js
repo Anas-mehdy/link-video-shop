@@ -14,6 +14,18 @@ module.exports = async function handler(req, res) {
       try { const replay=await sync.processEvents(result.event_id); projection.records_pending=replay.skipped>0; }
       catch { projection.records_pending=true; }
     }
+    if(event.p_event_name==='order.status.updated'&&!projection.records_pending){
+      try{
+        const cashback=require('../lib/cashback-delivery');
+        if(cashback.isDeliveryEvent(event)){
+          const delivery=await cashback.onDelivery(result.event_id);
+          projection.cashback=delivery.status||delivery.reason;
+        }
+      }catch(e){
+        console.error('cashback_hook_failed',/^[A-Za-z0-9_]{1,32}$/.test(String(e.code||''))?String(e.code):'unclassified');
+        projection.cashback='pending_worker';
+      }
+    }
     if(event.p_event_name.startsWith('order.')){
       // Reservations have a durable queue created in the same transaction as order writes.
       try { const data=await require('../lib/preorders').tick();projection.preorders_pending=data.errors>0; }

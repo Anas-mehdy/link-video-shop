@@ -33,6 +33,7 @@ test('paused worker makes no send; opted out/expired jobs cancel before claim; u
    if(path.startsWith('crm_whatsapp_consents?'))return [{}];
    if(path.startsWith('crm_whatsapp_optouts?'))return mode==='optout'?[{}]:[];
    if(path.startsWith('crm_pp_deliveries?'))return [];
+   if(path==='rpc/crm_cashback_enqueue_delivery')return {queued:0};
    if(path==='rpc/crm_cashback_claim'){claims++;status='sending';return event;}
    throw Error(path);
   };
@@ -71,15 +72,23 @@ test('SQL joins actual order ID, ignores non-delivered events, prevents double c
    insert into crm_event_inbox values(gen_random_uuid(),1829345766,'order.status.updated','{"data":{"order_id":123,"status":{"slug":"delivered"}}}',now()-interval '8 days',now(),now());`);
   const sql=fs.readFileSync(__dirname+'/../crm-cashback-delivery.sql','utf8');
   await db.exec(sql);await db.exec(sql);
+  const migration=fs.readFileSync(__dirname+'/../crm-cashback-auto-delivered.sql','utf8');
+  await db.exec(migration);await db.exec(migration);
   assert.deepEqual((await db.query('select event_id,order_reference from crm_cashback_candidates')).rows,[{event_id:event,order_reference:'789'}]);
-  await db.exec(`insert into crm_cashback_deliveries(merchant_id,order_id,external_order_id,event_id,evidence_ref,phone,expires_at) values(1829345766,'${orderId}','123','${event}','901','${phone}',now()+interval '1 hour')`);
-  const claim=async()=> (await db.query('select crm_cashback_claim($1,$2,$3) token',[orderId,phone,'model'])).rows[0].token;
-  assert.equal(await claim(),null);
-  await db.exec('update crm_cashback_control set enabled=true');
-  assert.equal(await claim(),null);
+  const enqueue=async(id=event)=>(await db.query('select crm_cashback_enqueue_delivery($1) q',[id])).rows[0].q;
+  assert.equal((await enqueue()).queued,0);
+  await db.exec("update crm_cashback_control set enabled=true,auto_started_at=now()");
+  assert.equal((await enqueue()).queued,0); // event from before activation
+  const fresh='55555555-5555-4555-8555-555555555555';
+  await db.query(`insert into crm_event_inbox select $1,merchant_id,event_name,payload,now(),now(),now() from crm_event_inbox where id=$2`,[fresh,event]);
+  assert.equal((await enqueue(fresh)).queued,0); // no opt-in
   await db.exec(`insert into crm_whatsapp_consents values(1829345766,'${phone}');insert into crm_whatsapp_optouts values(1829345766,'${phone}')`);
-  assert.equal(await claim(),null);
+  assert.equal((await enqueue(fresh)).queued,0);
   await db.exec('delete from crm_whatsapp_optouts');
+  assert.deepEqual(await enqueue(fresh),{queued:1,order_id:orderId});
+  assert.equal((await enqueue(fresh)).queued,0);
+  assert.equal((await enqueue(null)).queued,0);
+  const claim=async()=> (await db.query('select crm_cashback_claim($1,$2,$3) token',[orderId,phone,'cashback'])).rows[0].token;
   assert.match(await claim(),/^[a-f0-9-]{36}$/);assert.equal(await claim(),null);
   await assert.rejects(db.query("insert into crm_pp_deliveries values(1829345766,$1,'sending')",[orderId]),e=>e.code==='P0CBK');
   assert.equal((await db.query("select has_table_privilege('authenticated','crm_cashback_candidates','SELECT') val")).rows[0].val,false);
@@ -110,4 +119,22 @@ test('one test send to the server allowlist uses the cashback template and a pre
  assert.equal((await sendTest(body,{database,environment,request})).status,'accepted');
  assert.equal((await sendTest(body,{database,environment,request})).status,'duplicate');
  assert.equal(sends,1);
+});
+
+test('signed delivery runs cashback after projection in the same request; other statuses do not send',async()=>{
+ const vm=require('node:vm'),mod=require('../lib/cashback-delivery');
+ for(const [status,pending] of [['delivered',false],['shipped',false],['delivered',true]]){
+  const eventBody={p_event_name:'order.status.updated',p_payload:{data:{order:{status:{slug:status}}}}};
+  const calls=[];
+  const ctx={module:{},require:name=>({
+   '../lib/crm':{verifyWebhook:()=>calls.push('verified'),bodyObject:()=>({}),normalizeEvent:()=>eventBody,sb:async()=>{calls.push('inserted');return {event_id:event};},json:(_,http,body)=>({http,body}),noCache(){},errorResponse:(_,e)=>{throw e;}},
+   '../lib/salla-sync':{supports:()=>true,processEvents:async()=>{calls.push('projected');return {skipped:pending?1:0};}},
+   '../lib/preorders':{tick:async()=>({errors:0})},
+   '../lib/cashback-delivery':{isDeliveryEvent:mod.isDeliveryEvent,onDelivery:async id=>{assert.equal(id,event);calls.push('dispatched');return {status:'accepted'};}}
+  })[name]};
+  vm.runInNewContext(fs.readFileSync(__dirname+'/../api/salla-webhook.js','utf8'),ctx);
+  const response=await ctx.module.exports({method:'POST'},{});
+  assert.equal(response.http,200);
+  assert.deepEqual(calls,['verified','inserted','projected',...(status==='delivered'&&!pending?['dispatched']:[])]);
+ }
 });
