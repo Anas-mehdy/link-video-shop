@@ -53,7 +53,7 @@ button{border:0;border-radius:11px;padding:11px 15px;font-weight:800;cursor:poin
       <div><label for="cta">رابط عرض من المتجر (اختياري)</label><input id="cta" type="url" dir="ltr" placeholder="https://linkstore-sa.com/..."></div>
       <div><label for="title">العنوان</label><input id="title" placeholder="اسم الفيديو / المنتج"></div>
       <div><label for="badge">الشارة</label><input id="badge" placeholder="🔥 الأكثر طلبًا"></div>
-      <div><label for="sort">الترتيب</label><input id="sort" type="number" value="10"></div>
+      <div><label for="sort">الترتيب</label><input id="sort" type="number" min="1" max="2147483647" step="1" placeholder="آخر القائمة" aria-describedby="sort-hint"><small id="sort-hint">1 يظهر أولًا ويزيح ما بعده. إذا تركته فارغًا، يُضاف الفيديو الجديد في آخر القائمة.</small></div>
     </div>
     <div style="margin-top:12px"><label for="desc">الوصف</label><textarea id="desc"></textarea></div>
     <div style="margin-top:12px">
@@ -137,7 +137,7 @@ function cancelEdit(){
   if(saving)return;
   editingId=null;originalProductIds=[];selected=[];renderSelected();VideoUpload.reset();
   ['tiktok','title','badge','desc','productSearch','cta'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('sort').value='10';
+  document.getElementById('sort').value='';
   document.getElementById('searchResults').innerHTML='';
   document.getElementById('formHeading').textContent='إضافة فيديو';
   document.getElementById('saveVideo').textContent='إضافة الفيديو';
@@ -166,8 +166,10 @@ async function createVideo(){
   const s=document.getElementById('formStatus');
   if(!val('title')||(!val('tiktok')&&!VideoUpload.hasVideo())){s.textContent='أدخل العنوان واختر فيديو قابلًا للتشغيل أو رابط TikTok';return}
   if(VideoUpload.checking()){s.textContent='انتظر اكتمال فحص الفيديو';return}
-  if(!Number.isFinite(Number(val('sort')))){s.textContent='الترتيب غير صحيح';return}
-  const body={tiktok_url:val('tiktok'),title:val('title'),badge:val('badge'),description:val('desc'),sort_order:Number(val('sort')||0),cta_url:val('cta')};
+  const sort=val('sort'), position=Number(sort), currentSort=videosById.get(editingId)?.sort_order;
+  if(sort&&(!Number.isInteger(position)||position<1||position>2147483647)){s.textContent='الترتيب لازم يكون رقمًا صحيحًا يبدأ من 1';return}
+  const body={tiktok_url:val('tiktok'),title:val('title'),badge:val('badge'),description:val('desc'),cta_url:val('cta')};
+  if(sort&&position!==currentSort)body.sort_order=position;
   const ids=selected.map(x=>String(x.external_product_id));
   if(!editingId||JSON.stringify(ids)!==JSON.stringify(originalProductIds))body.product_ids=ids.map(Number);
   if(editingId)body.id=editingId;else body.is_active=true;
@@ -189,7 +191,7 @@ async function loadVideos(){
     videosById=new Map((j.videos||[]).map(v=>[v.id,v]));
     box.innerHTML=(j.videos||[]).map(v=>`<div class="video">
       <img class="thumb" src="${esc(v.thumbnail_url||'')}" onerror="this.style.opacity=.15">
-      <div><div class="name">${esc(v.title)}</div><div class="meta">${v.media_url?'فيديو مرفوع':'TikTok '+esc(v.tiktok_video_id)} • ترتيب ${v.sort_order} • منتجات: ${(v.product_ids||[]).join(', ')||'بدون'}</div><span class="pill">${v.is_active?'ظاهر':'مخفي'} ${esc(v.badge||'')}</span></div>
+      <div><div class="name">${esc(v.title)}</div><div class="meta">${v.media_url?'فيديو مرفوع':'TikTok '+esc(v.tiktok_video_id)} • ${v.is_active?'ترتيب العرض':'ترتيب المخفي'} ${v.sort_order} • منتجات: ${(v.product_ids||[]).join(', ')||'بدون'}</div><span class="pill">${v.is_active?'ظاهر':'مخفي'} ${esc(v.badge||'')}</span></div>
       <div class="actions row">
         <button class="ghost" onclick="editVideo('${v.id}')">تعديل</button>
         <button class="ghost" onclick="toggleVideo('${v.id}',${!v.is_active})">${v.is_active?'إخفاء':'إظهار'}</button>

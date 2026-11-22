@@ -29,11 +29,15 @@ module.exports = async function handler(req, res) {
       return json(res,200,{ok:true,...await media.signUpload(req.body,MERCHANT_ID)},{'Cache-Control':'no-store'});
     }
     if (req.method === 'GET') {
-      const videos = await sb(`video_shop_videos?merchant_id=eq.${MERCHANT_ID}&order=sort_order.asc&select=*`);
+      const videos = await sb(`video_shop_videos?merchant_id=eq.${MERCHANT_ID}&order=is_active.desc,sort_order.asc,id.asc&select=*`);
       return json(res, 200, {ok:true, videos:await hydrate(videos || [])});
     }
 
     const body = req.body && typeof req.body === 'object' ? req.body : {};
+    if (['POST','PATCH'].includes(req.method) && Object.hasOwn(body,'sort_order') &&
+        (!Number.isInteger(body.sort_order) || body.sort_order<1 || body.sort_order>2147483647)) {
+      return json(res,400,{ok:false,error:'الترتيب لازم يكون رقمًا صحيحًا يبدأ من 1'});
+    }
     if (req.method === 'POST') {
       const tiktokId = extractTikTokId(body.tiktok_url);
       if ((!tiktokId && !body.media_path) || !String(body.title||'').trim()) return json(res, 400, {ok:false,error:'أدخل العنوان وارفع الفيديو أو أضف رابط TikTok'});
@@ -46,7 +50,7 @@ module.exports = async function handler(req, res) {
         tiktok_video_id: tiktokId,
         thumbnail_url: body.thumbnail_url || null,
         description: body.description || null,
-        sort_order: Number(body.sort_order || 0),
+        sort_order: body.sort_order ?? 0,
         is_active: body.is_active !== false
       }];
 

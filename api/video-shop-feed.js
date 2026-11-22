@@ -8,12 +8,12 @@ module.exports = async function handler(req, res) {
 
   try {
     const videos = await sb(
-      `video_shop_videos?merchant_id=eq.${MERCHANT_ID}&is_active=eq.true&order=sort_order.asc&select=id,title,badge,tiktok_url,tiktok_video_id,thumbnail_url,description,sort_order,media_url,cta_url`
+      `video_shop_videos?merchant_id=eq.${MERCHANT_ID}&is_active=eq.true&order=sort_order.asc,id.asc&select=id,title,badge,tiktok_url,tiktok_video_id,thumbnail_url,description,sort_order,media_url,cta_url`
     );
 
     if (!Array.isArray(videos) || !videos.length) {
       return json(res, 200, { ok:true, videos:[] }, {
-        'Cache-Control':'public, s-maxage=60, stale-while-revalidate=600'
+        'Cache-Control':'public, max-age=0, s-maxage=15, must-revalidate'
       });
     }
 
@@ -70,7 +70,7 @@ module.exports = async function handler(req, res) {
     });
 
     return json(res, 200, { ok:true, merchant_id:MERCHANT_ID, videos:out }, {
-      'Cache-Control':'public, s-maxage=300, stale-while-revalidate=3600'
+      'Cache-Control':'public, max-age=0, s-maxage=15, must-revalidate'
     });
   } catch (e) {
     console.error(e);
