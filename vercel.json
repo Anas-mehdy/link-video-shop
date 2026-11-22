@@ -21,6 +21,10 @@
   },
   "rewrites": [
     {
+      "source": "/lux-video",
+      "destination": "/lux-video.html"
+    },
+    {
       "source": "/iphone-bundles",
       "destination": "/iphone-bundles.html"
     },
