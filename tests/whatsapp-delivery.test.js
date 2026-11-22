@@ -10,7 +10,7 @@ test('Automatic sender fails closed before IO, uses fixed template, and never re
  const database=async(path,opts)=>{dbCalls++;if(path.endsWith('crm_claim_cart_delivery'))return {id,attempt_token:token,phone:'966500000001',customer_name:'Test',checkout_url:'https://mtjr.at/cart'};finish.push(JSON.parse(opts.body));return true;};
  assert.equal((await tick({database,request,environment:{}})).reason,'server_disabled');assert.equal(dbCalls,0);assert.equal(io,0);
  assert.equal((await tick({database:async()=>({idle:'paused'}),request,environment})).sent,false);assert.equal(io,0);
- const good=await tick({database,request:async(url,options)=>{assert.equal(url,'https://business.etisalna.com/developer/api/v1/messages');assert.equal(options.headers.api_account_id,'12');assert.equal(JSON.parse(options.body).message.whatsapp_template.name,'link_abandoned_cart_ar');return request();},environment});
+ const good=await tick({database,request:async(url,options)=>{assert.equal(url,'https://business.etisalna.com/developer/api/v1/messages');assert.equal(options.headers.api_account_id,'12');assert.equal(JSON.parse(options.body).message.whatsapp_template.name,'link_abandoned_cart_v2_ar');return request();},environment});
  assert.equal(good.status,'accepted');assert.equal(good.delivery_confirmed,false);assert.equal(finish[0].p_token,token);
  for(const response of [async()=>{throw new Error('Timeout');},async()=>({status:422}),async()=>({status:201,json:async()=>({message_id:9007199254740992})})])assert.equal((await tick({database,request:response,environment})).status,'unknown');
  assert.equal(io,1);assert.equal(finish.length,4);
