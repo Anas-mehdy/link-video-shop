@@ -62,3 +62,59 @@ test('wrong snapshot recipient is blocked before page, claim, stock or send',asy
  const m=mock();let sends=0;const database=async(p,o)=>{const r=await m.database(p,o);if(p.startsWith('orders?'))r[0].source_payload.customer.mobile='+966555000111';return r};
  const r=await tick({...dependencies,database,pageData:async()=>{throw Error('must not create page')},request:async()=>sends++});assert.equal(r.reason,'order_phone_mismatch');assert.equal(sends,0);assert.ok(!m.calls.includes('rpc/crm_pp_delivery_claim'));
 });
+
+test('approved LUX template uses exact body variables and a static video button',async()=>{
+ const m=mock();let claim,sends=0;
+ const database=async(p,o)=>{
+  if(p.includes('select=*&')&&p.startsWith('crm_pp_delivery_control?'))return [{enabled:true,lux_enabled:true}];
+  if(p==='rpc/crm_pp_lux_candidates')return [{external_order_id:'123',purchased_name:'كفر دريب ماج سيف'}];
+  if(p.startsWith('crm_pp_stock_cache?'))return [{state:'checked',available:true,checked_at:new Date().toISOString()}];
+  if(p==='rpc/crm_pp_delivery_claim')claim=JSON.parse(o.body);
+  return m.database(p,o);
+ };
+ const result=await tick({...dependencies,database,review:async()=>{throw Error('normal offer not needed')},request:async(_,o)=>{
+  sends++;assert.deepEqual(claim.p_products,['387390654']);assert.equal(claim.p_model,'عرض LUX');
+  const t=JSON.parse(o.body).message.whatsapp_template;
+  assert.equal(t.name,'link_postpurchase_lux_ar');assert.deepEqual(t.components[0].parameters.map(p=>p.text),['أنس','كفر دريب ماج سيف']);
+  assert.equal(t.components[1].parameters[0].payload,'unsubscribe');assert.equal(t.components.length,2);
+  return {status:201,json:async()=>({message_id:1000})};
+ }});
+ assert.equal(sends,1);assert.equal(result.sent,true);
+});
+
+test('LUX candidates require verified delivery, phone and MagSafe; cooldown and ownership block the send',async()=>{
+ const {PGlite}=require('@electric-sql/pglite'),db=new PGlite();try{
+ await db.exec(`
+  create role anon;create role authenticated;create role service_role;
+  create table crm_pp_delivery_control(merchant_id bigint,enabled bool);
+  insert into crm_pp_delivery_control values(1829345766,true);
+  create table crm_postpurchase_delivered(merchant_id bigint,order_id uuid,delivered_at timestamptz);
+  create table orders(id uuid,merchant_id bigint,external_order_id text,customer_id uuid,status_slug text,ordered_at timestamptz,source_payload jsonb);
+  create table customers(id uuid,merchant_id bigint,normalized_phone text,phone text);
+  create table crm_postpurchase_settings(merchant_id bigint,delay_days int,cooldown_days int);
+  insert into crm_postpurchase_settings values(1829345766,7,14);
+  create table crm_whatsapp_optouts(merchant_id bigint,phone text);
+  create table crm_pp_deliveries(merchant_id bigint,order_id uuid,external_order_id text,phone text,model text,attempted_at timestamptz,product_ids text[]);
+  create table crm_cart_deliveries(merchant_id bigint,attempted_phone text,status text,attempted_at timestamptz);
+  create table crm_cashback_deliveries(merchant_id bigint,order_id uuid,phone text,status text,attempted_at timestamptz);
+ `);
+ await db.exec(fs.readFileSync(path.join(__dirname,'../crm-postpurchase-lux.sql'),'utf8'));
+ await db.exec('create trigger lux_guard before insert on crm_pp_deliveries for each row execute function crm_cashback_guard_postpurchase()');
+ for(const [p] of [['966555000111']]){
+  await db.query('insert into customers values($1,1829345766,$2,$2)',[uuid,p]);
+  await db.query("insert into orders values($1,1829345766,'123',$1,'delivered',now()-interval '20 days',$2)",[uuid,JSON.stringify({items:[{product:{id:284157041}}],customer:{mobile:'0555000111',mobile_code:'+966'}})]);
+  const due=async()=> (await db.query('select * from crm_pp_lux_candidates()')).rows;
+  assert.deepEqual(await due(),[]);
+  await db.query("insert into crm_postpurchase_delivered values(1829345766,$1,now()-interval '6 days')",[uuid]);assert.deepEqual(await due(),[]);
+  await db.exec("update crm_postpurchase_delivered set delivered_at=now()-interval '8 days'");assert.equal((await due())[0].external_order_id,'123');
+  const claim=()=>db.query("insert into crm_pp_deliveries values(1829345766,$1,'123',$2,'عرض LUX',now(),array['387390654'])",[uuid,p]);
+  await assert.rejects(claim(),{code:'P0LUX'});
+  await db.exec('update crm_pp_delivery_control set lux_enabled=true');
+  await db.query("insert into crm_cashback_deliveries values(1829345766,$1,$2,'accepted',now())",[uuid,p]);assert.deepEqual(await due(),[]);
+  await db.exec("update crm_cashback_deliveries set attempted_at=now()-interval '15 days'");assert.equal((await due()).length,1);
+  await db.query("insert into crm_whatsapp_optouts values(1829345766,$1)",[p]);assert.deepEqual(await due(),[]);await db.exec('delete from crm_whatsapp_optouts');
+  await db.query("insert into orders values(gen_random_uuid(),1829345766,'999',$1,'delivered',now(),'{\"items\":[{\"product_id\":387390654}]}')",[uuid]);assert.deepEqual(await due(),[]);
+  await db.exec("delete from orders where external_order_id='999'");await claim();assert.deepEqual(await due(),[]);
+ }
+ }finally{await db.close();}
+});
