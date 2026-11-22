@@ -129,3 +129,9 @@ body{font-size:16px;line-height:1.65}button,input,select,textarea{font:inherit}t
  #ads-filters>button{grid-column:1/-1;width:100%;min-height:44px}
  #ads-filters .ads-date-field{grid-column:1/-1}
 }
+
+.cart-recovery-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px;margin-block:12px}
+.cart-recovery-card{background:rgba(129,93,167,.10);border:1px solid var(--line,#3d3547);border-radius:12px;padding:14px;min-width:0}
+.cart-recovery-card strong{display:block;font-size:1.55rem;margin-block:4px;font-variant-numeric:tabular-nums}
+.cart-recovery-table time{white-space:nowrap}
+.cart-recovery-pagination{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-block-start:12px}

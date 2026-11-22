@@ -3,7 +3,7 @@
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const date=value=>value?new Date(value).toLocaleString('ar-SA-u-ca-gregory-nu-latn',{timeZone:'Asia/Riyadh'}):'—';
 const reasons={delay:'بانتظار الموعد',paused:'التجربة موقوفة',quiet_hours:'مؤجلة إلى وقت التواصل',purchased:'السلة مشتراة أو للعميل طلب أحدث',optout:'العميل ألغى الاشتراك',expired:'السلة منتهية أو عمرها تجاوز24 ساعة',missing_phone:'رقم العميل غير صالح',missing_url:'رابط السلة غير متاح',cart_status:'حالة السلة لا تسمح بالمتابعة',dry_run:'اكتملت المحاكاة · لم تُرسل رسالة'};
-function shell(){return '<section class="panel"><div class="panel-header"><h3>إرسال متابعة السلات تلقائيًا</h3><span class="badge">قالب واتساب المعتمد</span></div><div id="cart-delivery">جاري تحميل إعدادات الإرسال…</div></section><section class="panel"><div class="panel-header"><h3>التذكير الثاني وعروض السلة</h3><span class="badge">بعد التذكير الأول</span></div><div id="cart-second">جاري تحميل الإعدادات…</div></section><section class="panel"><div class="panel-header"><h3>محاكاة متابعة السلات</h3><span class="badge">اختبار فقط</span></div><div id="cart-followup">جاري تحميل قائمة المتابعة…</div></section>';}
+function shell(){return '<section class="panel"><div class="panel-header"><div><h3>نتائج استرجاع السلات</h3><p class="muted">آخر 7 أيام · بتوقيت السعودية</p></div><button class="secondary" id="cart-recovery-refresh" type="button">تحديث</button></div><p id="cart-recovery-status" role="status"></p><div id="cart-recovery-report" aria-busy="true"></div></section><section class="panel"><div class="panel-header"><h3>إرسال متابعة السلات تلقائيًا</h3><span class="badge">قالب واتساب المعتمد</span></div><div id="cart-delivery">جاري تحميل إعدادات الإرسال…</div></section><section class="panel"><div class="panel-header"><h3>التذكير الثاني وعروض السلة</h3><span class="badge">بعد التذكير الأول</span></div><div id="cart-second">جاري تحميل الإعدادات…</div></section><section class="panel"><div class="panel-header"><h3>محاكاة متابعة السلات</h3><span class="badge">اختبار فقط</span></div><div id="cart-followup">جاري تحميل قائمة المتابعة…</div></section>';}
 const deliveryReasons={delay:'بانتظار الموعد',paused:'الإرسال موقوف',missing_phone:'رقم غير صالح',unsupported_url:'رابط غير مدعوم',quiet_hours:'خارج وقت التواصل',purchased_or_inactive:'مشتراة أو غير نشطة',optout:'إلغاء الاشتراك',expired:'لا يوجد تحديث خلال24 ساعة',before_activation:'قبل التفعيل الحالي',test_attempt:'لها محاولة اختبار سابقة',human_followup:'أُحيلت سابقًا للمتابعة اليدوية',recent_contact:'تمت متابعة الرقم خلال24 ساعة',provider_request:'جارٍ الإرسال',provider_accepted:'قبلها مزود واتساب',unconfirmed_attempt:'النتيجة غير مؤكدة · لا إعادة تلقائية',invalid_activity:'تاريخ السلة غير صالح'};
 function deliveryView(data){
  if(!data.storage_ready)return '<div class="notice warn">شغّل <a href="https://github.com/Anas-mehdy/link-video-shop/blob/main/crm-whatsapp-delivery.sql" target="_blank" rel="noopener">crm-whatsapp-delivery.sql</a> في Supabase، ثم حدّث الصفحة. الإرسال غير مفعّل.</div>';
@@ -24,6 +24,7 @@ function render(data){
  return `<p class="muted">السلات الجديدة بعد التفعيل فقط. وقت التواصل 09:00–21:00 بتوقيت السعودية. تُلغى عند الشراء أو إلغاء الاشتراك أو مرور24 ساعة. الإرسال الفعلي متوقف.</p><form id="cart-followup-form" class="form-row"><label class="switch"><input name="enabled" type="checkbox" ${data.configuration.enabled?'checked':''}> تفعيل التجربة</label><div class="form-field short"><label for="cart-followup-delay">الانتظار بالدقائق للسلات الجديدة</label><input id="cart-followup-delay" name="delay" type="number" dir="ltr" min="1" max="1440" value="${data.configuration.delay_minutes}" required></div><button class="primary" type="submit">حفظ</button><button class="secondary" id="cart-followup-refresh" type="button">تحديث المحاكاة</button></form><p class="muted">بداية التجربة: ${date(data.configuration.started_at)}. نص الرسالة من مسودة السلة في قسم واتساب. تحديث المحاكاة يراجع البيانات المحفوظة فقط ولا يطلب بيانات من سلة.</p><p class="muted">المواعيد لا تعمل في الخلفية قبل إعداد العامل الدوري. المحاكاة لا تؤكد موافقة العميل على الرسائل؛ يجب التحقق منها قبل الإرسال الفعلي.</p>${data.queue.length?`<div class="table-wrap" tabindex="0" role="region" aria-label="جدول بيانات قابل للتمرير أفقيًا"><table><thead><tr><th>العميل والسلة</th><th>الموعد</th><th>النتيجة</th><th>الرسالة</th><th>إدارة الاشتراك</th></tr></thead><tbody>${data.queue.map(row=>`<tr><td>${esc(row.customer_name)}<br><span dir="ltr">${esc(row.cart_id)}</span></td><td>${date(row.scheduled_for)}</td><td><span class="badge">${esc(reasons[row.reason]||row.status)}</span></td><td><details><summary>معاينة الرسالة</summary><p style="white-space:pre-wrap;overflow-wrap:anywhere;max-width:360px">${esc(row.message)}</p><small>الأزرار تُضاف بعد تأكيد قدرات مزود واتساب.</small></details></td><td>${row.reason==='optout'?'أُلغي الاشتراك':`<button class="text-button" type="button" data-cart-optout="${esc(row.id)}">تسجيل إلغاء الاشتراك</button>`}</td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">لا توجد متابعات بعد. فعّل التجربة وانتظر وصول سلة جديدة؛ السلات القديمة لا تدخل القائمة.</p>'}`;
 }
 async function bind({api,toast}){
+ bindRecovery(api);
  const target=document.getElementById('cart-followup');if(!target)return;
  async function show(data){if(!target.isConnected)return;target.innerHTML=render(data);wire();}
  function wire(){
@@ -46,6 +47,56 @@ async function bindSecond({api,toast}){
  target.querySelector('#second-refresh').addEventListener('click',async()=>{try{show(await api('whatsapp-second'));}catch(e){toast(e.message);}});
  }
  try{show(await api('whatsapp-second'));}catch(e){if(target.isConnected)target.textContent=e.message;}
+}
+const metricNumber=new Intl.NumberFormat('ar-SA-u-nu-latn',{maximumFractionDigits:2});
+const valueLabel=(value,currency)=>value==null?'—':metricNumber.format(value)+' '+(currency==='SAR'?'ر.س':String(currency||''));
+const orderStates={completed:'تم التنفيذ',delivered:'تم التوصيل',under_review:'قيد المراجعة',shipped:'تم الشحن',in_progress:'قيد التنفيذ'};
+function recoveryView(data,page){
+ const m=data.metrics, number=n=>esc(metricNumber.format(n)), stage=n=>n===2?'التذكير الثاني':'التذكير الأول';
+ const card=(label,value,note)=>`<div class="cart-recovery-card"><span>${label}</span><strong>${value}</strong><small class="muted">${note}</small></div>`;
+ const cards=[
+  card('قبله المزود · التذكير الأول',number(m.accepted_first),number(m.exact_first)+' طلب مرتبط بآخر تذكير أول'),
+  card('قبله المزود · التذكير الثاني',number(m.accepted_second),number(m.exact_second)+' طلب مرتبط بآخر تذكير ثانٍ'),
+  card('طلبات مرتبطة بالسلة',number(m.exact_count),'نفس رقم السلة في الطلب'),
+  card('قيمة الطلبات المرتبطة',esc(valueLabel(m.exact_sar,'SAR')),'إجمالي الطلبات المرتبطة بالريال'),
+  card('شراء بعد الرسالة',number(m.after_count),'نفس العميل · بدون ربط مباشر')].join('');
+ const rows=data.rows.map(r=>`<tr><td><strong dir="ltr">${esc(r.order_reference||r.external_order_id)}</strong><br><small class="muted">${esc(r.customer_name||'—')}</small></td>
+ <td><time>${esc(date(r.ordered_at))}</time><br><small>${esc(orderStates[r.status_slug]||r.status_slug)}</small></td>
+ <td>${esc(valueLabel(r.total_amount,r.currency))}</td><td>${stage(r.stage)}<br><time class="muted">${esc(date(r.reminder_at))}</time>${r.coupon_code?`<br><small>عُرض الكود <bdi>${esc(r.coupon_code)}</bdi></small>`:''}</td>
+ <td><span class="badge ${r.match_kind==='exact'?'green':'amber'}">${r.match_kind==='exact'?'نفس رقم السلة':'شراء بعد الرسالة'}</span><br><small class="muted">السلة <bdi>${esc(r.external_cart_id)}</bdi></small></td></tr>`).join('');
+ const pages=Math.max(1,Math.ceil(m.total/20));
+ return `<div class="cart-recovery-cards">${cards}</div>
+ <p class="muted">نربط الطلب بآخر تذكير قبله خلال 72 ساعة. قبول الرسالة لا يؤكد وصولها، والربط لا يثبت أن الرسالة سببت الشراء. نستبعد الطلبات الملغاة والمرتجعة والمنتظرة للدفع.</p>
+ ${rows?`<div class="table-wrap cart-recovery-table" role="region" aria-label="سجل طلبات استرجاع السلات" tabindex="0"><table><thead><tr><th scope="col">الطلب / العميل</th><th scope="col">وقت الطلب / الحالة</th><th scope="col">القيمة</th><th scope="col">آخر تذكير قبله</th><th scope="col">دليل الربط</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<p class="muted">لا توجد طلبات مطابقة خلال الفترة.</p>'}
+ ${pages>1?`<div class="cart-recovery-pagination"><button class="secondary" data-recovery-page="${page-1}" ${page<=1?'disabled':''}>السابق</button><span>صفحة ${number(page)} من ${number(pages)}</span><button class="secondary" data-recovery-page="${page+1}" ${page>=pages?'disabled':''}>التالي</button></div>`:''}`;
+}
+function bindRecovery(api){
+ const target=document.getElementById('cart-recovery-report'),refresh=document.getElementById('cart-recovery-refresh'),status=document.getElementById('cart-recovery-status');
+ if(!target||!refresh||!status)return;
+ let busy=false,page=1;
+ async function load(next){
+  if(busy)return;
+  busy=true;refresh.disabled=true;target.setAttribute('aria-busy','true');status.textContent='جارٍ تحميل نتائج الاسترجاع…';
+  try{
+   let d=await api('cart-recovery-report&page='+next);
+   if(next>1&&!d.rows.length){next=1;d=await api('cart-recovery-report&page=1');}
+   if(!target.isConnected)return;
+   page=next;target.innerHTML=recoveryView(d,page);
+   status.textContent='';
+  }catch{if(target.isConnected)status.textContent='تعذّر تحميل نتائج الاسترجاع. اضغط تحديث للمحاولة مجددًا.';}
+  finally{busy=false;refresh.disabled=false;target.setAttribute('aria-busy','false');}
+ }
+ refresh.addEventListener('click',()=>load(page));
+ target.addEventListener('click',async e=>{
+  const button=e.target.closest('[data-recovery-page]');if(!button||busy)return;
+  button.disabled=true;
+  try{await load(Number(button.dataset.recoveryPage));}
+  finally{
+   if(button.isConnected){button.disabled=false;button.focus();}
+   else (target.querySelector('.cart-recovery-table')||refresh).focus();
+  }
+ });
+ load(1);
 }
 window.LinkCartFollowup={shell,bind};
 })();

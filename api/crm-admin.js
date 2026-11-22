@@ -33,6 +33,13 @@ module.exports = async function handler(req, res) {
     if(resource==='postpurchase')return await require('../lib/postpurchase').admin(req,res);
     if(resource==='cart-human')return require('../lib/cart-human').admin(req,res);
     if(resource==='whatsapp-second')return require('../lib/cart-reminder-two').admin(req,res);
+    if(resource==='cart-recovery-report'){
+      if(req.method!=='GET')return json(res,405,{ok:false,error:'Method not allowed'});
+      const page=Number(req.query?.page??1);
+      if(!Number.isInteger(page)||page<1||page>10000)return json(res,400,{ok:false,error:'رقم الصفحة غير صالح'});
+      const data=await sb('rpc/crm_cart_recovery_report',{method:'POST',body:JSON.stringify({p_page:page})});
+      return json(res,200,{ok:true,...data});
+    }
     if(resource==='whatsapp-delivery')return require('../lib/whatsapp-delivery').admin(req,res);
     if(resource==='cart-followup'){
       const followup=require('../lib/cart-followup');
