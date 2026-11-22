@@ -1,3 +1,54 @@
+// Campaign link on the storefront homepage. The theme's HTML component may
+// strip script tags and inline handlers, so this runs in the theme JS loader.
+(function () {
+  if (location.pathname !== '/' || new URLSearchParams(location.search).get('lvs_video') !== 'lux' ||
+      document.getElementById('link-lux-home-player')) return;
+  const product='https://linkstore-sa.com/hml-link-lmgntysy-llsyr-lux/p387390654?utm_source=whatsapp&utm_medium=postpurchase&utm_campaign=lux_video';
+  function mount() {
+    const dialog=document.createElement('dialog');
+    dialog.id='link-lux-home-player';
+    dialog.dir='rtl';
+    dialog.setAttribute('aria-labelledby','link-lux-home-title');
+    const style=document.createElement('style');
+    style.textContent='#link-lux-home-player{box-sizing:border-box;width:min(96vw,460px);max-height:94dvh;overflow:auto;border:0;border-radius:16px;padding:14px;background:#170e21;color:#fff;font:16px/1.5 system-ui}#link-lux-home-player::backdrop{background:#000c}#link-lux-home-player header{display:flex;align-items:center;justify-content:space-between;gap:12px}#link-lux-home-player h2{font-size:1.18rem;margin:0 0 8px}#link-lux-home-player button,#link-lux-home-player a{background:#6b218a;color:#fff;border:0;border-radius:10px;padding:10px 14px}#link-lux-home-player button{cursor:pointer;white-space:nowrap}#link-lux-home-player video{display:block;width:100%;height:min(60dvh,620px);object-fit:contain;background:#000;border-radius:10px}#link-lux-home-player video[hidden],#link-lux-home-player p[hidden]{display:none}#link-lux-home-player a{display:block;margin-top:10px;text-align:center;text-decoration:none}';
+    const header=document.createElement('header'), title=document.createElement('h2'), close=document.createElement('button');
+    title.id='link-lux-home-title';title.textContent='شوف حامل LUX على الواقع';
+    close.type='button';close.textContent='إغلاق';header.append(title,close);
+    const player=document.createElement('video');
+    player.controls=true;player.playsInline=true;player.preload='none';player.hidden=true;
+    const status=document.createElement('p');
+    status.setAttribute('role','status');status.textContent='جارٍ تحميل الفيديو…';
+    const buy=document.createElement('a');
+    buy.href=product;buy.textContent='تسوّق حامل LUX';
+    dialog.append(style,header,player,status,buy);
+    (document.getElementById('link-video-shop')||document.body).append(dialog);
+    const request=new AbortController(),timer=setTimeout(()=>request.abort(),10000);
+    close.onclick=()=>dialog.close();
+    dialog.addEventListener('close',()=>{
+      request.abort();clearTimeout(timer);
+      player.pause();player.removeAttribute('src');player.load();dialog.remove();
+    },{once:true});
+    dialog.showModal();
+    const unavailable=()=>{player.hidden=true;status.hidden=false;status.textContent='الفيديو غير متاح حاليًا. تقدر تشوف تفاصيل الحامل من زر التسوّق.';};
+    const https=value=>{
+      if(typeof value!=='string')return '';
+      try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch{return '';}
+    };
+    fetch('https://link-video-shop.vercel.app/api/video-shop-feed',{credentials:'omit',signal:request.signal})
+      .then(r=>{if(!r.ok)throw Error();return r.json();})
+      .then(({videos})=>{
+        if(!dialog.open)return;
+        const lux=videos?.find(v=>v.id==='68e42ef7-821e-4275-8c08-5ddde6ea2e94'),media=https(lux?.media_url);
+        if(!media)throw Error();
+        const cover=https(lux.thumbnail_url);if(cover)player.poster=cover;
+        player.addEventListener('error',unavailable,{once:true});
+        player.src=media;player.hidden=false;status.hidden=true;
+      }).catch(()=>{if(dialog.open)unavailable();}).finally(()=>clearTimeout(timer));
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount,{once:true});
+  else mount();
+})();
+
 /* Protection-page bootstrap: inactive on ordinary storefront URLs. */
 (function(){
  if(window.__linkCompleteBootstrap)return;window.__linkCompleteBootstrap=true;
