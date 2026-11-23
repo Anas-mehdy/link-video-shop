@@ -20,11 +20,11 @@
 </head>
 <body>
   <main class="shell">
-    <div class="brand"><div class="mark">L↗</div><div><b>Link Store</b><small>أداة خدمة العملاء · غفران</small></div></div>
+    <div class="brand"><div class="mark">L↗</div><div><b>Link Store</b><small>أداة روابط خدمة العملاء</small></div></div>
     <section class="card">
       <span class="eyebrow">ASSISTED SALES</span>
-      <h1>حوّلي أي رابط إلى رابط تتبّع</h1>
-      <p class="lead">ضعي رابط المنتج أو الصفحة، اختاري المنصة، ثم أنشئي الرابط وانسخيه للعميل. كل إنشاء ونسخ يُسجّل تلقائيًا في لوحة لنك.</p>
+      <h1>حوّل أي رابط إلى رابط تتبّع</h1>
+      <p class="lead">ضع رابط المنتج أو الصفحة، واختر المنصة، ثم أنشئ الرابط وانسخه للعميل. كل إنشاء ونسخ يُسجّل تلقائيًا في لوحة لنك.</p>
       <form id="form">
         <label for="url">رابط المنتج أو الصفحة</label>
         <input class="input" id="url" name="url" type="url" inputmode="url" autocomplete="off" required placeholder="https://linkstore-sa.com/...">
@@ -70,7 +70,7 @@
     try{
       const data=await api('copy'); preview.textContent=data.url;
       if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(data.url); else {const ta=document.createElement('textarea');ta.value=data.url;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();}
-      copies++;count.textContent=String(copies);message('تم النسخ ✓ أرسلي الرابط للعميل.','ok');
+      copies++;count.textContent=String(copies);message('تم النسخ ✓ أرسل الرابط للعميل.','ok');
     }catch(e){message(e.message,'err');}
     finally{copy.disabled=false;}
   });
