@@ -118,3 +118,18 @@ test('LUX candidates require verified delivery, phone and MagSafe; cooldown and 
  }
  }finally{await db.close();}
 });
+
+test('LUX uses both Riyadh windows while the 17:00 batch still handles regular offers',async()=>{
+ for(const [utcHour,expectLux] of [[8,true],[14,false],[17,true]]){
+  const m=mock();let queriedLux=false,reviewedNormal=false;
+  const database=async(p,o)=>{
+   if(p==='rpc/crm_pp_delivery_batch')return {reason:'reserved',token:uuid,batch_at:new Date(Date.UTC(2026,10,23,utcHour)).toISOString()};
+   if(p.startsWith('crm_pp_delivery_control?')&&p.includes('select=*&'))return [{enabled:true,lux_enabled:true}];
+   if(p==='rpc/crm_pp_lux_candidates'){queriedLux=true;return [];}
+   return m.database(p,o);
+  };
+  await tick({...dependencies,database,review:async()=>{reviewedNormal=true;return {rows:[]}},request:async()=>{throw Error('no real sends')}});
+  assert.equal(queriedLux,expectLux);
+  assert.equal(reviewedNormal,true);
+ }
+});
