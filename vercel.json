@@ -33,6 +33,10 @@
       "destination": "/dashboard.html"
     },
     {
+      "source": "/staff-links",
+      "destination": "/staff-link.html"
+    },
+    {
       "source": "/ghofran-links",
       "destination": "/staff-link.html"
     },
