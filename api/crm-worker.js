@@ -1,6 +1,44 @@
 const { sb, json, requireWorker, MERCHANT_ID, noCache, errorResponse } = require('../lib/crm');
+const { timingSafeEqual } = require('node:crypto');
+const { bodyObject } = require('../lib/crm');
+
+async function redboxMonitor(req, res) {
+  const secret = process.env.REDBOX_MONITOR_WEBHOOK_SECRET;
+  const header = typeof req.headers?.authorization === 'string' ? req.headers.authorization : '';
+  const pathKey = typeof req.query?.key === 'string' ? req.query.key : '';
+  const provided = header ? header.replace(/^Bearer /i, '') : pathKey;
+  if (!secret || !/^[a-f0-9]{64}$/.test(provided) || Buffer.byteLength(secret) !== 64 ||
+      !timingSafeEqual(Buffer.from(secret), Buffer.from(provided))) return json(res, 404, { ok: false });
+  if (req.method === 'GET') return json(res, 200, { ok: true, mode: 'monitor_only' });
+  if (req.method !== 'POST') return json(res, 405, { ok: false }, { Allow: 'GET, POST' });
+  try {
+    const body = bodyObject(req);
+    const data = body.data && typeof body.data === 'object' && !Array.isArray(body.data) ? body.data : body;
+    const type = body.event ?? body.event_type ?? body.type;
+    if (typeof type === 'string' && type !== 'shipment.status.update' && data !== body) {
+      return json(res, 200, { ok: true, ignored: true });
+    }
+    const valueId = x => typeof x === 'string' || Number.isSafeInteger(x) ? String(x).trim() : '';
+    const tracking = valueId(data.tracking_number);
+    const shipment = valueId(data.shipment_id);
+    const status = typeof data.status_name === 'string' ? data.status_name.trim() : '';
+    const code = /^[0-9]{3,5}$/.test(valueId(data.status_code)) ? Number(data.status_code) : -1;
+    const time = typeof data.date === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d{1,9})?(?:Z|[+-]\d\d:\d\d)$/.test(data.date) ? new Date(data.date) : null;
+    if (!/^[A-Za-z0-9_-]{3,100}$/.test(shipment) || !/^[A-Za-z0-9-]{5,60}$/.test(tracking) ||
+        !/^[A-Za-z][A-Za-z -]{0,49}$/.test(status) || code < 0 || !Number.isFinite(time?.getTime())) {
+      return json(res, 400, { ok: false, error: 'invalid shipment event' });
+    }
+    await sb('rpc/crm_record_redbox_monitor_event', {method:'POST', body:JSON.stringify({
+      p_merchant_id: MERCHANT_ID, p_shipment_id: shipment, p_tracking_number: tracking,
+      p_status_code: code, p_status_name: status, p_occurred_at: time.toISOString(),
+    })});
+    return json(res, 200, { ok: true, mode: 'monitor_only' });
+  } catch (error) { return errorResponse(res, error); }
+}
+
 module.exports = async function handler(req, res) {
   noCache(res);
+  if (req.query?.action === 'redbox-events') return redboxMonitor(req, res);
   if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'Method not allowed' }, { Allow: 'POST' });
   if (req.query?.action === 'whatsapp-events') return require('../lib/etisalna-webhook').handle(req, res);
   try {
