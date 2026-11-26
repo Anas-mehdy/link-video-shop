@@ -30,6 +30,19 @@ module.exports = async function handler(req, res) {
     if(resource==='coupon-replies')return await require('../lib/coupon-replies').admin(req,res);
     if(resource==='preorders')return await require('../lib/preorders').admin(req,res);
     if(resource==='delivery-cashback')return await require('../lib/cashback-delivery').admin(req,res);
+    if(resource==='redbox-monitor'){
+      if(req.method!=='GET')return json(res,405,{ok:false,error:'Method not allowed'});
+      const cutoff=new Date(Date.now()-7*86400000).toISOString();
+      try {
+        const [orders,events]=await Promise.all([
+          sb(`crm_redbox_postpurchase_monitor?merchant_id=eq.${MERCHANT_ID}&select=external_order_id,parcels,delivered_parcels,delivered_at,simulated_cashback_sar,phase&order=delivered_at.desc.nullslast,external_order_id.desc&limit=25`),
+          sb(`crm_redbox_monitor_events?merchant_id=eq.${MERCHANT_ID}&received_at=gte.${cutoff}&select=tracking_number,status_code,status_name,received_at,match_state,external_order_id&order=received_at.desc,id.desc&limit=20`),
+        ]);
+        return json(res,200,{ok:true,orders,events});
+      } catch {
+        return json(res,503,{ok:false,error:'تعذّر تحميل بيانات ريد بوكس. حاول التحديث.'});
+      }
+    }
     if(resource==='postpurchase')return await require('../lib/postpurchase').admin(req,res);
     if(resource==='cart-human')return require('../lib/cart-human').admin(req,res);
     if(resource==='whatsapp-second')return require('../lib/cart-reminder-two').admin(req,res);
