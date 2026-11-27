@@ -38,7 +38,11 @@ module.exports = async function handler(req, res) {
           sb(`crm_redbox_postpurchase_monitor?merchant_id=eq.${MERCHANT_ID}&select=external_order_id,parcels,delivered_parcels,delivered_at,simulated_cashback_sar,phase&order=delivered_at.desc.nullslast,external_order_id.desc&limit=25`),
           sb(`crm_redbox_monitor_events?merchant_id=eq.${MERCHANT_ID}&received_at=gte.${cutoff}&select=tracking_number,status_code,status_name,received_at,match_state,external_order_id&order=received_at.desc,id.desc&limit=20`),
         ]);
-        return json(res,200,{ok:true,orders,events});
+        const ids=[...new Set([...orders,...events].map(row=>String(row.external_order_id??'')).filter(id=>/^\d{1,40}$/.test(id)))];
+        const refs=ids.length?await sb(`orders?merchant_id=eq.${MERCHANT_ID}&external_order_id=in.(${ids.join(',')})&select=external_order_id,order_reference`):[];
+        const byId=new Map(refs.map(row=>[String(row.external_order_id),String(row.order_reference??'').trim()]));
+        const addReference=row=>({...row,order_reference:byId.get(String(row.external_order_id))||null});
+        return json(res,200,{ok:true,orders:orders.map(addReference),events:events.map(addReference)});
       } catch {
         return json(res,503,{ok:false,error:'تعذّر تحميل بيانات ريد بوكس. حاول التحديث.'});
       }
